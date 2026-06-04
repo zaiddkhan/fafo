@@ -1,0 +1,76 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "cancelled", "order": "ASCENDING"},
+        {"fieldPath": "geohash", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "cancelled", "order": "ASCENDING"},
+        {"fieldPath": "geohash", "order": "ASCENDING"},
+        {"fieldPath": "date_time", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "cancelled", "order": "ASCENDING"},
+        {"fieldPath": "category_id", "order": "ASCENDING"},
+        {"fieldPath": "geohash", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "cancelled", "order": "ASCENDING"},
+        {"fieldPath": "event_type", "order": "ASCENDING"},
+        {"fieldPath": "geohash", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "cancelled", "order": "ASCENDING"},
+        {"fieldPath": "category_id", "order": "ASCENDING"},
+        {"fieldPath": "event_type", "order": "ASCENDING"},
+        {"fieldPath": "geohash", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "joinees",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {"fieldPath": "uid", "order": "ASCENDING"},
+        {"fieldPath": "joined_at", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "friend_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "recipient_uid", "order": "ASCENDING"},
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "created_at", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "friend_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "requester_uid", "order": "ASCENDING"},
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "created_at", "order": "DESCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

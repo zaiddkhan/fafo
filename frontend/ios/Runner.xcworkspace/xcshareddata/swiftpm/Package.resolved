@@ -1,0 +1,14 @@
+{
+  "originHash" : "whatspoppn-maplibre-ios",
+  "pins" : [
+    {
+      "identity" : "maplibre-gl-native-distribution",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/maplibre/maplibre-native/releases/download/ios-v6_25_0/MapLibre-dynamic.xcframework.zip",
+      "state" : {
+        "version" : "6.25.0"
+      }
+    }
+  ],
+  "version" : 3
+}

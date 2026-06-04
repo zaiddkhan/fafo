@@ -1,0 +1,70 @@
+
+Project Name: WhatsPopn
+
+
+
+App Discovery Document.
+
+
+
+
+
+
+
+
+
+From	To
+Abhiraj Sakargaye	WhatsPopn Team
+abhiraj@singlebit.xyz	
++91 9301951512	
+Table of Contents
+1. Overview
+2. Core Features
+3. Out of Scope
+4. Requirements
+5. Estimated Duration
+
+
+
+1. Overview.
+WhatsPopn is building a mobile application centred around community based event discovery and map-based exploration.
+
+The goal of this engagement is to produce a fully functional static app UI that can be presented to investors and early adopters to validate the concept and attract support.
+
+This app will allow users to discover events on a visual map, explore details, build personal profiles, and see AI-based suggestions, without requiring any backend system at this stage.
+2. Core Features.
+Based on the goals discussed, we have noted down the following core features required for making of this app and achieving user goals:
+2.1 Discover Events
+Show an immersive (3D) map on the home screen with nearby events pinned.
+Search & filtering for event listings.
+Select a pin and see the event’s details.
+Give a scrollable listing of similar events.
+Save events in user profile.
+2.2 User Interests 
+Select personas and interests while signing up.
+AI bar ask moods and goals each day or continue on the last day’s interest.
+Give a scrollable listing of similar events. 
+2.3 Miscellaneous Features
+Detailed page for all events.
+A list of side quests for all users.
+Create & Update events.
+Authentication and Onboarding process.
+Profile and Account settings.
+
+3. Out of Scope.
+The following work pieces are exclusively excluded from this engagement:
+Any backend, server, or cloud infrastructure.
+Any AI integrations.
+API integrations or live data connections.
+Database design or data modelling.
+UI/UX design files or user journey documentation (design assets must be provided or agreed upon separately).
+App Store / Play Store submission or deployment.
+Ongoing maintenance or post-delivery support.
+4. Requirements.
+UI design style or basic wireframes for all screens (Figma, Sketch, or equivalent).
+Defined user journeys and navigation flow between screens.
+Brand assets (logo, colour palette, typography, and iconography).
+Sample/mock content (event names, images, categories, and location data for demo purposes).
+5. Estimated Duration.
+Static UI development and testing including handover will be accomplished in XYZ.
+Provided that feedback loops are followed timely and resources are shared promptly.

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Vintage Map Style - WhatsPopn MVP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: Georgia, serif;
+            font-size: 12px;
+            max-width: 250px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .info-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #6b5344;
+        }
+        .color-legend {
+            margin-top: 10px;
+        }
+        .color-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border: 1px solid #8b7355;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="info-panel">
+        <h3>Vintage Map Style</h3>
+        <p>Colors inferred from vintage Bangalore map (circa 1900s)</p>
+        <div class="color-legend">
+            <div class="color-item">
+                <div class="color-box" style="background-color: #e8dcc8"></div>
+                <span>Land</span>
+            </div>
+            <div class="color-item">
+                <div class="color-box" style="background-color: #a8c5ba"></div>
+                <span>Water</span>
+            </div>
+            <div class="color-item">
+                <div class="color-box" style="background-color: #d4877a"></div>
+                <span>Buildings</span>
+            </div>
+            <div class="color-item">
+                <div class="color-box" style="background-color: #d9c870"></div>
+                <span>Parks</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize map centered on Bangalore with Maptiler's free vector tiles
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://api.maptiler.com/maps/streets/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+            center: [77.5946, 12.9716], // Bangalore coordinates
+            zoom: 13,
+            pitch: 0,
+            bearing: 0
+        });
+
+        // Apply vintage colors once the base style loads
+        map.on('load', () => {
+            console.log('Map loaded, applying vintage style...');
+
+            const vintageColors = {
+                background: '#e8dcc8',
+                water: '#a8c5ba',
+                buildings: '#d4877a',
+                buildingOutline: '#b86f61',
+                parks: '#d9c870',
+                roads: '#8b7355',
+                roadsMinor: '#a89080',
+                labels: '#4a3829'
+            };
+
+            try {
+                // Get all layers
+                const layers = map.getStyle().layers;
+
+                // Apply colors to each layer type
+                layers.forEach(layer => {
+                    try {
+                        // Background
+                        if (layer.id === 'background') {
+                            map.setPaintProperty(layer.id, 'background-color', vintageColors.background);
+                        }
+
+                        // Water layers
+                        if (layer.type === 'fill' && (layer.id.includes('water') || layer['source-layer'] === 'water')) {
+                            map.setPaintProperty(layer.id, 'fill-color', vintageColors.water);
+                        }
+
+                        // Building layers
+                        if (layer.type === 'fill' && (layer.id.includes('building') || layer['source-layer'] === 'building')) {
+                            map.setPaintProperty(layer.id, 'fill-color', vintageColors.buildings);
+                            if (map.getPaintProperty(layer.id, 'fill-outline-color') !== undefined) {
+                                map.setPaintProperty(layer.id, 'fill-outline-color', vintageColors.buildingOutline);
+                            }
+                        }
+
+                        // Park/landuse layers
+                        if (layer.type === 'fill' && (layer.id.includes('park') || layer.id.includes('grass') || layer.id.includes('wood'))) {
+                            map.setPaintProperty(layer.id, 'fill-color', vintageColors.parks);
+                        }
+
+                        // Road layers
+                        if (layer.type === 'line' && (layer.id.includes('road') || layer.id.includes('street') || layer.id.includes('transportation'))) {
+                            const isMinor = layer.id.includes('minor') || layer.id.includes('service') || layer.id.includes('path');
+                            map.setPaintProperty(layer.id, 'line-color', isMinor ? vintageColors.roadsMinor : vintageColors.roads);
+                        }
+
+                        // Label layers
+                        if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+                            map.setPaintProperty(layer.id, 'text-color', vintageColors.labels);
+                            map.setPaintProperty(layer.id, 'text-halo-color', 'rgba(232, 220, 200, 0.9)');
+                            map.setPaintProperty(layer.id, 'text-halo-width', 1.5);
+                        }
+                    } catch (e) {
+                        // Skip layers that can't be modified
+                    }
+                });
+
+                console.log('✓ Vintage style applied!');
+            } catch (error) {
+                console.error('Error applying vintage style:', error);
+            }
+        });
+
+        // Add navigation controls
+        map.addControl(new maplibregl.NavigationControl(), 'top-left');
+    </script>
+</body>
+</html>
