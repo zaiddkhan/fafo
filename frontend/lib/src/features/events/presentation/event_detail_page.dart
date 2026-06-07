@@ -16,6 +16,7 @@ import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/shared/widgets/app_pressable.dart';
+import 'package:fafu/src/shared/widgets/negative_action_dialog.dart';
 
 class EventDetailPage extends ConsumerStatefulWidget {
   const EventDetailPage({super.key, required this.eventId, this.initialEvent});
@@ -86,7 +87,21 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       return;
     }
 
-    if (_isFull || !_registrationOpen) return;
+    if (_isFull || !_registrationOpen || _joinWindowClosed) return;
+
+    // PRD: a confirmation popup appears on joining.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Join this event?'),
+        content: const Text('You can leave anytime up to 10 minutes after it starts.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Join')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
 
     setState(() {
       _joining = true;
@@ -134,6 +149,19 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     );
     if (reason == null || !mounted) return;
 
+    // PRD: every negative action requires a 3-to-5 question questionnaire gate.
+    final answers = await showNegativeActionQuestionnaire(
+      context,
+      title: 'Leave this event?',
+      confirmLabel: 'Leave event',
+      questions: const [
+        'What changed since you joined?',
+        'Could anything have kept you in?',
+        'Anything the organizer should know?',
+      ],
+    );
+    if (answers == null || !mounted) return;
+
     setState(() {
       _joining = true;
       _error = null;
@@ -142,7 +170,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     try {
       await ref
           .read(eventsRepositoryProvider)
-          .unjoinEvent(widget.eventId, reason: reason);
+          .unjoinEvent(widget.eventId, reason: reason, answers: answers);
       if (!mounted) return;
       setState(() => _joined = false);
       await _loadEvent();
@@ -213,9 +241,19 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
 
   bool get _registrationOpen => _backendEvent?.registrationOpen ?? true;
 
+  /// PRD: users can join only up to 10 minutes after an event starts.
+  bool get _joinWindowClosed {
+    final backend = _backendEvent;
+    if (backend == null) return false;
+    return DateTime.now().isAfter(
+      backend.dateTime.toLocal().add(const Duration(minutes: 10)),
+    );
+  }
+
   String get _joinLabel {
     if (_joining) return 'Joining...';
     if (_joined) return 'Leave event';
+    if (_joinWindowClosed) return 'Join window closed';
     if (_isFull) return 'Full';
     if (!_registrationOpen) return 'Registration Closed';
     return 'Join';
@@ -533,7 +571,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                 : Icons.how_to_reg_outlined,
                             label: _joinLabel,
                             isActive:
-                                (_joined || (!_isFull && _registrationOpen)) &&
+                                (_joined || (!_isFull && _registrationOpen && !_joinWindowClosed)) &&
                                 !_joining,
                             onTap: _handleRegisterTap,
                           ),

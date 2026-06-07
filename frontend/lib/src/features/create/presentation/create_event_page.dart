@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -39,6 +39,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
   final _organizerContactController = TextEditingController();
   final _organizerInstagramController = TextEditingController();
   final _capacityController = TextEditingController();
+  final _customEmojiController = TextEditingController();
   final _imagePicker = ImagePicker();
 
   List<CategoryResponse> _categories = const [];
@@ -47,7 +48,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
   String? _categoriesError;
 
   EventType _eventType = EventType.normal;
-  File? _selectedCoverImage;
+  XFile? _selectedCoverImage;
+  Uint8List? _coverBytes;
   DateTime _selectedDateTime = DateTime.now().add(const Duration(hours: 1));
 
   double? _lat;
@@ -100,8 +102,13 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       imageQuality: 90,
       maxWidth: 1600,
     );
-    if (image == null || !mounted) return;
-    setState(() => _selectedCoverImage = File(image.path));
+    if (image == null) return;
+    final bytes = await image.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _selectedCoverImage = image;
+      _coverBytes = bytes;
+    });
   }
 
   Future<void> _pickLocation() async {
@@ -230,6 +237,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       description: optional(_descriptionController),
       categoryId: categoryId!,
       eventType: _eventType,
+      customEmoji: optional(_customEmojiController),
       lat: lat!,
       lng: lng!,
       locationName: locationName!,
@@ -269,7 +277,9 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       _organizerContactController.clear();
       _organizerInstagramController.clear();
       _capacityController.clear();
+    _customEmojiController.clear();
       _selectedCoverImage = null;
+      _coverBytes = null;
       _eventType = EventType.normal;
       _selectedDateTime = DateTime.now().add(const Duration(hours: 1));
       _lat = null;
@@ -288,6 +298,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
     _organizerContactController.dispose();
     _organizerInstagramController.dispose();
     _capacityController.dispose();
+    _customEmojiController.dispose();
     super.dispose();
   }
 
@@ -338,9 +349,9 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
                   decoration: BoxDecoration(
                     color: fieldBackground,
                     borderRadius: BorderRadius.circular(8),
-                    image: _selectedCoverImage != null
+                    image: _coverBytes != null
                         ? DecorationImage(
-                            image: FileImage(_selectedCoverImage!),
+                            image: MemoryImage(_coverBytes!),
                             fit: BoxFit.cover,
                           )
                         : null,
@@ -528,6 +539,27 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
                   hintColor,
                   'Leave blank for unlimited',
                 ),
+              ),
+            ),
+            const SizedBox(height: 22),
+            _FieldLabel(label: 'Pin emoji (optional)', textColor: fieldText),
+            const SizedBox(height: 8),
+            _OutlinedFieldShell(
+              backgroundColor: fieldBackground,
+              outlineColor: outlineColor,
+              shadowColor: shadowColor,
+              child: TextField(
+                controller: _customEmojiController,
+                maxLength: 4,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: fieldText,
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: _fieldDecoration(
+                  theme,
+                  hintColor,
+                  'e.g. 🎸 — shown as your map pin',
+                ).copyWith(counterText: ''),
               ),
             ),
             const SizedBox(height: 22),
@@ -849,7 +881,7 @@ class _Chip extends StatelessWidget {
         label,
         style: theme.textTheme.labelLarge?.copyWith(
           color: isSelected
-              ? const Color(0xFF141414)
+              ? Colors.white
               : isDark
               ? Colors.white
               : const Color(0xFF181818),

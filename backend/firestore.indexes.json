@@ -70,7 +70,33 @@
         {"fieldPath": "status", "order": "ASCENDING"},
         {"fieldPath": "created_at", "order": "DESCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "group_invites",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "recipient_uid", "order": "ASCENDING"},
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "created_at", "order": "DESCENDING"}
+      ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "joinees",
+      "fieldPath": "uid",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"},
+        {"order": "DESCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    },
+    {
+      "collectionGroup": "members",
+      "fieldPath": "uid",
+      "indexes": [
+        {"order": "ASCENDING", "queryScope": "COLLECTION_GROUP"},
+        {"order": "DESCENDING", "queryScope": "COLLECTION_GROUP"}
+      ]
+    }
+  ]
 }

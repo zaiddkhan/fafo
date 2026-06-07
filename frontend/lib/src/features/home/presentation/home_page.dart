@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import 'package:fafu/src/features/categories/domain/category.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
+import 'package:fafu/src/features/location/selected_area_controller.dart';
 import 'package:fafu/src/features/search/presentation/search_page.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
 
@@ -51,6 +53,10 @@ class HomePageState extends ConsumerState<HomePage> {
 
   MapController? _mapController;
   MockEvent? _selectedEvent;
+  List<EventResponse> _rawEvents = const [];
+  StreamSubscription<List<EventResponse>>? _eventsSub;
+  Map<String, String> _categoryNames = const {};
+  Map<String, String> _categoryEmojis = const {};
   List<MockEvent> _events = [];
   List<MockEvent> _pagedEvents = const [];
   PageController? _eventPagerController;
@@ -83,25 +89,31 @@ class HomePageState extends ConsumerState<HomePage> {
 
     try {
       await _resolveUserLocation();
-      await _loadBackendEvents();
+      await _loadCategories();
+      _subscribeToEvents();
     } catch (e) {
       if (mounted) {
         setState(() {
           _events = const [];
           _eventsError = e.toString();
+          _loadingEvents = false;
         });
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _locationReady = true;
-          _loadingEvents = false;
-        });
+        setState(() => _locationReady = true);
       }
     }
   }
 
   Future<void> _resolveUserLocation() async {
+    // A manually chosen area (Settings) takes priority over GPS.
+    final chosen = ref.read(selectedAreaProvider);
+    if (chosen != null) {
+      _lat = chosen.lat;
+      _lng = chosen.lng;
+      return;
+    }
     try {
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -127,55 +139,102 @@ class HomePageState extends ConsumerState<HomePage> {
     }
   }
 
-  Future<void> _loadBackendEvents() async {
+  Future<void> _loadCategories() async {
     final categories = await ref
         .read(categoriesRepositoryProvider)
         .getCategories();
-    if (mounted) {
-      setState(() => _categories = categories);
-    }
-    final categoryNames = {
-      for (final category in categories) category.id: category.name,
-    };
-    final categoryEmojis = {
-      for (final category in categories) category.id: category.emoji,
-    };
+    if (!mounted) return;
+    setState(() {
+      _categories = categories;
+      _categoryNames = {for (final c in categories) c.id: c.name};
+      _categoryEmojis = {for (final c in categories) c.id: c.emoji};
+    });
+  }
 
-    final events = await ref
-        .read(eventsRepositoryProvider)
-        .getEvents(
-          lat: _lat,
-          lng: _lng,
-          radiusKm: _selectedRadiusRange.end,
-          categoryId: _selectedCategoryId,
-          eventType: _selectedEventType,
-          limit: 100,
+  /// Subscribes to the live Firestore event stream so the map reflects new and
+  /// edited events in real time.
+  void _subscribeToEvents() {
+    _eventsSub?.cancel();
+    _eventsSub = ref.read(eventsRepositoryProvider).streamEvents().listen(
+      (events) {
+        _rawEvents = events;
+        _rebuildVisibleEvents();
+        if (mounted && (_loadingEvents || _eventsError != null)) {
+          setState(() {
+            _loadingEvents = false;
+            _eventsError = null;
+          });
+        }
+      },
+      onError: (Object e) {
+        if (mounted) {
+          setState(() {
+            _eventsError = e.toString();
+            _loadingEvents = false;
+          });
+        }
+      },
+    );
+  }
+
+  /// Recomputes the mapped/displayed events from the latest raw stream data and
+  /// the currently selected category / event-type / visibility filters.
+  void _rebuildVisibleEvents() {
+    final cutoff = DateTime.now().toUtc().subtract(
+          const Duration(minutes: 10),
         );
+    final visible = _rawEvents.where((event) {
+      // An event stays visible until 10 minutes after its start time.
+      if (event.dateTime.toUtc().isBefore(cutoff)) return false;
+      if (_selectedCategoryId != null && event.categoryId != _selectedCategoryId) {
+        return false;
+      }
+      if (_selectedEventType != null && _effectiveType(event) != _selectedEventType) {
+        return false;
+      }
+      return true;
+    }).map(
+      (event) => _eventResponseToMockEvent(
+        event,
+        _categoryNames[event.categoryId] ?? event.categoryId,
+        _categoryEmojis[event.categoryId],
+      ),
+    );
 
-    _events = events
-        .map(
-          (event) => _eventResponseToMockEvent(
-            event,
-            categoryNames[event.categoryId] ?? event.categoryId,
-            categoryEmojis[event.categoryId],
-          ),
-        )
-        .toList(growable: false);
+    final next = visible.toList(growable: false);
+    if (!mounted) {
+      _events = next;
+      return;
+    }
+    setState(() {
+      _events = next;
+      final ids = _filteredEvents.map((e) => e.id).toSet();
+      if (_selectedEvent != null && !ids.contains(_selectedEvent!.id)) {
+        _selectedEvent = null;
+        _pagedEvents = const [];
+      } else if (_selectedEvent != null) {
+        _pagedEvents = _orderedEventsAround(_selectedEvent!);
+      }
+    });
+  }
+
+  /// The type used for display/filtering: a normal event happening today is
+  /// surfaced as a Spotlight (matches the backend's spotlight-today rule).
+  EventType _effectiveType(EventResponse event) {
+    final isToday = DateUtils.isSameDay(event.dateTime.toLocal(), DateTime.now());
+    if (isToday && event.eventType == EventType.normal) return EventType.spotlight;
+    return event.eventType;
   }
 
   Future<void> _refreshBackendEvents() async {
     setState(() {
-      _loadingEvents = true;
       _eventsError = null;
-      _selectedEvent = null;
-      _pagedEvents = const [];
     });
     try {
-      await _loadBackendEvents();
+      await _loadCategories();
+      _subscribeToEvents();
     } catch (e) {
       if (mounted) setState(() => _eventsError = e.toString());
-    } finally {
-      if (mounted) setState(() => _loadingEvents = false);
     }
   }
 
@@ -379,7 +438,8 @@ class HomePageState extends ConsumerState<HomePage> {
     return switch (eventType) {
       'spotlight' => AppColors.accentWarm,
       'volunteering' => const Color(0xFF4ADE80),
-      _ => AppColors.accentPrimary,
+      // Normal events use a light blue so the pin stays visible on the map.
+      _ => AppColors.accentLight1,
     };
   }
 
@@ -463,6 +523,21 @@ class HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  /// Re-centres the map when the user picks a new area in Settings.
+  void _applySelectedArea(SelectedArea area) {
+    if (!mounted) return;
+    _lat = area.lat;
+    _lng = area.lng;
+    _selectedEvent = null;
+    _pagedEvents = const [];
+    _mapController?.animateCamera(
+      center: Geographic(lon: _lng, lat: _lat),
+      zoom: _initialMapZoom,
+      nativeDuration: const Duration(milliseconds: 700),
+    );
+    _rebuildVisibleEvents();
+  }
+
   List<Marker> get _visibleMarkers {
     if (!_eventsVisibleOnMap) return const [];
 
@@ -483,12 +558,21 @@ class HomePageState extends ConsumerState<HomePage> {
 
   @override
   void dispose() {
+    _eventsSub?.cancel();
     _eventPagerController?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Re-centre the map whenever the user changes their area in Settings (and
+    // when a persisted area finishes loading from storage after first frame).
+    ref.listen<SelectedArea?>(selectedAreaProvider, (previous, next) {
+      if (next != null && (next.lat != _lat || next.lng != _lng)) {
+        _applySelectedArea(next);
+      }
+    });
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final searchSurface = isDark
@@ -615,7 +699,7 @@ class HomePageState extends ConsumerState<HomePage> {
                                     .name,
                           onSelected: (value) {
                             setState(() => _selectedCategoryId = value);
-                            _refreshBackendEvents();
+                            _rebuildVisibleEvents();
                           },
                         ),
                         const SizedBox(width: 8),
@@ -637,7 +721,7 @@ class HomePageState extends ConsumerState<HomePage> {
                               : _eventTypeLabel(value),
                           onSelected: (value) {
                             setState(() => _selectedEventType = value);
-                            _refreshBackendEvents();
+                            _rebuildVisibleEvents();
                           },
                         ),
                         const SizedBox(width: 8),
@@ -1289,7 +1373,7 @@ class _FilterOptionChip extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final foreground = selected
-        ? const Color(0xFF171717)
+        ? Colors.white
         : (isDark ? Colors.white : AppColors.textPrimary);
 
     return GestureDetector(
@@ -1340,7 +1424,7 @@ class _BaseFilterChip extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final foreground = selected
-        ? const Color(0xFF171717)
+        ? Colors.white
         : (isDark ? Colors.white : AppColors.textPrimary);
 
     return Container(

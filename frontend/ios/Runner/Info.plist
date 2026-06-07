@@ -49,6 +49,8 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSContactsUsageDescription</key>
+	<string>WhatsPopn uses phone numbers from your contacts to find friends already on WhatsPopn.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Fafu uses your location to show events near you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

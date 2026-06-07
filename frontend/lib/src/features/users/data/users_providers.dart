@@ -2,11 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
+import 'package:fafu/src/features/users/domain/profile_stats.dart';
 
 final usernameCheckProvider =
     FutureProvider.family<UsernameCheckResponse, String>((ref, username) {
   final repo = ref.watch(usersRepositoryProvider);
   return repo.checkUsername(username);
+});
+
+final profileStatsProvider = FutureProvider.autoDispose<ProfileStatsResponse>((ref) {
+  return ref.watch(usersRepositoryProvider).getMyStats();
 });
 
 final profileProvider =

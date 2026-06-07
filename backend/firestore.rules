@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// WhatsPopn Firestore security rules.
+//
+// The backend (FastAPI) uses the Firebase Admin SDK, which bypasses these rules
+// entirely — so ALL writes and almost all reads happen server-side and stay
+// locked down here. The Flutter client only talks to Firestore directly for one
+// thing: the live event stream that powers real-time map updates. That is the
+// only client-side allowance below; everything else is denied by default.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Events are public (PRD), so any signed-in user may read them live from the
+    // client for the real-time map. All writes go through the verified-creator
+    // backend endpoints only.
+    match /events/{eventId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+
+      // Joinee lists are managed server-side; never exposed to the client directly.
+      match /{subcollection=**} {
+        allow read, write: if false;
+      }
+    }
+
+    // Everything else is server-only. The client reaches these through the
+    // authenticated REST API, never directly.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/theme/app_chrome.dart';
@@ -25,7 +24,8 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   final _mapKey = GlobalKey();
-  final _sideQuestsKey = GlobalKey();
+  final _exploreKey = GlobalKey();
+  final _friendsKey = GlobalKey();
 
   int _stackIndex = 0; // Index into IndexedStack (0-3)
   int _navIndex = 0; // Index in bottom nav (0-4)
@@ -43,8 +43,13 @@ class _MainShellState extends ConsumerState<MainShell> {
   void _maybeStartFirstLaunchTooltips() {
     if (_tooltipStarted || _tooltipCompleting) return;
 
-    // TEST MODE: always show the tooltip sequence whenever the main/home shell
-    // is opened. Restore the profile flag check before release.
+    // Only show the tooltip sequence to users who haven't completed it. While
+    // the profile is still loading we hold off (treat as "done" so we never
+    // flash tips at a returning user before their flag arrives).
+    final profile = ref.read(currentProfileProvider);
+    final alreadySeen = profile.value?.firstLaunchTooltipComplete ?? true;
+    if (alreadySeen) return;
+
     _tooltipStarted = true;
     _tooltipStep = _FirstLaunchTooltipStep.map;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,7 +83,10 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   void _nextTooltipStep() {
     if (_tooltipStep == _FirstLaunchTooltipStep.map) {
-      _tooltipStep = _FirstLaunchTooltipStep.sideQuests;
+      _tooltipStep = _FirstLaunchTooltipStep.explore;
+      _showTooltipOverlay();
+    } else if (_tooltipStep == _FirstLaunchTooltipStep.explore) {
+      _tooltipStep = _FirstLaunchTooltipStep.nudgeFeed;
       _showTooltipOverlay();
     } else {
       _completeFirstLaunchTooltips();
@@ -88,11 +96,11 @@ class _MainShellState extends ConsumerState<MainShell> {
   void _showTooltipOverlay() {
     _tooltipOverlay?.remove();
 
-    final targetRect = _rectFor(
-      _tooltipStep == _FirstLaunchTooltipStep.map
-          ? _mapKey
-          : _sideQuestsKey,
-    );
+    final targetRect = _rectFor(switch (_tooltipStep) {
+      _FirstLaunchTooltipStep.map => _mapKey,
+      _FirstLaunchTooltipStep.explore => _exploreKey,
+      _FirstLaunchTooltipStep.nudgeFeed => _friendsKey,
+    });
     if (targetRect == null) return;
 
     _tooltipOverlay = OverlayEntry(
@@ -109,6 +117,9 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     ref.watch(themeModeControllerProvider);
+    // Watch the profile so this rebuilds (and re-evaluates the tooltip gate)
+    // once the first-launch flag loads.
+    ref.watch(currentProfileProvider);
     _maybeStartFirstLaunchTooltips();
 
     return Scaffold(
@@ -127,6 +138,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                   KeyedSubtree(key: _mapKey, child: const HomePage()),
                   const EventsListPage(events: []),
                   const CreateTab(),
+                  const FriendsPage(showBackButton: false),
                   const ProfilePage(savedEvents: []),
                 ],
               ),
@@ -138,16 +150,12 @@ class _MainShellState extends ConsumerState<MainShell> {
             bottom: 0,
             child: _BottomNav(
               currentIndex: _navIndex,
-              sideQuestsKey: _sideQuestsKey,
+              exploreKey: _exploreKey,
+              friendsKey: _friendsKey,
               onTap: (index) {
-                if (index == 3) {
-                  context.push(FriendsPage.routePath);
-                  return;
-                }
                 setState(() {
                   _navIndex = index;
-                  // Map nav index to stack index (skip chat at 3)
-                  _stackIndex = index > 3 ? index - 1 : index;
+                  _stackIndex = index;
                 });
               },
             ),
@@ -161,12 +169,14 @@ class _MainShellState extends ConsumerState<MainShell> {
 class _BottomNav extends StatelessWidget {
   const _BottomNav({
     required this.currentIndex,
-    required this.sideQuestsKey,
+    required this.exploreKey,
+    required this.friendsKey,
     required this.onTap,
   });
 
   final int currentIndex;
-  final GlobalKey sideQuestsKey;
+  final GlobalKey exploreKey;
+  final GlobalKey friendsKey;
   final ValueChanged<int> onTap;
 
   @override
@@ -205,15 +215,15 @@ class _BottomNav extends StatelessWidget {
               _NavItem(
                 icon: Icons.map_outlined,
                 activeIcon: Icons.map,
-                label: 'Explore',
+                label: 'Map',
                 isActive: currentIndex == 0,
                 onTap: () => onTap(0),
               ),
               _NavItem(
-                key: sideQuestsKey,
+                key: exploreKey,
                 icon: Icons.list_outlined,
                 activeIcon: Icons.list,
-                label: 'Side Quests',
+                label: 'Explore',
                 isActive: currentIndex == 1,
                 onTap: () => onTap(1),
               ),
@@ -225,6 +235,7 @@ class _BottomNav extends StatelessWidget {
                 onTap: () => onTap(2),
               ),
               _NavItem(
+                key: friendsKey,
                 icon: Icons.people_alt_outlined,
                 activeIcon: Icons.people_alt,
                 label: 'Friends',
@@ -305,7 +316,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-enum _FirstLaunchTooltipStep { map, sideQuests }
+enum _FirstLaunchTooltipStep { map, explore, nudgeFeed }
 
 class _FirstLaunchTooltipOverlay extends StatelessWidget {
   const _FirstLaunchTooltipOverlay({
@@ -326,15 +337,34 @@ class _FirstLaunchTooltipOverlay extends StatelessWidget {
     final size = MediaQuery.sizeOf(context);
     final tooltipWidth = size.width < 420 ? size.width - 32 : 360.0;
     final isMapStep = step == _FirstLaunchTooltipStep.map;
+    final isNudgeStep = step == _FirstLaunchTooltipStep.nudgeFeed;
+    // Nudge step shows a taller card (it embeds a sample friend screen), so it
+    // needs to sit higher above the bottom-nav target.
+    final liftAbove = isNudgeStep ? 360.0 : 178.0;
     final tooltipTop = isMapStep
         ? 92.0
-        : (targetRect.top - 178).clamp(16.0, size.height - 190.0);
+        : (targetRect.top - liftAbove).clamp(16.0, size.height - 190.0);
     final tooltipLeft = isMapStep
         ? ((size.width - tooltipWidth) / 2).clamp(16.0, size.width)
         : (targetRect.center.dx - tooltipWidth / 2).clamp(
             16.0,
             size.width - tooltipWidth - 16.0,
           );
+
+    final (title, body) = switch (step) {
+      _FirstLaunchTooltipStep.map => (
+          'Explore what\'s popping',
+          'Use the map to discover nearby events, hangs, and pop-ups around you.',
+        ),
+      _FirstLaunchTooltipStep.explore => (
+          'Explore events',
+          'Tap Explore to browse everything happening — spotlight, blogs, categories, and the full list.',
+        ),
+      _FirstLaunchTooltipStep.nudgeFeed => (
+          'Nudge your friends',
+          'Add friends to swap time-bound nudge cards. Here\'s what a feed looks like:',
+        ),
+    };
 
     return Material(
       color: Colors.transparent,
@@ -379,20 +409,22 @@ class _FirstLaunchTooltipOverlay extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    isMapStep ? 'Explore what\'s popping' : 'Find Side Quests',
+                    title,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    isMapStep
-                        ? 'Use the map to discover nearby events, hangs, and pop-ups around you.'
-                        : 'Tap Side Quests to see events in a list when you want to browse faster.',
+                    body,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
+                  if (isNudgeStep) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    const _SampleNudgeFeed(),
+                  ],
                   const SizedBox(height: AppSpacing.lg),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -400,12 +432,113 @@ class _FirstLaunchTooltipOverlay extends StatelessWidget {
                       TextButton(onPressed: onSkip, child: const Text('Skip')),
                       FilledButton(
                         onPressed: onNext,
-                        child: Text(isMapStep ? 'Next' : 'Got it'),
+                        child: Text(isNudgeStep ? 'Got it' : 'Next'),
                       ),
                     ],
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A non-interactive preview of a friend's nudge feed, shown during onboarding
+/// so a brand-new user understands the feed before they have any friends.
+class _SampleNudgeFeed extends StatelessWidget {
+  const _SampleNudgeFeed();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1B1B1B)
+            : const Color(0xFFF4F6FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE7EEFB),
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(color: Colors.black, width: 1.2),
+                ),
+                child: const Center(child: Text('☕', style: TextStyle(fontSize: 15))),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Aanya',
+                style: TextStyle(color: AppColors.accentPrimary, fontWeight: FontWeight.w900, fontSize: 13),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const _SampleNudgeCard(title: 'Meet at coffee place', subtitle: 'Starting in 15 min', accepted: false),
+          const SizedBox(height: 8),
+          const _SampleNudgeCard(title: 'Catch the 6pm gig?', subtitle: 'Accepted • 04:58', accepted: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _SampleNudgeCard extends StatelessWidget {
+  const _SampleNudgeCard({required this.title, required this.subtitle, required this.accepted});
+  final String title;
+  final String subtitle;
+  final bool accepted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF111111) : Colors.white,
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: Colors.black, width: 1.2),
+      ),
+      child: Row(
+        children: [
+          const Text('👉', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: accepted ? const Color(0xFFE5484D) : const Color(0xFF6D6D78),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: accepted ? const Color(0xFF38A849) : AppColors.accentPrimary,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              accepted ? 'YES' : 'Yes / No',
+              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
             ),
           ),
         ],

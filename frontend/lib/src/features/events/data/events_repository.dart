@@ -1,6 +1,6 @@
-import 'dart:io';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fafu/src/core/network/api_exception.dart';
@@ -15,6 +15,70 @@ class EventsRepository {
   EventsRepository(this._dio);
 
   final Dio _dio;
+
+  /// Live stream of all non-cancelled events straight from Firestore, so the
+  /// map updates in real time as creators post or edit events. Radius,
+  /// category, visibility-window and event-type filtering are applied by the
+  /// caller (the map screen) on top of this stream.
+  Stream<List<EventResponse>> streamEvents({int limit = 300}) {
+    return FirebaseFirestore.instance
+        .collection('events')
+        .where('cancelled', isEqualTo: false)
+        .limit(limit)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => _eventFromFirestore(doc.id, doc.data()))
+              .whereType<EventResponse>()
+              .toList(),
+        );
+  }
+
+  static EventResponse? _eventFromFirestore(String id, Map<String, dynamic> data) {
+    final location = data['location'];
+    if (location is! GeoPoint) return null;
+    final dateTime = _toDate(data['date_time']);
+    if (dateTime == null) return null;
+    return EventResponse(
+      id: id,
+      creatorUid: data['creator_uid'] as String? ?? '',
+      title: data['title'] as String? ?? '',
+      description: data['description'] as String?,
+      categoryId: data['category_id'] as String? ?? '',
+      eventType: _eventTypeFromString(data['event_type'] as String?),
+      customEmoji: data['custom_emoji'] as String?,
+      lat: location.latitude,
+      lng: location.longitude,
+      locationName: data['location_name'] as String? ?? '',
+      dateTime: dateTime,
+      capacity: (data['capacity'] as num?)?.toInt(),
+      joineeCount: (data['joinee_count'] as num?)?.toInt() ?? 0,
+      registrationOpen: data['registration_open'] as bool? ?? true,
+      cancelled: data['cancelled'] as bool? ?? false,
+      bannerUrl: data['banner_url'] as String?,
+      organizerName: data['organizer_name'] as String?,
+      organizerContact: data['organizer_contact'] as String?,
+      organizerInstagram: data['organizer_instagram'] as String?,
+      isJoined: false,
+      createdAt: _toDate(data['created_at']) ?? dateTime,
+      updatedAt: _toDate(data['updated_at']) ?? dateTime,
+    );
+  }
+
+  static DateTime? _toDate(Object? value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
+  static EventType _eventTypeFromString(String? value) {
+    return switch (value) {
+      'volunteering' => EventType.volunteering,
+      'spotlight' => EventType.spotlight,
+      _ => EventType.normal,
+    };
+  }
 
   Future<List<EventResponse>> getEvents({
     required double lat,
@@ -96,10 +160,10 @@ class EventsRepository {
 
   Future<EventBannerUploadResponse> uploadBanner(
     String eventId,
-    File banner,
+    XFile banner,
   ) async {
     try {
-      final path = banner.path.toLowerCase();
+      final path = banner.name.toLowerCase();
       final DioMediaType mediaType;
       if (path.endsWith('.png')) {
         mediaType = DioMediaType('image', 'png');
@@ -109,10 +173,13 @@ class EventsRepository {
         mediaType = DioMediaType('image', 'jpeg');
       }
 
+      // Read bytes so this works on Flutter web too (MultipartFile.fromFile
+      // needs dart:io, which isn't available on web).
+      final bytes = await banner.readAsBytes();
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(
-          banner.path,
-          filename: banner.path.split('/').last,
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: banner.name.isNotEmpty ? banner.name : 'banner.jpg',
           contentType: mediaType,
         ),
       });
@@ -144,11 +211,11 @@ class EventsRepository {
     }
   }
 
-  Future<void> cancelEvent(String eventId, {required String reason}) async {
+  Future<void> cancelEvent(String eventId, {required String reason, List<String> answers = const []}) async {
     try {
       await _dio.post(
         '/events/$eventId/cancel',
-        data: EventCancelRequest(reason: reason).toJson(),
+        data: {'reason': reason, 'answers': answers},
       );
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
@@ -164,11 +231,11 @@ class EventsRepository {
     }
   }
 
-  Future<void> unjoinEvent(String eventId, {required UnjoinReason reason}) async {
+  Future<void> unjoinEvent(String eventId, {required UnjoinReason reason, List<String> answers = const []}) async {
     try {
       await _dio.delete(
         '/events/$eventId/join',
-        data: EventUnjoinRequest(reason: reason).toJson(),
+        data: {'reason': _unjoinReasonValue(reason), 'answers': answers},
       );
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
@@ -196,4 +263,13 @@ class EventsRepository {
       throw ApiException.fromDioError(e);
     }
   }
+}
+
+String _unjoinReasonValue(UnjoinReason reason) {
+  return switch (reason) {
+    UnjoinReason.changeOfPlans => 'change_of_plans',
+    UnjoinReason.schedulingConflict => 'scheduling_conflict',
+    UnjoinReason.noLongerInterested => 'no_longer_interested',
+    UnjoinReason.other => 'other',
+  };
 }

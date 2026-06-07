@@ -36,6 +36,10 @@ class AppColors {
   static const Color accentLight2 = Color(0xFFA3D4F4);
   static const Color accentLightest = Color(0xFFEBF5FC);
 
+  /// Use instead of pure black for borders, outlines, and high-contrast text —
+  /// a soft dark grey reads better than #000 on the app's light surfaces.
+  static const Color ink = Color(0xFF24252B);
+
   static Color get bgPrimary => _isDark ? darkBgPrimary : lightBgPrimary;
   static Color get bgSecondary => _isDark ? darkBgSecondary : lightBgSecondary;
   static Color get bgTertiary => _isDark ? darkBgTertiary : lightBgTertiary;

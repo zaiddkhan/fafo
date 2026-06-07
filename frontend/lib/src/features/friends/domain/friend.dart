@@ -128,6 +128,20 @@ class FriendStatsResponse {
   }
 }
 
+class BlockedUserResponse {
+  const BlockedUserResponse({required this.user, required this.blockedAt});
+
+  final PublicUserResponse user;
+  final DateTime blockedAt;
+
+  factory BlockedUserResponse.fromJson(Map<String, dynamic> json) {
+    return BlockedUserResponse(
+      user: PublicUserResponse.fromJson(json['user'] as Map<String, dynamic>),
+      blockedAt: DateTime.parse(json['blocked_at'] as String),
+    );
+  }
+}
+
 class FriendInviteCreateResponse {
   const FriendInviteCreateResponse({
     required this.token,

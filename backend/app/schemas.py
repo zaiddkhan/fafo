@@ -150,6 +150,57 @@ class BlockedUserResponse(BaseModel):
     blocked_at: datetime
 
 
+# --- Groups ---
+
+
+class GroupInviteStatus(str, Enum):
+    pending = "pending"
+    accepted = "accepted"
+    declined = "declined"
+
+
+class GroupCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class GroupUpdateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class GroupMemberResponse(BaseModel):
+    user: PublicUserResponse
+    joined_at: datetime
+    is_admin: bool = False
+
+
+class GroupResponse(BaseModel):
+    id: str
+    name: str
+    admin_uid: str
+    created_at: datetime
+    updated_at: datetime
+    members: list[GroupMemberResponse] = Field(default_factory=list)
+
+
+class GroupInviteCreateRequest(BaseModel):
+    recipient_uid: str
+
+
+class GroupInviteResponse(BaseModel):
+    id: str
+    group_id: str
+    group_name: str
+    inviter: PublicUserResponse
+    recipient: PublicUserResponse
+    status: GroupInviteStatus
+    created_at: datetime
+    responded_at: Optional[datetime] = None
+
+
+class GroupTransferRequest(BaseModel):
+    new_admin_uid: str
+
+
 # --- Creators ---
 
 
@@ -312,6 +363,7 @@ class EventBannerUploadResponse(BaseModel):
 
 class EventCancelRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=200)
+    answers: list[str] = Field(default_factory=list, max_length=5)
 
 
 class EventJoinResponse(BaseModel):
@@ -328,6 +380,7 @@ class UnjoinReason(str, Enum):
 
 class EventUnjoinRequest(BaseModel):
     reason: UnjoinReason
+    answers: list[str] = Field(default_factory=list, max_length=5)
 
 
 class JoineeResponse(BaseModel):
@@ -344,3 +397,111 @@ class EventListQuery(BaseModel):
     radius_km: float = Field(default=15.0)
     category_id: Optional[str] = None
     event_type: Optional[EventType] = None
+
+
+# --- Side Quests ---
+
+
+class QuestDifficulty(str, Enum):
+    easy = "easy"
+    medium = "medium"
+    hard = "hard"
+
+
+class QuestCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=500)
+    difficulty: QuestDifficulty
+    city: Optional[str] = Field(default=None, max_length=80)
+    area: Optional[Area] = None
+    published: bool = True
+
+
+class QuestUpdateRequest(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    description: Optional[str] = Field(default=None, max_length=500)
+    difficulty: Optional[QuestDifficulty] = None
+    city: Optional[str] = Field(default=None, max_length=80)
+    area: Optional[Area] = None
+    published: Optional[bool] = None
+
+
+class QuestResponse(BaseModel):
+    id: str
+    title: str
+    description: Optional[str]
+    difficulty: QuestDifficulty
+    city: Optional[str]
+    area: Optional[Area]
+    published: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+# --- Nudge Cards ---
+
+
+class NudgeFeedType(str, Enum):
+    friend = "friend"
+    group = "group"
+
+
+class NudgeStatus(str, Enum):
+    active = "active"
+    accepted_timer = "accepted_timer"
+    resolved = "resolved"
+    expired = "expired"
+
+
+class NudgeVote(str, Enum):
+    yes = "yes"
+    no = "no"
+
+
+class NudgeCreateRequest(BaseModel):
+    feed_type: NudgeFeedType
+    target_id: str
+    title: str = Field(min_length=1, max_length=100)
+    location: Optional[str] = Field(default=None, max_length=500)
+    response_window_minutes: int
+
+    @field_validator("response_window_minutes")
+    @classmethod
+    def valid_window(cls, v: int) -> int:
+        if v not in (5, 10, 15, 20):
+            raise ValueError("Response window must be 5, 10, 15, or 20 minutes")
+        return v
+
+
+class NudgeRespondRequest(BaseModel):
+    vote: NudgeVote
+
+
+class NudgeResponse(BaseModel):
+    id: str
+    feed_type: NudgeFeedType
+    feed_id: str
+    sender_uid: str
+    title: str
+    location: Optional[str]
+    response_window_minutes: int
+    status: NudgeStatus
+    expires_at: datetime
+    accepted_timer_started_at: Optional[datetime] = None
+    reminder_count: int
+    reminder_limit: int
+    next_reminder_available_at: Optional[datetime] = None
+    votes: dict[str, NudgeVote | str] = Field(default_factory=dict)
+    yes_count: int = 0
+    voter_count: int = 0
+    expected_voter_count: int = 0
+    created_at: datetime
+    resolved_at: Optional[datetime] = None
+
+
+class ProfileStatsResponse(BaseModel):
+    upcoming_events: int = 0
+    events_joined: int = 0
+    side_quests_activated: int = 0
+    friends_count: int = 0
+    current_streak: int = 0

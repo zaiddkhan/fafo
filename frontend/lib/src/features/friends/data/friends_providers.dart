@@ -26,3 +26,7 @@ final friendSearchProvider =
   if (query.trim().length < 2) return const [];
   return ref.watch(friendsRepositoryProvider).searchUsers(query.trim());
 });
+
+final blockedUsersProvider = FutureProvider.autoDispose<List<BlockedUserResponse>>((ref) {
+  return ref.watch(friendsRepositoryProvider).getBlockedUsers();
+});

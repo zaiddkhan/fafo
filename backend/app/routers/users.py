@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+from uuid import uuid4
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from google.cloud import firestore
 from google.cloud.firestore import GeoPoint
@@ -6,9 +9,11 @@ from app.dependencies import get_current_user
 from app.firebase import get_firestore
 from app.schemas import (
     Area,
+    NegativeActionAnswers,
     PhotoUploadResponse,
     ProfileResponse,
     ProfileSetupRequest,
+    ProfileStatsResponse,
     PublicUserResponse,
     TooltipCompleteResponse,
     UsernameCheckResponse,
@@ -147,6 +152,76 @@ def get_public_profile(uid: str, current_user: dict = Depends(get_current_user))
             detail="User not found",
         )
     return public_user_from_doc(uid, doc.to_dict(), current_user["uid"])
+
+
+@router.get("/me/stats", response_model=ProfileStatsResponse)
+def get_my_stats(current_user: dict = Depends(get_current_user)):
+    uid = current_user["uid"]
+    db = get_firestore()
+    user_doc = db.collection("users").document(uid).get()
+    user_data = user_doc.to_dict() if user_doc.exists else {}
+    friends_count = len(list(db.collection("users").document(uid).collection("friends").stream()))
+    # Avoid collection-group uid index dependency while Firestore indexes build.
+    events_joined = sum(
+        1
+        for event_doc in db.collection("events").limit(500).stream()
+        if event_doc.reference.collection("joinees").document(uid).get().exists
+    )
+    side_quests_activated = len(list(db.collection("users").document(uid).collection("quest_activations").stream()))
+    current_streak = int(user_data.get("current_streak", 0) or 0)
+    last_activity_date = user_data.get("last_activity_date")
+    today = datetime.now(timezone.utc).date()
+    if last_activity_date:
+        last_date = datetime.fromisoformat(last_activity_date).date()
+        if (today - last_date).days > 1:
+            current_streak = 0
+    return ProfileStatsResponse(
+        upcoming_events=events_joined,
+        events_joined=events_joined,
+        side_quests_activated=side_quests_activated,
+        friends_count=friends_count,
+        current_streak=current_streak,
+    )
+
+
+@router.delete("/me", status_code=status.HTTP_200_OK)
+def delete_account(body: NegativeActionAnswers, current_user: dict = Depends(get_current_user)):
+    uid = current_user["uid"]
+    db = get_firestore()
+    user_ref = db.collection("users").document(uid)
+    for friend_doc in user_ref.collection("friends").stream():
+        db.collection("users").document(friend_doc.id).collection("friends").document(uid).delete()
+        friend_doc.reference.delete()
+    for member_doc in db.collection_group("members").where("uid", "==", uid).stream():
+        group_ref = member_doc.reference.parent.parent
+        if group_ref is not None:
+            group_data = group_ref.get().to_dict() or {}
+            member_doc.reference.delete()
+            if group_data.get("admin_uid") == uid:
+                remaining = list(group_ref.collection("members").order_by("joined_at").stream())
+                if remaining:
+                    next_uid = remaining[0].id
+                    group_ref.update({"admin_uid": next_uid, "updated_at": datetime.now(timezone.utc)})
+                    remaining[0].reference.update({"is_admin": True})
+                else:
+                    group_ref.update({"dissolved": True, "dissolved_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc)})
+        else:
+            member_doc.reference.delete()
+    for event_doc in db.collection("events").limit(500).stream():
+        joinee_ref = event_doc.reference.collection("joinees").document(uid)
+        if joinee_ref.get().exists:
+            joinee_ref.delete()
+            event_doc.reference.update({"joinee_count": max(0, (event_doc.to_dict() or {}).get("joinee_count", 1) - 1)})
+    for nudge_doc in db.collection("nudges").where("participant_uids", "array_contains", uid).stream():
+        nudge_doc.reference.update({"status": "expired", "resolved_at": datetime.now(timezone.utc)})
+    db.collection("negative_action_responses").document(str(uuid4())).set({
+        "actor_uid": uid,
+        "action_type": "delete_account",
+        "answers": body.answers,
+        "created_at": datetime.now(timezone.utc),
+    })
+    user_ref.update({"deleted": True, "display_name": "", "username": "", "photo_url": None, "deleted_at": datetime.now(timezone.utc)})
+    return {"detail": "Account deleted"}
 
 
 @router.post("/profile/photo", response_model=PhotoUploadResponse)

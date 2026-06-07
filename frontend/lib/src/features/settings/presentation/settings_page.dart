@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,11 +7,17 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:fafu/src/core/config/map_config.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
+import 'package:fafu/src/core/network/api_exception.dart';
+import 'package:fafu/src/core/network/auth_token_provider.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/theme_mode_controller.dart';
 import 'package:fafu/src/features/creators/presentation/creator_application_page.dart';
+import 'package:fafu/src/features/location/selected_area_controller.dart';
+import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
+import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -26,6 +33,82 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _pushNotifications = true;
   bool _emailNotifications = false;
   bool _locationSharing = true;
+  bool _busy = false;
+
+  Future<List<String>?> _negativeAnswers(String title) async {
+    final controllers = List.generate(3, (_) => TextEditingController());
+    final result = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Answer these questions to confirm this destructive action.'),
+            const SizedBox(height: 12),
+            TextField(controller: controllers[0], decoration: const InputDecoration(labelText: 'Why are you doing this?')),
+            TextField(controller: controllers[1], decoration: const InputDecoration(labelText: 'What could have prevented this?')),
+            TextField(controller: controllers[2], decoration: const InputDecoration(labelText: 'Anything else we should know?')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              final answers = controllers.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList();
+              if (answers.length < 3) return;
+              Navigator.of(context).pop(answers);
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    for (final c in controllers) {
+      c.dispose();
+    }
+    return result;
+  }
+
+  /// Fully signs the user out: clears local onboarding state, signs out of
+  /// Firebase (otherwise the Dio interceptor silently re-fetches a token), and
+  /// drops the cached auth token.
+  Future<void> _signOutLocally() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(onboardingCompleteKey);
+    await FirebaseAuth.instance.signOut();
+    ref.read(authTokenProvider.notifier).clearToken();
+  }
+
+  Future<void> _changeArea() async {
+    final result = await showLocationSearchSheet(context);
+    if (result == null) return;
+    await ref.read(selectedAreaProvider.notifier).setArea(
+          lat: result.lat,
+          lng: result.lng,
+          label: result.label,
+        );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Area set to ${result.label}. The map will re-centre.')),
+      );
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final answers = await _negativeAnswers('Delete account?');
+    if (answers == null) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(usersRepositoryProvider).deleteAccount(answers: answers);
+      await _signOutLocally();
+      if (mounted) context.go('/');
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _showMapDataLicenses() async {
     final theme = Theme.of(context);
@@ -79,6 +162,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final theme = Theme.of(context);
     final themeMode = ref.watch(themeModeControllerProvider);
     final isDarkMode = themeMode == ThemeMode.dark;
+    final selectedArea = ref.watch(selectedAreaProvider);
+    final areaLabel = selectedArea == null
+        ? 'Auto (GPS)'
+        : selectedArea.label.split(',').first;
 
     return Scaffold(
       body: SafeArea(
@@ -134,12 +221,40 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   _SettingsTile(
                     icon: Icons.person_outline,
                     title: 'Edit Profile',
-                    onTap: () {},
+                    onTap: () {
+                      final profile = ref.read(currentProfileProvider).value;
+                      if (profile == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Profile still loading…')),
+                        );
+                        return;
+                      }
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => EditProfilePage(profile: profile)),
+                      );
+                    },
                   ),
                   _SettingsTile(
-                    icon: Icons.interests_outlined,
-                    title: 'Update Interests',
-                    onTap: () {},
+                    icon: Icons.place_outlined,
+                    title: 'Change Area',
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 140),
+                          child: Text(
+                            areaLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                            style: theme.textTheme.labelMedium,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 20),
+                      ],
+                    ),
+                    onTap: _changeArea,
                   ),
                   _SettingsTile(
                     icon: Icons.verified_outlined,
@@ -218,13 +333,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(height: AppSpacing.xxl),
 
+                  AppButton(
+                    label: _busy ? 'Deleting…' : 'Delete Account',
+                    variant: AppButtonVariant.secondary,
+                    onPressed: _busy ? null : _deleteAccount,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
                   // Logout
                   AppButton(
                     label: 'Log Out',
                     variant: AppButtonVariant.secondary,
                     onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.remove(onboardingCompleteKey);
+                      await _signOutLocally();
                       if (context.mounted) context.go('/');
                     },
                   ),

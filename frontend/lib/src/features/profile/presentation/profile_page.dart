@@ -7,68 +7,21 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
+import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
+import 'package:fafu/src/features/quests/data/quests_providers.dart';
+import 'package:fafu/src/features/quests/data/quests_repository.dart';
+import 'package:fafu/src/features/quests/domain/quest.dart';
+import 'package:fafu/src/features/quests/presentation/quests_page.dart';
 import 'package:fafu/src/features/settings/presentation/settings_page.dart';
+import 'package:fafu/src/features/users/data/users_providers.dart';
+import 'package:fafu/src/features/users/data/users_repository.dart';
+import 'package:fafu/src/features/users/domain/profile.dart';
+import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key, required this.savedEvents});
 
   final List<MockEvent> savedEvents;
-
-  static const _quests = [
-    _ProfileQuest(
-      title: 'Plan a night out with friends',
-      badge: 'Go Out',
-      difficulty: _QuestDifficulty.easy,
-    ),
-    _ProfileQuest(
-      title: 'Check into your first live music group',
-      badge: 'First Step',
-      badgeColor: Color(0xFF5BA8FF),
-      difficulty: _QuestDifficulty.easy,
-    ),
-    _ProfileQuest(
-      title: 'Save 3 spots you want to try this week',
-      badge: 'Scout',
-      badgeColor: Color(0xFF7A67F8),
-      difficulty: _QuestDifficulty.easy,
-    ),
-    _ProfileQuest(
-      title: 'Join a plan outside your usual neighborhood',
-      badge: 'Explore',
-      badgeColor: Color(0xFF16A085),
-      difficulty: _QuestDifficulty.easy,
-    ),
-    _ProfileQuest(
-      title: 'Try a new restaurant with friends this week',
-      badge: 'Adventure',
-      badgeColor: Color(0xFF44B64A),
-      difficulty: _QuestDifficulty.medium,
-    ),
-    _ProfileQuest(
-      title: 'Host a full weekend plan for your crew',
-      badge: 'Leader',
-      badgeColor: Color(0xFFE08E2B),
-      difficulty: _QuestDifficulty.hard,
-    ),
-    _ProfileQuest(
-      title: 'Plan 3 back-to-back group experiences in one weekend',
-      badge: 'Marathon',
-      badgeColor: Color(0xFFD35400),
-      difficulty: _QuestDifficulty.hard,
-    ),
-    _ProfileQuest(
-      title: 'Bring 10 friends into one public event plan',
-      badge: 'Connector',
-      badgeColor: Color(0xFFC0392B),
-      difficulty: _QuestDifficulty.hard,
-    ),
-    _ProfileQuest(
-      title: 'Create a trusted organizer streak for 4 weekends',
-      badge: 'Verified',
-      badgeColor: Color(0xFFB9770E),
-      difficulty: _QuestDifficulty.hard,
-    ),
-  ];
 
   static const _pastExperiences = [
     _PastExperience(
@@ -94,14 +47,11 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final joinedEvents = ref.watch(_joinedEventsProvider);
+    final stats = ref.watch(profileStatsProvider);
+    final profile = ref.watch(currentProfileProvider);
+    final quests = ref.watch(questsListProvider);
     final rsvpedEvents = savedEvents.take(3).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final questSections = {
-      for (final difficulty in _QuestDifficulty.values)
-        difficulty: _quests
-            .where((quest) => quest.difficulty == difficulty)
-            .toList(),
-    };
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1F1F1F) : AppColors.bgPrimary,
@@ -111,38 +61,54 @@ class ProfilePage extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Expanded(
-                  child: Text(
-                    'Profile',
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      color: AppColors.accentPrimary,
-                      fontSize: 28,
-                      height: 1,
-                    ),
+                Text(
+                  'Profile',
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    color: AppColors.accentPrimary,
+                    fontSize: 28,
+                    height: 1,
                   ),
                 ),
-                GestureDetector(
-                  onTap: () => context.push(SettingsPage.routePath),
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF252525) : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.8)
-                            : const Color(0xFF171717),
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.settings_outlined,
-                      color: isDark ? Colors.white : const Color(0xFF171717),
-                      size: 20,
+                const Spacer(),
+                if (profile.hasValue)
+                  _HeaderIconButton(
+                    icon: Icons.edit_outlined,
+                    isDark: isDark,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => EditProfilePage(profile: profile.value!)),
                     ),
                   ),
+                if (profile.hasValue) const SizedBox(width: 10),
+                _HeaderIconButton(
+                  icon: Icons.settings_outlined,
+                  isDark: isDark,
+                  onTap: () => context.push(SettingsPage.routePath),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+            profile.when(
+              loading: () => const SizedBox(height: 64, child: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))),
+              error: (_, _) => const SizedBox.shrink(),
+              data: (p) => _IdentityHeader(profile: p, isDark: isDark),
+            ),
+            const SizedBox(height: 18),
+            stats.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+              data: (s) => Row(
+                children: [
+                  Expanded(child: _StatPill(label: 'Upcoming', value: '${s.upcomingEvents}')),
+                  const SizedBox(width: 6),
+                  Expanded(child: _StatPill(label: 'Joined', value: '${s.eventsJoined}')),
+                  const SizedBox(width: 6),
+                  Expanded(child: _StatPill(label: 'Quests', value: '${s.sideQuestsActivated}')),
+                  const SizedBox(width: 6),
+                  Expanded(child: _StatPill(label: 'Friends', value: '${s.friendsCount}')),
+                  const SizedBox(width: 6),
+                  Expanded(child: _StatPill(label: 'Streak', value: '${s.currentStreak}')),
+                ],
+              ),
             ),
             const SizedBox(height: 18),
             _SectionHeader(title: 'Joined events', actionLabel: 'View All'),
@@ -191,28 +157,43 @@ class ProfilePage extends ConsumerWidget {
               },
             ),
             const SizedBox(height: 12),
-            Text(
-              'Quests for you',
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                color: isDark ? Colors.white : const Color(0xFF171717),
-                fontSize: 18,
+            _SectionHeader(
+              title: 'Side Quests',
+              actionLabel: 'View All',
+              onAction: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const QuestsPage()),
               ),
             ),
-            const SizedBox(height: 14),
-            ...questSections.entries.expand(
-              (entry) => [
-                _QuestSectionHeader(
-                  title: entry.key.label,
-                  count: entry.value.length,
-                ),
-                const SizedBox(height: 10),
-                ...entry.value.map(
-                  (quest) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: _QuestCard(quest: quest),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 12),
+            quests.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.only(bottom: 18),
+                child: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)),
+              ),
+              error: (error, _) => Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: Text(error.toString(), style: const TextStyle(color: Color(0xFFE5484D))),
+              ),
+              data: (items) {
+                if (items.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.only(bottom: 18),
+                    child: Text('No side quests published yet.'),
+                  );
+                }
+                return Column(
+                  children: items.take(4).map(
+                    (quest) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _SideQuestCard(
+                        quest: quest,
+                        isDark: isDark,
+                        onStart: () => _startQuest(ref, context, quest.id),
+                      ),
+                    ),
+                  ).toList(),
+                );
+              },
             ),
             const SizedBox(height: 6),
             _SectionHeader(
@@ -236,6 +217,194 @@ class ProfilePage extends ConsumerWidget {
 final _joinedEventsProvider = FutureProvider.autoDispose<List<EventResponse>>(
   (ref) => ref.watch(eventsRepositoryProvider).getJoinedEvents(limit: 20),
 );
+
+/// Reverse-geocoded label for the profile's area coordinate.
+final _areaLabelProvider = FutureProvider.autoDispose.family<String?, ({double lat, double lng})>(
+  (ref, coord) => reverseGeocodeLabel(coord.lat, coord.lng),
+);
+
+Future<void> _startQuest(WidgetRef ref, BuildContext context, String questId) async {
+  try {
+    await ref.read(questsRepositoryProvider).activateQuest(questId);
+    ref.invalidate(profileStatsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quest activated.')));
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({required this.icon, required this.isDark, required this.onTap});
+  final IconData icon;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF252525) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF171717)),
+        ),
+        child: Icon(icon, color: isDark ? Colors.white : const Color(0xFF171717), size: 20),
+      ),
+    );
+  }
+}
+
+class _IdentityHeader extends ConsumerWidget {
+  const _IdentityHeader({required this.profile, required this.isDark});
+  final ProfileResponse profile;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final area = profile.area;
+    final areaLabel = area == null
+        ? null
+        : ref.watch(_areaLabelProvider((lat: area.lat, lng: area.lng)));
+    final name = profile.displayName.isEmpty ? '@${profile.username}' : profile.displayName;
+
+    return Row(
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: AppColors.bgSecondary,
+            shape: BoxShape.circle,
+            border: Border.all(color: isDark ? Colors.white24 : const Color(0xFF171717), width: 1.6),
+            image: profile.photoUrl == null
+                ? null
+                : DecorationImage(image: NetworkImage(profile.photoUrl!), fit: BoxFit.cover),
+          ),
+          child: profile.photoUrl == null
+              ? Center(
+                  child: Text(
+                    (profile.displayName.isEmpty ? profile.username : profile.displayName).characters.first.toUpperCase(),
+                    style: theme.textTheme.displayMedium?.copyWith(fontSize: 24),
+                  ),
+                )
+              : null,
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.displayMedium?.copyWith(
+                  color: isDark ? Colors.white : const Color(0xFF171717),
+                  fontSize: 20,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '@${profile.username}',
+                style: theme.textTheme.labelLarge?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.place_outlined, size: 14, color: AppColors.textSecondary),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      area == null
+                          ? 'Area not set'
+                          : (areaLabel?.value ?? '${area.lat.toStringAsFixed(3)}, ${area.lng.toStringAsFixed(3)}'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SideQuestCard extends StatelessWidget {
+  const _SideQuestCard({required this.quest, required this.isDark, required this.onStart});
+  final QuestResponse quest;
+  final bool isDark;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (quest.difficulty) {
+      QuestDifficulty.easy => const Color(0xFF35B45A),
+      QuestDifficulty.medium => const Color(0xFFE6B23A),
+      QuestDifficulty.hard => const Color(0xFFE5484D),
+    };
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF252525) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.85) : const Color(0xFF171717), width: 1.4),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  quest.title,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF171717),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(6)),
+                      child: Text(quest.difficulty.badgeLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(quest.difficulty.timeEstimate, style: const TextStyle(color: Color(0xFF8A8A92), fontWeight: FontWeight.w700, fontSize: 11)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: onStart,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              decoration: BoxDecoration(color: AppColors.accentPrimary, borderRadius: BorderRadius.circular(8)),
+              child: const Text('Start', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _JoinedEventCard extends StatelessWidget {
   const _JoinedEventCard({required this.event});
@@ -287,21 +456,43 @@ class _JoinedEventCard extends StatelessWidget {
   }
 }
 
-enum _QuestDifficulty {
-  easy('Easy'),
-  medium('Medium'),
-  hard('Hard');
-
-  const _QuestDifficulty(this.label);
+class _StatPill extends StatelessWidget {
+  const _StatPill({required this.label, required this.value});
 
   final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 16)),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.actionLabel});
+  const _SectionHeader({required this.title, required this.actionLabel, this.onAction});
 
   final String title;
   final String actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -318,12 +509,15 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        Text(
-          actionLabel,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: AppColors.accentPrimary,
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+        GestureDetector(
+          onTap: onAction,
+          child: Text(
+            actionLabel,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: AppColors.accentPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
@@ -441,7 +635,7 @@ class _RsvpCard extends StatelessWidget {
                 _CardActionButton(
                   label: 'LOCATION',
                   backgroundColor: AppColors.accentPrimary,
-                  textColor: Color(0xFF252525),
+                  textColor: Colors.white,
                 ),
                 const SizedBox(height: 8),
                 _CardActionButton(
@@ -583,199 +777,6 @@ class _PastExperienceCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _QuestCard extends StatelessWidget {
-  const _QuestCard({required this.quest});
-
-  final _ProfileQuest quest;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.85)
-        : const Color(0xFF171717);
-    final titleColor = isDark ? Colors.white : const Color(0xFF171717);
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  quest.title,
-                  style: theme.textTheme.displayMedium?.copyWith(
-                    color: titleColor,
-                    fontSize: 14,
-                    height: 1.3,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: quest.badgeColor,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  quest.badge,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _QuestButton(
-                  label: 'Interested',
-                  backgroundColor: AppColors.accentPrimary,
-                  textColor: Color(0xFF252525),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _QuestButton(
-                  label: 'Not Interested',
-                  backgroundColor: isDark
-                      ? const Color(0xFF2C2C2C)
-                      : const Color(0xFFF1F1F1),
-                  textColor: isDark
-                      ? const Color(0xFFC9C9C9)
-                      : const Color(0xFF5F5F5F),
-                  borderColor: isDark
-                      ? Colors.white.withValues(alpha: 0.45)
-                      : const Color(0xFF171717),
-                  isOutlined: true,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuestSectionHeader extends StatelessWidget {
-  const _QuestSectionHeader({required this.title, required this.count});
-
-  final String title;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Row(
-      children: [
-        Text(
-          title,
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: isDark ? Colors.white : const Color(0xFF171717),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.22)
-                  : const Color(0xFF171717),
-            ),
-          ),
-          child: Text(
-            '$count',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: isDark ? Colors.white70 : const Color(0xFF5F5F5F),
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuestButton extends StatelessWidget {
-  const _QuestButton({
-    required this.label,
-    required this.backgroundColor,
-    required this.textColor,
-    this.isOutlined = false,
-    this.borderColor,
-  });
-
-  final String label;
-  final Color backgroundColor;
-  final Color textColor;
-  final bool isOutlined;
-  final Color? borderColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 28,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(6),
-        border: isOutlined
-            ? Border.all(
-                color: borderColor ?? Colors.white.withValues(alpha: 0.45),
-              )
-            : null,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: textColor,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileQuest {
-  const _ProfileQuest({
-    required this.title,
-    required this.badge,
-    required this.difficulty,
-    this.badgeColor = const Color(0xFF2A66F6),
-  });
-
-  final String title;
-  final String badge;
-  final _QuestDifficulty difficulty;
-  final Color badgeColor;
 }
 
 class _PastExperience {

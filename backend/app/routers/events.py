@@ -15,6 +15,7 @@ from firebase_admin import storage
 from google.cloud import firestore
 from google.cloud.firestore import GeoPoint
 
+from app.activity import record_meaningful_action
 from app.dependencies import get_current_user, get_creator_user, validate_document_id
 from app.firebase import get_firestore
 from app.geo import encode_geohash, geohash_bounds_for_radius
@@ -262,7 +263,10 @@ def list_events(
 def list_my_events(
     include_archived: bool = Query(default=False),
     limit: int = Query(default=DEFAULT_PAGE_LIMIT, le=MAX_PAGE_LIMIT),
-    current_user: dict = Depends(get_creator_user),
+    # Not gated on is_creator: a revoked creator must still manage events they
+    # already created (PRD: active events remain live). Ownership is enforced
+    # by the creator_uid == uid filter below.
+    current_user: dict = Depends(get_current_user),
 ):
     uid = current_user["uid"]
     db = get_firestore()
@@ -290,26 +294,12 @@ def list_joined_events(
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(minutes=VISIBILITY_WINDOW_MINUTES)
 
-    joined_docs = (
-        db.collection_group("joinees")
-        .where("uid", "==", uid)
-        .order_by("joined_at", direction=firestore.Query.DESCENDING)
-        .limit(limit)
-        .stream()
-    )
-
-    event_refs = []
-    for joined_doc in joined_docs:
-        event_ref = joined_doc.reference.parent.parent
-        if event_ref is not None:
-            event_refs.append(event_ref)
-
-    if not event_refs:
-        return []
-
+    # Avoid collection-group uid index dependency while Firestore single-field
+    # indexes are still building. This is less efficient but reliable for dev/MVP.
     results = []
-    for doc in db.get_all(event_refs):
-        if not doc.exists:
+    for doc in db.collection("events").limit(MAX_PAGE_LIMIT * 5).stream():
+        joinee_doc = doc.reference.collection("joinees").document(uid).get()
+        if not joinee_doc.exists:
             continue
         data = doc.to_dict()
         if data.get("cancelled") or _ensure_utc(data["date_time"]) < cutoff:
@@ -347,7 +337,9 @@ def get_event(event_id: str, current_user: dict = Depends(get_current_user)):
 def update_event(
     event_id: str,
     body: EventUpdateRequest,
-    current_user: dict = Depends(get_creator_user),
+    # Owner-gated below (creator_uid check), not is_creator-gated, so a revoked
+    # creator can still edit/manage events they already created.
+    current_user: dict = Depends(get_current_user),
 ):
     validate_document_id(event_id)
     uid = current_user["uid"]
@@ -403,7 +395,9 @@ def update_event(
 def cancel_event(
     event_id: str,
     body: EventCancelRequest,
-    current_user: dict = Depends(get_creator_user),
+    # Owner-gated below, not is_creator-gated (revoked creators can still cancel
+    # their own active events).
+    current_user: dict = Depends(get_current_user),
 ):
     validate_document_id(event_id)
     uid = current_user["uid"]
@@ -436,6 +430,14 @@ def cancel_event(
             "updated_at": datetime.now(timezone.utc),
         }
     )
+    if body.answers:
+        db.collection("negative_action_responses").document(str(uuid4())).set({
+            "actor_uid": uid,
+            "target_id": event_id,
+            "action_type": "cancel_event",
+            "answers": body.answers,
+            "created_at": datetime.now(timezone.utc),
+        })
 
     return {"detail": "Event cancelled"}
 
@@ -504,6 +506,7 @@ def join_event(event_id: str, current_user: dict = Depends(get_current_user)):
 
     transaction = db.transaction()
     joined_at = _join_event_txn(transaction, doc_ref, joinee_ref)
+    record_meaningful_action(db, uid, "join_event", {"event_id": event_id})
 
     return EventJoinResponse(event_id=event_id, joined_at=joined_at)
 
@@ -543,8 +546,26 @@ def unjoin_event(
     doc_ref = db.collection("events").document(event_id)
     joinee_ref = doc_ref.collection("joinees").document(uid)
 
+    event_doc = doc_ref.get()
+    if event_doc.exists:
+        event_time = _ensure_utc(event_doc.to_dict()["date_time"])
+        leave_cutoff = event_time + timedelta(minutes=VISIBILITY_WINDOW_MINUTES)
+        if datetime.now(timezone.utc) > leave_cutoff:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Leave window has closed",
+            )
+
     transaction = db.transaction()
     _unjoin_event_txn(transaction, doc_ref, joinee_ref)
+    if body.answers:
+        db.collection("negative_action_responses").document(str(uuid4())).set({
+            "actor_uid": uid,
+            "target_id": event_id,
+            "action_type": "unjoin_event",
+            "answers": body.answers,
+            "created_at": datetime.now(timezone.utc),
+        })
 
     return {"detail": "Unjoined successfully", "reason": body.reason.value}
 
@@ -554,7 +575,8 @@ def list_joinees(
     event_id: str,
     limit: int = Query(default=DEFAULT_PAGE_LIMIT, le=MAX_PAGE_LIMIT),
     cursor: str | None = Query(default=None),
-    current_user: dict = Depends(get_creator_user),
+    # Owner-gated below; revoked creators can still see their event's joinees.
+    current_user: dict = Depends(get_current_user),
 ):
     validate_document_id(event_id)
     uid = current_user["uid"]

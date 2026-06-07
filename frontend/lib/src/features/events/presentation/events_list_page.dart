@@ -498,8 +498,8 @@ class _SpotlightCard extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.05),
-                    Colors.black.withValues(alpha: 0.82),
+                    AppColors.ink.withValues(alpha: 0.05),
+                    AppColors.ink.withValues(alpha: 0.82),
                   ],
                 ),
               ),
@@ -513,7 +513,9 @@ class _SpotlightCard extends StatelessWidget {
                   Text(
                     'TODAY • ${category?.emoji ?? '⚡'} ${category?.name ?? 'Event'}',
                     style: theme.textTheme.labelLarge?.copyWith(
-                      color: AppColors.accentPrimary,
+                      // Light blue reads on the photo's dark scrim; the medium
+                      // brand blue was invisible over images.
+                      color: AppColors.accentLight2,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -606,9 +608,9 @@ class _BlogCard extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.05),
-                    Colors.black.withValues(alpha: 0.32),
-                    Colors.black.withValues(alpha: 0.88),
+                    AppColors.ink.withValues(alpha: 0.05),
+                    AppColors.ink.withValues(alpha: 0.32),
+                    AppColors.ink.withValues(alpha: 0.88),
                   ],
                   stops: const [0, 0.48, 1],
                 ),
@@ -676,7 +678,7 @@ class _BlogCard extends StatelessWidget {
                         ),
                         child: const Icon(
                           Icons.arrow_forward_rounded,
-                          color: Color(0xFF161616),
+                          color: Colors.white,
                           size: 18,
                         ),
                       ),
@@ -791,7 +793,7 @@ class _CategoryChip extends StatelessWidget {
           label,
           style: theme.textTheme.labelLarge?.copyWith(
             color: isSelected
-                ? const Color(0xFF181818)
+                ? Colors.white
                 : isDark
                 ? Colors.white
                 : const Color(0xFF303030),

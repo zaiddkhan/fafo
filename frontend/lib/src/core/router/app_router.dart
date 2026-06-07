@@ -9,9 +9,12 @@ import 'package:fafu/src/features/chat/presentation/chat_page.dart';
 import 'package:fafu/src/features/creators/presentation/creator_application_page.dart';
 import 'package:fafu/src/features/events/presentation/event_detail_page.dart';
 import 'package:fafu/src/features/friends/presentation/friends_page.dart';
+import 'package:fafu/src/features/groups/presentation/groups_page.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
+import 'package:fafu/src/features/profile/presentation/public_profile_page.dart';
+import 'package:fafu/src/features/friends/domain/friend.dart';
 import 'package:fafu/src/features/search/presentation/search_page.dart';
 import 'package:fafu/src/features/settings/presentation/settings_page.dart';
 import 'package:fafu/src/features/splash/presentation/splash_page.dart';
@@ -107,6 +110,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: FriendsPage.routePath,
         name: FriendsPage.routeName,
         builder: (context, state) => const FriendsPage(),
+      ),
+      GoRoute(
+        path: GroupsPage.routePath,
+        name: GroupsPage.routeName,
+        builder: (context, state) => const GroupsPage(),
+      ),
+      GoRoute(
+        path: PublicProfilePage.routePath,
+        name: PublicProfilePage.routeName,
+        builder: (context, state) => PublicProfilePage(user: state.extra as PublicUserResponse),
       ),
       GoRoute(
         path: CreatorApplicationPage.routePath,

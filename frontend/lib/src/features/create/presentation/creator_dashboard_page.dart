@@ -8,6 +8,7 @@ import 'package:fafu/src/features/create/presentation/create_event_page.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/negative_action_dialog.dart';
 
 class CreatorDashboardPage extends ConsumerStatefulWidget {
   const CreatorDashboardPage({super.key});
@@ -91,19 +92,24 @@ class _CreatorDashboardPageState extends ConsumerState<CreatorDashboardPage> {
   }
 
   Future<void> _cancel(EventResponse event) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel event?'),
-        content: Text('This will remove "${event.title}" from discovery.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Cancel event')),
-        ],
-      ),
+    // PRD: cancelling an event is a negative action gated by a 3-to-5 question flow.
+    final answers = await showNegativeActionQuestionnaire(
+      context,
+      title: 'Cancel "${event.title}"?',
+      intro: 'Cancellation is irreversible and notifies everyone who joined. Confirm with a few questions.',
+      confirmLabel: 'Cancel event',
+      questions: const [
+        'Why are you cancelling this event?',
+        'Could anything have kept it running?',
+        'Anything attendees should know?',
+      ],
     );
-    if (confirm != true) return;
-    await ref.read(eventsRepositoryProvider).cancelEvent(event.id, reason: 'Cancelled by creator');
+    if (answers == null) return;
+    await ref.read(eventsRepositoryProvider).cancelEvent(
+          event.id,
+          reason: answers.first,
+          answers: answers,
+        );
     await _load();
   }
 

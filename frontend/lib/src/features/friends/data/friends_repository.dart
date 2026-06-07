@@ -22,6 +22,18 @@ class FriendsRepository {
     }
   }
 
+  Future<List<PublicUserResponse>> syncContacts(List<String> phoneNumbers) async {
+    try {
+      final response = await _dio.post('/friends/contacts/sync', data: {'phone_numbers': phoneNumbers});
+      final data = response.data as Map<String, dynamic>;
+      return (data['matches'] as List)
+          .map((e) => PublicUserResponse.fromJson((e as Map<String, dynamic>)['user'] as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<List<PublicUserResponse>> searchUsers(String query) async {
     try {
       final response = await _dio.get(
@@ -112,6 +124,17 @@ class FriendsRepository {
   Future<void> unfriend(String uid, {required List<String> answers}) async {
     try {
       await _dio.delete('/friends/$uid', data: {'answers': answers});
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  Future<List<BlockedUserResponse>> getBlockedUsers() async {
+    try {
+      final response = await _dio.get('/friends/blocks');
+      return (response.data as List)
+          .map((e) => BlockedUserResponse.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

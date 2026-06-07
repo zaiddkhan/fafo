@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import CORS_ORIGINS, RATE_LIMIT_DEFAULT
 from app.firebase import init_firebase
-from app.routers import admin, auth, blogs, categories, creators, events, friends, users
+from app.routers import admin, auth, blogs, categories, console, creators, events, friends, groups, nudges, quests, users
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[RATE_LIMIT_DEFAULT])
 
@@ -26,7 +26,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS or ["*"],
+    allow_origins= ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,10 +36,14 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(creators.router)
 app.include_router(admin.router)
+app.include_router(console.router)
 app.include_router(categories.router)
 app.include_router(blogs.router)
 app.include_router(events.router)
 app.include_router(friends.router)
+app.include_router(groups.router)
+app.include_router(quests.router)
+app.include_router(nudges.router)
 
 
 @app.get("/health")

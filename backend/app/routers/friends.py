@@ -255,14 +255,18 @@ def incoming_requests(
 ):
     uid = current_user["uid"]
     db = get_firestore()
-    docs = db.collection("friend_requests").where("recipient_uid", "==", uid).where("status", "==", FriendRequestStatus.pending.value).order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit).stream()
+    # Query only by recipient to avoid requiring a composite Firestore index in local/dev.
+    docs = db.collection("friend_requests").where("recipient_uid", "==", uid).limit(MAX_LIMIT).stream()
     responses = []
     for doc in docs:
         data = doc.to_dict()
+        if data.get("status") != FriendRequestStatus.pending.value:
+            continue
         if _friendship_status(uid, data["requester_uid"]) in (FriendshipStatus.blocked, FriendshipStatus.blocked_by):
             continue
         responses.append(_request_response(doc.id, data, uid))
-    return responses
+    responses.sort(key=lambda item: item.created_at, reverse=True)
+    return responses[:limit]
 
 
 @router.get("/requests/outgoing", response_model=list[FriendRequestResponse])
@@ -272,8 +276,15 @@ def outgoing_requests(
 ):
     uid = current_user["uid"]
     db = get_firestore()
-    docs = db.collection("friend_requests").where("requester_uid", "==", uid).where("status", "==", FriendRequestStatus.pending.value).order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit).stream()
-    return [_request_response(doc.id, doc.to_dict(), uid) for doc in docs]
+    # Query only by requester to avoid requiring a composite Firestore index in local/dev.
+    docs = db.collection("friend_requests").where("requester_uid", "==", uid).limit(MAX_LIMIT).stream()
+    responses = []
+    for doc in docs:
+        data = doc.to_dict()
+        if data.get("status") == FriendRequestStatus.pending.value:
+            responses.append(_request_response(doc.id, data, uid))
+    responses.sort(key=lambda item: item.created_at, reverse=True)
+    return responses[:limit]
 
 
 @firestore.transactional
@@ -330,8 +341,16 @@ def friend_stats(current_user: dict = Depends(get_current_user)):
     uid = current_user["uid"]
     db = get_firestore()
     friends_count = len(list(db.collection("users").document(uid).collection("friends").stream()))
-    incoming_count = len(list(db.collection("friend_requests").where("recipient_uid", "==", uid).where("status", "==", FriendRequestStatus.pending.value).stream()))
-    outgoing_count = len(list(db.collection("friend_requests").where("requester_uid", "==", uid).where("status", "==", FriendRequestStatus.pending.value).stream()))
+    incoming_count = sum(
+        1
+        for doc in db.collection("friend_requests").where("recipient_uid", "==", uid).stream()
+        if doc.to_dict().get("status") == FriendRequestStatus.pending.value
+    )
+    outgoing_count = sum(
+        1
+        for doc in db.collection("friend_requests").where("requester_uid", "==", uid).stream()
+        if doc.to_dict().get("status") == FriendRequestStatus.pending.value
+    )
     return FriendStatsResponse(
         friends_count=friends_count,
         incoming_request_count=incoming_count,
@@ -401,6 +420,22 @@ def block_user(target_uid: str, body: NegativeActionAnswers, current_user: dict 
         "created_at": SERVER_TIMESTAMP,
     })
     return BlockedUserResponse(user=public_user_from_doc(target_uid, user_doc.to_dict(), uid), blocked_at=now)
+
+
+@router.get("/blocks", response_model=list[BlockedUserResponse])
+def list_blocks(current_user: dict = Depends(get_current_user)):
+    uid = current_user["uid"]
+    db = get_firestore()
+    responses = []
+    for block_doc in db.collection("users").document(uid).collection("blocks").order_by("blocked_at", direction=firestore.Query.DESCENDING).stream():
+        user_doc = db.collection("users").document(block_doc.id).get()
+        if not user_doc.exists:
+            continue
+        responses.append(BlockedUserResponse(
+            user=public_user_from_doc(user_doc.id, user_doc.to_dict() or {}, uid),
+            blocked_at=block_doc.to_dict()["blocked_at"],
+        ))
+    return responses
 
 
 @router.delete("/blocks/{target_uid}", status_code=status.HTTP_200_OK)
