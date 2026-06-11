@@ -533,7 +533,17 @@ class _RequestCard extends StatelessWidget {
         children: [
           _Avatar(user: user, size: 46),
           const SizedBox(width: 14),
-          Expanded(child: Text(displayName, style: TextStyle(color: AppColors.accentPrimary, fontWeight: FontWeight.w900, fontSize: 19))),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.accentPrimary, fontWeight: FontWeight.w900, fontSize: 19)),
+                if (user.displayName.isNotEmpty)
+                  Text('@${user.username}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF74747D), fontWeight: FontWeight.w700, fontSize: 13)),
+              ],
+            ),
+          ),
           if (secondaryLabel != null) TextButton(onPressed: onSecondary, child: Text(secondaryLabel!)),
           FilledButton(onPressed: onPrimary, child: Text(primaryLabel)),
         ],

@@ -2000,7 +2000,7 @@ as String,
 /// @nodoc
 mixin _$JoineeResponse {
 
- String get uid; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'photo_url') String? get photoUrl;@JsonKey(name: 'joined_at') DateTime get joinedAt;
+ String get uid; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'photo_url') String? get photoUrl; bool get online;@JsonKey(name: 'joined_at') DateTime get joinedAt;
 /// Create a copy of JoineeResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2013,16 +2013,16 @@ $JoineeResponseCopyWith<JoineeResponse> get copyWith => _$JoineeResponseCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is JoineeResponse&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.joinedAt, joinedAt) || other.joinedAt == joinedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is JoineeResponse&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.online, online) || other.online == online)&&(identical(other.joinedAt, joinedAt) || other.joinedAt == joinedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,uid,username,displayName,photoUrl,joinedAt);
+int get hashCode => Object.hash(runtimeType,uid,username,displayName,photoUrl,online,joinedAt);
 
 @override
 String toString() {
-  return 'JoineeResponse(uid: $uid, username: $username, displayName: $displayName, photoUrl: $photoUrl, joinedAt: $joinedAt)';
+  return 'JoineeResponse(uid: $uid, username: $username, displayName: $displayName, photoUrl: $photoUrl, online: $online, joinedAt: $joinedAt)';
 }
 
 
@@ -2033,7 +2033,7 @@ abstract mixin class $JoineeResponseCopyWith<$Res>  {
   factory $JoineeResponseCopyWith(JoineeResponse value, $Res Function(JoineeResponse) _then) = _$JoineeResponseCopyWithImpl;
 @useResult
 $Res call({
- String uid, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'joined_at') DateTime joinedAt
+ String uid, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'photo_url') String? photoUrl, bool online,@JsonKey(name: 'joined_at') DateTime joinedAt
 });
 
 
@@ -2050,13 +2050,14 @@ class _$JoineeResponseCopyWithImpl<$Res>
 
 /// Create a copy of JoineeResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? uid = null,Object? username = null,Object? displayName = null,Object? photoUrl = freezed,Object? joinedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? uid = null,Object? username = null,Object? displayName = null,Object? photoUrl = freezed,Object? online = null,Object? joinedAt = null,}) {
   return _then(_self.copyWith(
 uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
 as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,photoUrl: freezed == photoUrl ? _self.photoUrl : photoUrl // ignore: cast_nullable_to_non_nullable
-as String?,joinedAt: null == joinedAt ? _self.joinedAt : joinedAt // ignore: cast_nullable_to_non_nullable
+as String?,online: null == online ? _self.online : online // ignore: cast_nullable_to_non_nullable
+as bool,joinedAt: null == joinedAt ? _self.joinedAt : joinedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));
 }
@@ -2142,10 +2143,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String uid,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'joined_at')  DateTime joinedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String uid,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'photo_url')  String? photoUrl,  bool online, @JsonKey(name: 'joined_at')  DateTime joinedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _JoineeResponse() when $default != null:
-return $default(_that.uid,_that.username,_that.displayName,_that.photoUrl,_that.joinedAt);case _:
+return $default(_that.uid,_that.username,_that.displayName,_that.photoUrl,_that.online,_that.joinedAt);case _:
   return orElse();
 
 }
@@ -2163,10 +2164,10 @@ return $default(_that.uid,_that.username,_that.displayName,_that.photoUrl,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String uid,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'joined_at')  DateTime joinedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String uid,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'photo_url')  String? photoUrl,  bool online, @JsonKey(name: 'joined_at')  DateTime joinedAt)  $default,) {final _that = this;
 switch (_that) {
 case _JoineeResponse():
-return $default(_that.uid,_that.username,_that.displayName,_that.photoUrl,_that.joinedAt);case _:
+return $default(_that.uid,_that.username,_that.displayName,_that.photoUrl,_that.online,_that.joinedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2183,10 +2184,10 @@ return $default(_that.uid,_that.username,_that.displayName,_that.photoUrl,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String uid,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'joined_at')  DateTime joinedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String uid,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'photo_url')  String? photoUrl,  bool online, @JsonKey(name: 'joined_at')  DateTime joinedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _JoineeResponse() when $default != null:
-return $default(_that.uid,_that.username,_that.displayName,_that.photoUrl,_that.joinedAt);case _:
+return $default(_that.uid,_that.username,_that.displayName,_that.photoUrl,_that.online,_that.joinedAt);case _:
   return null;
 
 }
@@ -2198,13 +2199,14 @@ return $default(_that.uid,_that.username,_that.displayName,_that.photoUrl,_that.
 @JsonSerializable()
 
 class _JoineeResponse implements JoineeResponse {
-  const _JoineeResponse({required this.uid, required this.username, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'photo_url') this.photoUrl, @JsonKey(name: 'joined_at') required this.joinedAt});
+  const _JoineeResponse({required this.uid, required this.username, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'photo_url') this.photoUrl, this.online = false, @JsonKey(name: 'joined_at') required this.joinedAt});
   factory _JoineeResponse.fromJson(Map<String, dynamic> json) => _$JoineeResponseFromJson(json);
 
 @override final  String uid;
 @override final  String username;
 @override@JsonKey(name: 'display_name') final  String displayName;
 @override@JsonKey(name: 'photo_url') final  String? photoUrl;
+@override@JsonKey() final  bool online;
 @override@JsonKey(name: 'joined_at') final  DateTime joinedAt;
 
 /// Create a copy of JoineeResponse
@@ -2220,16 +2222,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _JoineeResponse&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.joinedAt, joinedAt) || other.joinedAt == joinedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _JoineeResponse&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.online, online) || other.online == online)&&(identical(other.joinedAt, joinedAt) || other.joinedAt == joinedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,uid,username,displayName,photoUrl,joinedAt);
+int get hashCode => Object.hash(runtimeType,uid,username,displayName,photoUrl,online,joinedAt);
 
 @override
 String toString() {
-  return 'JoineeResponse(uid: $uid, username: $username, displayName: $displayName, photoUrl: $photoUrl, joinedAt: $joinedAt)';
+  return 'JoineeResponse(uid: $uid, username: $username, displayName: $displayName, photoUrl: $photoUrl, online: $online, joinedAt: $joinedAt)';
 }
 
 
@@ -2240,7 +2242,7 @@ abstract mixin class _$JoineeResponseCopyWith<$Res> implements $JoineeResponseCo
   factory _$JoineeResponseCopyWith(_JoineeResponse value, $Res Function(_JoineeResponse) _then) = __$JoineeResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String uid, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'joined_at') DateTime joinedAt
+ String uid, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'photo_url') String? photoUrl, bool online,@JsonKey(name: 'joined_at') DateTime joinedAt
 });
 
 
@@ -2257,13 +2259,14 @@ class __$JoineeResponseCopyWithImpl<$Res>
 
 /// Create a copy of JoineeResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? uid = null,Object? username = null,Object? displayName = null,Object? photoUrl = freezed,Object? joinedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? uid = null,Object? username = null,Object? displayName = null,Object? photoUrl = freezed,Object? online = null,Object? joinedAt = null,}) {
   return _then(_JoineeResponse(
 uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
 as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,photoUrl: freezed == photoUrl ? _self.photoUrl : photoUrl // ignore: cast_nullable_to_non_nullable
-as String?,joinedAt: null == joinedAt ? _self.joinedAt : joinedAt // ignore: cast_nullable_to_non_nullable
+as String?,online: null == online ? _self.online : online // ignore: cast_nullable_to_non_nullable
+as bool,joinedAt: null == joinedAt ? _self.joinedAt : joinedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));
 }

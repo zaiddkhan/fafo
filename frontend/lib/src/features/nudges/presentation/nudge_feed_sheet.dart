@@ -452,11 +452,12 @@ class _NudgePalette {
 }
 
 _NudgePalette _activePalette() {
-  final week = ((DateTime.now().day - 1) ~/ 7) % 4;
-  return switch (week) {
-    0 => const _NudgePalette(primary: Color(0xFF3F86D9), soft: Color(0xFFEAF3FF), yes: Color(0xFF38A849), no: Color(0xFFE5484D)),
-    1 => const _NudgePalette(primary: Color(0xFF7A67F8), soft: Color(0xFFF0EDFF), yes: Color(0xFF16A085), no: Color(0xFFD35400)),
-    2 => const _NudgePalette(primary: Color(0xFFFF8A00), soft: Color(0xFFFFF1DA), yes: Color(0xFF5B7C00), no: Color(0xFFC0392B)),
-    _ => const _NudgePalette(primary: Color(0xFF16A085), soft: Color(0xFFE7F8F3), yes: Color(0xFF1472B8), no: Color(0xFFE5484D)),
-  };
+  // Keep the nudge flow on the app's primary brand color rather than a
+  // rotating per-week accent, so it matches the rest of the app.
+  return const _NudgePalette(
+    primary: AppColors.accentPrimary,
+    soft: AppColors.accentLightest,
+    yes: Color(0xFF38A849),
+    no: Color(0xFFE5484D),
+  );
 }

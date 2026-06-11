@@ -191,6 +191,7 @@ _JoineeResponse _$JoineeResponseFromJson(Map<String, dynamic> json) =>
       username: json['username'] as String,
       displayName: json['display_name'] as String,
       photoUrl: json['photo_url'] as String?,
+      online: json['online'] as bool? ?? false,
       joinedAt: DateTime.parse(json['joined_at'] as String),
     );
 
@@ -200,5 +201,6 @@ Map<String, dynamic> _$JoineeResponseToJson(_JoineeResponse instance) =>
       'username': instance.username,
       'display_name': instance.displayName,
       'photo_url': instance.photoUrl,
+      'online': instance.online,
       'joined_at': instance.joinedAt.toIso8601String(),
     };

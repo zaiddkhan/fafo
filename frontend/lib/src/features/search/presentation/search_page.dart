@@ -139,7 +139,7 @@ class _SearchPageState extends State<SearchPage> {
                         cat,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: isSelected
-                              ? AppColors.textPrimary
+                              ? Colors.white
                               : AppColors.textSecondary,
                           fontWeight: FontWeight.w600,
                         ),

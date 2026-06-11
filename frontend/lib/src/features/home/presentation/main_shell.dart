@@ -10,6 +10,7 @@ import 'package:fafu/src/features/create/presentation/create_tab.dart';
 import 'package:fafu/src/features/events/presentation/events_list_page.dart';
 import 'package:fafu/src/features/home/presentation/home_page.dart';
 import 'package:fafu/src/features/profile/presentation/profile_page.dart';
+import 'package:fafu/src/features/quests/presentation/quests_page.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -24,11 +25,11 @@ class MainShell extends ConsumerStatefulWidget {
 
 class _MainShellState extends ConsumerState<MainShell> {
   final _mapKey = GlobalKey();
-  final _exploreKey = GlobalKey();
+  final _questsKey = GlobalKey();
   final _friendsKey = GlobalKey();
 
-  int _stackIndex = 0; // Index into IndexedStack (0-3)
-  int _navIndex = 0; // Index in bottom nav (0-4)
+  int _stackIndex = 0; // Index into IndexedStack (0-5)
+  int _navIndex = 0; // Index in bottom nav (0-5)
   OverlayEntry? _tooltipOverlay;
   _FirstLaunchTooltipStep _tooltipStep = _FirstLaunchTooltipStep.map;
   bool _tooltipStarted = false;
@@ -83,9 +84,9 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   void _nextTooltipStep() {
     if (_tooltipStep == _FirstLaunchTooltipStep.map) {
-      _tooltipStep = _FirstLaunchTooltipStep.explore;
+      _tooltipStep = _FirstLaunchTooltipStep.sideQuests;
       _showTooltipOverlay();
-    } else if (_tooltipStep == _FirstLaunchTooltipStep.explore) {
+    } else if (_tooltipStep == _FirstLaunchTooltipStep.sideQuests) {
       _tooltipStep = _FirstLaunchTooltipStep.nudgeFeed;
       _showTooltipOverlay();
     } else {
@@ -98,7 +99,7 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     final targetRect = _rectFor(switch (_tooltipStep) {
       _FirstLaunchTooltipStep.map => _mapKey,
-      _FirstLaunchTooltipStep.explore => _exploreKey,
+      _FirstLaunchTooltipStep.sideQuests => _questsKey,
       _FirstLaunchTooltipStep.nudgeFeed => _friendsKey,
     });
     if (targetRect == null) return;
@@ -137,6 +138,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                 children: [
                   KeyedSubtree(key: _mapKey, child: const HomePage()),
                   const EventsListPage(events: []),
+                  const QuestsPage(),
                   const CreateTab(),
                   const FriendsPage(showBackButton: false),
                   const ProfilePage(savedEvents: []),
@@ -150,7 +152,7 @@ class _MainShellState extends ConsumerState<MainShell> {
             bottom: 0,
             child: _BottomNav(
               currentIndex: _navIndex,
-              exploreKey: _exploreKey,
+              questsKey: _questsKey,
               friendsKey: _friendsKey,
               onTap: (index) {
                 setState(() {
@@ -169,13 +171,13 @@ class _MainShellState extends ConsumerState<MainShell> {
 class _BottomNav extends StatelessWidget {
   const _BottomNav({
     required this.currentIndex,
-    required this.exploreKey,
+    required this.questsKey,
     required this.friendsKey,
     required this.onTap,
   });
 
   final int currentIndex;
-  final GlobalKey exploreKey;
+  final GlobalKey questsKey;
   final GlobalKey friendsKey;
   final ValueChanged<int> onTap;
 
@@ -220,7 +222,6 @@ class _BottomNav extends StatelessWidget {
                 onTap: () => onTap(0),
               ),
               _NavItem(
-                key: exploreKey,
                 icon: Icons.list_outlined,
                 activeIcon: Icons.list,
                 label: 'Explore',
@@ -228,26 +229,34 @@ class _BottomNav extends StatelessWidget {
                 onTap: () => onTap(1),
               ),
               _NavItem(
+                key: questsKey,
+                icon: Icons.explore_outlined,
+                activeIcon: Icons.explore,
+                label: 'Quests',
+                isActive: currentIndex == 2,
+                onTap: () => onTap(2),
+              ),
+              _NavItem(
                 icon: Icons.add_circle_outline,
                 activeIcon: Icons.add_circle,
                 label: 'Create',
-                isActive: currentIndex == 2,
-                onTap: () => onTap(2),
+                isActive: currentIndex == 3,
+                onTap: () => onTap(3),
               ),
               _NavItem(
                 key: friendsKey,
                 icon: Icons.people_alt_outlined,
                 activeIcon: Icons.people_alt,
                 label: 'Friends',
-                isActive: currentIndex == 3,
-                onTap: () => onTap(3),
+                isActive: currentIndex == 4,
+                onTap: () => onTap(4),
               ),
               _NavItem(
                 icon: Icons.person_outline,
                 activeIcon: Icons.person,
                 label: 'Profile',
-                isActive: currentIndex == 4,
-                onTap: () => onTap(4),
+                isActive: currentIndex == 5,
+                onTap: () => onTap(5),
               ),
             ],
           ),
@@ -316,7 +325,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-enum _FirstLaunchTooltipStep { map, explore, nudgeFeed }
+enum _FirstLaunchTooltipStep { map, sideQuests, nudgeFeed }
 
 class _FirstLaunchTooltipOverlay extends StatelessWidget {
   const _FirstLaunchTooltipOverlay({
@@ -356,9 +365,9 @@ class _FirstLaunchTooltipOverlay extends StatelessWidget {
           'Explore what\'s popping',
           'Use the map to discover nearby events, hangs, and pop-ups around you.',
         ),
-      _FirstLaunchTooltipStep.explore => (
-          'Explore events',
-          'Tap Explore to browse everything happening — spotlight, blogs, categories, and the full list.',
+      _FirstLaunchTooltipStep.sideQuests => (
+          'Take on Side Quests',
+          'Tap Quests for WhatsPopn challenges around your city — quick solo missions to fill your free time.',
         ),
       _FirstLaunchTooltipStep.nudgeFeed => (
           'Nudge your friends',

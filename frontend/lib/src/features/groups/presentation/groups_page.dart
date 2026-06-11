@@ -259,7 +259,26 @@ class _GroupCard extends StatelessWidget {
         children: group.members.map((member) {
           final canManage = _isAdmin && member.user.uid != group.adminUid;
           return ListTile(
-            leading: CircleAvatar(child: Text((member.user.displayName.isEmpty ? member.user.username : member.user.displayName).characters.first.toUpperCase())),
+            leading: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CircleAvatar(child: Text((member.user.displayName.isEmpty ? member.user.username : member.user.displayName).characters.first.toUpperCase())),
+                if (member.user.online)
+                  Positioned(
+                    right: -1,
+                    bottom: -1,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4ED164),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.bgSecondary, width: 2),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             title: Text(member.user.displayName.isEmpty ? '@${member.user.username}' : member.user.displayName),
             subtitle: Text(member.isAdmin ? '@${member.user.username} • Admin' : '@${member.user.username}'),
             trailing: canManage

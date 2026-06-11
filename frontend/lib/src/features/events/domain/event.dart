@@ -148,6 +148,7 @@ abstract class JoineeResponse with _$JoineeResponse {
     required String username,
     @JsonKey(name: 'display_name') required String displayName,
     @JsonKey(name: 'photo_url') String? photoUrl,
+    @Default(false) bool online,
     @JsonKey(name: 'joined_at') required DateTime joinedAt,
   }) = _JoineeResponse;
 

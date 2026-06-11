@@ -748,7 +748,7 @@ class _PastExperienceCard extends StatelessWidget {
                 child: Text(
                   experience.tag,
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: const Color(0xFF171717),
+                    color: Colors.white,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                   ),

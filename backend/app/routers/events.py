@@ -17,6 +17,7 @@ from google.cloud.firestore import GeoPoint
 
 from app.activity import record_meaningful_action
 from app.dependencies import get_current_user, get_creator_user, validate_document_id
+from app.routers.friends import _is_online
 from app.firebase import get_firestore
 from app.geo import encode_geohash, geohash_bounds_for_radius
 from app.schemas import (
@@ -636,6 +637,7 @@ def list_joinees(
                 username=user_data.get("username", ""),
                 display_name=user_data.get("display_name", ""),
                 photo_url=user_data.get("photo_url") or None,
+                online=_is_online(user_data),
                 joined_at=joinee_data["joined_at"],
             )
         )

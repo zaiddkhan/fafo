@@ -212,7 +212,26 @@ class _CreatorEventCard extends StatelessWidget {
               else
                 ...joinees!.map((j) => ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(backgroundImage: j.photoUrl == null ? null : NetworkImage(j.photoUrl!)),
+                  leading: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(backgroundImage: j.photoUrl == null ? null : NetworkImage(j.photoUrl!)),
+                      if (j.online)
+                        Positioned(
+                          right: -1,
+                          bottom: -1,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4ED164),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.bgSecondary, width: 2),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                   title: Text(j.displayName.isEmpty ? '@${j.username}' : j.displayName),
                   subtitle: Text('@${j.username}'),
                 )),

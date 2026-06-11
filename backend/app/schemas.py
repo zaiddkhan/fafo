@@ -388,6 +388,7 @@ class JoineeResponse(BaseModel):
     username: str
     display_name: str
     photo_url: Optional[str]
+    online: bool = False
     joined_at: datetime
 
 

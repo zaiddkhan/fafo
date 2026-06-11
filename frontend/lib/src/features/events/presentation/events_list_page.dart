@@ -184,7 +184,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Live and upcoming things to do around Mumbai and Bengaluru.',
+                'Live and upcoming things to do around you',
                 style: theme.textTheme.bodyLarge?.copyWith(color: bodyColor),
               ),
               const SizedBox(height: 22),
@@ -403,14 +403,24 @@ class _EventListingCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${category?.emoji ?? '📍'} ${category?.name ?? event.categoryId}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: AppColors.accentPrimary,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                '${category?.emoji ?? '📍'} ${category?.name ?? event.categoryId}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: AppColors.accentPrimary,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            if (event.eventType == EventType.volunteering) ...[
+                              const SizedBox(width: 6),
+                              const _VolunteeringTag(),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -722,6 +732,32 @@ class _CountPill extends StatelessWidget {
   }
 }
 
+class _VolunteeringTag extends StatelessWidget {
+  const _VolunteeringTag();
+
+  // Matches the green volunteering pin color used on the map.
+  static const Color _green = Color(0xFF4ADE80);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: _green,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(
+        'Volunteering',
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: const Color(0xFF0A2540),
+          fontWeight: FontWeight.w800,
+          fontSize: 9,
+        ),
+      ),
+    );
+  }
+}
+
 class _CardButton extends StatelessWidget {
   const _CardButton({
     required this.label,
@@ -736,7 +772,7 @@ class _CardButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderColor = filled ? AppColors.accentPrimary : Colors.grey;
-    final textColor = filled ? const Color(0xFF1A1A1A) : Colors.grey;
+    final textColor = filled ? Colors.white : Colors.grey;
 
     return AppPressable(
       onTap: onTap,
