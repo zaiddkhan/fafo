@@ -108,6 +108,40 @@ def _event_to_response(doc_id: str, data: dict, current_uid: str | None = None) 
     )
 
 
+def build_event_data(body: EventCreateRequest, creator_uid: str, *, seeded: bool = False) -> dict:
+    """Build the Firestore document for a new event.
+
+    Shared by creator-facing creation and admin Event Seeding. `seeded` marks
+    team-generated events; it is internal-only and never exposed on user-facing
+    surfaces (not part of EventResponse).
+    """
+    now = datetime.now(timezone.utc)
+    return {
+        "creator_uid": creator_uid,
+        "title": body.title,
+        "description": body.description,
+        "category_id": body.category_id,
+        "event_type": EventType.normal.value if body.event_type == EventType.spotlight else body.event_type.value,
+        "custom_emoji": body.custom_emoji,
+        "location": GeoPoint(body.lat, body.lng),
+        "location_name": body.location_name,
+        "geohash": encode_geohash(body.lat, body.lng),
+        "date_time": body.date_time,
+        "capacity": body.capacity,
+        "joinee_count": 0,
+        "registration_open": True,
+        "cancelled": False,
+        "cancel_reason": None,
+        "banner_url": None,
+        "organizer_name": body.organizer_name,
+        "organizer_contact": body.organizer_contact,
+        "organizer_instagram": body.organizer_instagram,
+        "seeded": seeded,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 def create_event(
     body: EventCreateRequest, current_user: dict = Depends(get_creator_user)
@@ -122,36 +156,9 @@ def create_event(
             detail="Invalid category_id",
         )
 
-    now = datetime.now(timezone.utc)
-    gh = encode_geohash(body.lat, body.lng)
-
-    event_data = {
-        "creator_uid": uid,
-        "title": body.title,
-        "description": body.description,
-        "category_id": body.category_id,
-        "event_type": EventType.normal.value if body.event_type == EventType.spotlight else body.event_type.value,
-        "custom_emoji": body.custom_emoji,
-        "location": GeoPoint(body.lat, body.lng),
-        "location_name": body.location_name,
-        "geohash": gh,
-        "date_time": body.date_time,
-        "capacity": body.capacity,
-        "joinee_count": 0,
-        "registration_open": True,
-        "cancelled": False,
-        "cancel_reason": None,
-        "banner_url": None,
-        "organizer_name": body.organizer_name,
-        "organizer_contact": body.organizer_contact,
-        "organizer_instagram": body.organizer_instagram,
-        "created_at": now,
-        "updated_at": now,
-    }
-
+    event_data = build_event_data(body, uid)
     event_id = str(uuid4())
-    doc_ref = db.collection("events").document(event_id)
-    doc_ref.set(event_data)
+    db.collection("events").document(event_id).set(event_data)
 
     return _event_to_response(event_id, event_data)
 

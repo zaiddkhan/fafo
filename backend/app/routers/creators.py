@@ -16,9 +16,11 @@ def apply_for_creator(
     db = get_firestore()
 
     existing = db.collection("creator_applications").document(uid).get()
+    history = []
+    is_reapplication = False
     if existing.exists:
         existing_data = existing.to_dict()
-        if existing_data["status"] == "pending":
+        if existing_data["status"] in ("pending", "reapplied"):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Application already pending",
@@ -28,14 +30,28 @@ def apply_for_creator(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Already an approved creator",
             )
+        # rejected or revoked -> this is a reapplication. Preserve prior history so
+        # the reviewer sees the full record.
+        is_reapplication = True
+        history = list(existing_data.get("history", []))
+        history.append(
+            {
+                "status": existing_data["status"],
+                "purpose": existing_data.get("purpose"),
+                "reviewed_at": existing_data.get("reviewed_at"),
+                "submitted_at": existing_data.get("submitted_at"),
+            }
+        )
 
     application = {
         "purpose": body.purpose,
         "social_links": body.social_links,
         "phone": body.phone,
         "relevant_links": body.relevant_links,
-        "status": "pending",
+        "status": "reapplied" if is_reapplication else "pending",
         "submitted_at": SERVER_TIMESTAMP,
+        "reapplied": is_reapplication,
+        "history": history,
     }
     db.collection("creator_applications").document(uid).set(application)
 

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, status
+from google.cloud import firestore
 from google.cloud.firestore import GeoPoint, SERVER_TIMESTAMP
 
 from fastapi import HTTPException
@@ -86,6 +87,8 @@ def activate_quest(quest_id: str, current_user: dict = Depends(get_current_user)
     activation_ref.set({"quest_id": quest_id, "activated_at": datetime.now(timezone.utc)})
     if not already_active:
         record_meaningful_action(db, uid, "activate_quest", {"quest_id": quest_id})
+        # Maintain the denormalized activation count surfaced in the admin Quest Manager.
+        quest_ref.update({"activation_count": firestore.Increment(1)})
 
     return {"detail": "Quest activated", "quest_id": quest_id}
 
@@ -102,6 +105,7 @@ def create_quest(body: QuestCreateRequest, _: dict = Depends(get_admin_user)):
         "city": body.city,
         "area": _area_to_data(body.area),
         "published": body.published,
+        "activation_count": 0,
         "created_at": now,
         "updated_at": now,
     })

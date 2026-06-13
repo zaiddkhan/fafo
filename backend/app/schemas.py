@@ -506,3 +506,191 @@ class ProfileStatsResponse(BaseModel):
     side_quests_activated: int = 0
     friends_count: int = 0
     current_streak: int = 0
+
+
+# --- Admin: shared ---
+
+
+class AdminMeResponse(BaseModel):
+    uid: str
+    is_admin: bool
+
+
+class ReasonRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class AuditLogResponse(BaseModel):
+    id: str
+    admin_uid: str
+    action: str
+    target_type: Optional[str] = None
+    target_id: Optional[str] = None
+    reason: Optional[str] = None
+    metadata: dict = Field(default_factory=dict)
+    created_at: datetime
+
+
+# --- Admin: Creator Queue ---
+
+
+class CreatorHistoryEntry(BaseModel):
+    status: str
+    at: datetime
+    note: Optional[str] = None
+
+
+class CreatorListItem(BaseModel):
+    uid: str
+    display_name: str
+    username: str
+    photo_url: Optional[str] = None
+    status: str
+    is_creator: bool
+    reapplied: bool = False
+    submitted_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+
+
+class CreatorDetailResponse(CreatorListItem):
+    purpose: str = ""
+    social_links: list[str] = Field(default_factory=list)
+    relevant_links: list[str] = Field(default_factory=list)
+    phone: str = ""
+    history: list[CreatorHistoryEntry] = Field(default_factory=list)
+
+
+# --- Admin: Quest Manager ---
+
+
+class AdminQuestResponse(QuestResponse):
+    activation_count: int = 0
+
+
+# --- Admin: Event Seeding ---
+
+
+class AdminEventListItem(BaseModel):
+    id: str
+    title: str
+    creator_uid: str
+    category_id: str
+    location_name: str
+    lat: float
+    lng: float
+    date_time: datetime
+    joinee_count: int
+    cancelled: bool
+    seeded: bool
+    created_at: datetime
+
+
+# --- Admin: Density View ---
+
+
+class LaunchAreaCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    center_lat: float = Field(ge=-90, le=90)
+    center_lng: float = Field(ge=-180, le=180)
+    radius_km: float = Field(default=15.0, gt=0, le=200)
+
+
+class LaunchAreaUpdateRequest(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=80)
+    center_lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    center_lng: Optional[float] = Field(default=None, ge=-180, le=180)
+    radius_km: Optional[float] = Field(default=None, gt=0, le=200)
+
+
+class LaunchAreaResponse(BaseModel):
+    id: str
+    name: str
+    center_lat: float
+    center_lng: float
+    radius_km: float
+    created_at: datetime
+
+
+class ExpiringEventItem(BaseModel):
+    id: str
+    title: str
+    location_name: str
+    date_time: datetime
+    seeded: bool
+
+
+class DensityAreaResponse(BaseModel):
+    area: LaunchAreaResponse
+    active_event_count: int
+    below_threshold: bool
+    expiring_24h: list[ExpiringEventItem] = Field(default_factory=list)
+
+
+class DensityResponse(BaseModel):
+    threshold: int = 3
+    areas: list[DensityAreaResponse] = Field(default_factory=list)
+    generated_at: datetime
+
+
+# --- Admin: User Management ---
+
+
+class AdminUserListItem(BaseModel):
+    uid: str
+    display_name: str
+    username: str
+    phone: Optional[str] = None
+    photo_url: Optional[str] = None
+    is_creator: bool = False
+    deactivated: bool = False
+
+
+class AdminUserGroup(BaseModel):
+    id: str
+    name: str
+    is_admin: bool = False
+
+
+class AdminUserDetailResponse(AdminUserListItem):
+    friends_count: int = 0
+    events_joined: int = 0
+    current_streak: int = 0
+    groups: list[AdminUserGroup] = Field(default_factory=list)
+
+
+class ForceUsernameRequest(ReasonRequest):
+    new_username: str = Field(min_length=3, max_length=30, pattern=r"^[a-z0-9._]+$")
+
+
+# --- Admin: Notification Templates ---
+
+
+class NotificationTemplateUpdateRequest(BaseModel):
+    body: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    sound: Optional[str] = Field(default=None, max_length=60)
+    enabled: Optional[bool] = None
+    params: Optional[dict] = None
+
+
+class NotificationTemplateVersion(BaseModel):
+    version: int
+    body: str
+    sound: Optional[str] = None
+    enabled: bool
+    params: dict = Field(default_factory=dict)
+    updated_at: datetime
+    updated_by: Optional[str] = None
+
+
+class NotificationTemplateResponse(BaseModel):
+    id: str
+    type: str
+    subtype: str
+    body: str
+    variables: list[str] = Field(default_factory=list)
+    sound: Optional[str] = None
+    enabled: bool = True
+    params: dict = Field(default_factory=dict)
+    version: int = 1
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[str] = None
