@@ -45,12 +45,14 @@ def list_events(
         data = doc.to_dict() or {}
         if seeded is not None and bool(data.get("seeded", False)) != seeded:
             continue
-        dt = data["date_time"]
+        dt = data.get("date_time")
+        loc = data.get("location")
+        if dt is None or loc is None:
+            continue  # skip malformed/incomplete event docs
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         if upcoming_only and (data.get("cancelled") or dt < now):
             continue
-        loc: GeoPoint = data["location"]
         out.append(
             AdminEventListItem(
                 id=doc.id,

@@ -102,12 +102,14 @@ def density(_: dict = Depends(get_admin_user)):
         data = doc.to_dict() or {}
         if data.get("cancelled"):
             continue
-        dt = data["date_time"]
+        dt = data.get("date_time")
+        loc = data.get("location")
+        if dt is None or loc is None:
+            continue  # skip malformed/incomplete event docs
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         if dt < now:
             continue
-        loc = data["location"]
         active.append(
             {
                 "id": doc.id,

@@ -15,8 +15,21 @@ export function LoginPage() {
     setError(null);
     try {
       await login(email, password);
-    } catch {
-      setError("Invalid email or password.");
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? "";
+      if (code === "auth/operation-not-allowed") {
+        setError(
+          "Email/Password sign-in is disabled for this Firebase project. Enable it in Firebase console → Authentication → Sign-in method.",
+        );
+      } else if (
+        code === "auth/invalid-credential" ||
+        code === "auth/wrong-password" ||
+        code === "auth/user-not-found"
+      ) {
+        setError("Invalid email or password.");
+      } else {
+        setError(`Sign-in failed: ${code || (err as Error).message}`);
+      }
     } finally {
       setBusy(false);
     }
