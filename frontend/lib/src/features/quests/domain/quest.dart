@@ -64,3 +64,35 @@ class QuestResponse {
     );
   }
 }
+
+enum QuestActivationStatus { active, completed }
+
+QuestActivationStatus questActivationStatusFromJson(String? value) =>
+    value == 'completed' ? QuestActivationStatus.completed : QuestActivationStatus.active;
+
+/// A quest the current user has started, with its participation status.
+class QuestActivation {
+  const QuestActivation({
+    required this.quest,
+    required this.status,
+    required this.activatedAt,
+    this.completedAt,
+  });
+
+  final QuestResponse quest;
+  final QuestActivationStatus status;
+  final DateTime activatedAt;
+  final DateTime? completedAt;
+
+  bool get isActive => status == QuestActivationStatus.active;
+  bool get isCompleted => status == QuestActivationStatus.completed;
+
+  factory QuestActivation.fromJson(Map<String, dynamic> json) {
+    return QuestActivation(
+      quest: QuestResponse.fromJson(json['quest'] as Map<String, dynamic>),
+      status: questActivationStatusFromJson(json['status'] as String?),
+      activatedAt: DateTime.parse(json['activated_at'] as String),
+      completedAt: json['completed_at'] == null ? null : DateTime.parse(json['completed_at'] as String),
+    );
+  }
+}

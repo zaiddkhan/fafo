@@ -50,6 +50,12 @@ class ProfilePage extends ConsumerWidget {
     final stats = ref.watch(profileStatsProvider);
     final profile = ref.watch(currentProfileProvider);
     final quests = ref.watch(questsListProvider);
+    final activations = ref.watch(questActivationsProvider);
+    final activationById = <String, QuestActivation>{
+      for (final a in activations.asData?.value ?? const <QuestActivation>[]) a.quest.id: a,
+    };
+    final activeCount = activationById.values.where((a) => a.isActive).length;
+    final atQuestLimit = activeCount >= kMaxActiveQuests;
     final rsvpedEvents = savedEvents.take(3).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -188,12 +194,19 @@ class ProfilePage extends ConsumerWidget {
                       child: _SideQuestCard(
                         quest: quest,
                         isDark: isDark,
+                        activation: activationById[quest.id],
+                        atLimit: atQuestLimit,
                         onStart: () => _startQuest(ref, context, quest.id),
                       ),
                     ),
                   ).toList(),
                 );
               },
+            ),
+            const SizedBox(height: 6),
+            _QuestHistorySection(
+              activations: activations,
+              isDark: isDark,
             ),
             const SizedBox(height: 6),
             _SectionHeader(
@@ -227,13 +240,115 @@ Future<void> _startQuest(WidgetRef ref, BuildContext context, String questId) as
   try {
     await ref.read(questsRepositoryProvider).activateQuest(questId);
     ref.invalidate(profileStatsProvider);
+    ref.invalidate(questActivationsProvider);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quest activated.')));
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     }
+  }
+}
+
+/// "Quest History" — the quests the user has actually started, with their
+/// status. Reads from [questActivationsProvider] so it survives refreshes.
+class _QuestHistorySection extends StatelessWidget {
+  const _QuestHistorySection({required this.activations, required this.isDark});
+
+  final AsyncValue<List<QuestActivation>> activations;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: 'Quest History'),
+        const SizedBox(height: 12),
+        activations.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.only(bottom: 18),
+            child: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)),
+          ),
+          error: (error, _) => Padding(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: Text(error.toString(), style: const TextStyle(color: Color(0xFFE5484D))),
+          ),
+          data: (items) {
+            if (items.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.only(bottom: 18),
+                child: Text("You haven't started any quests yet."),
+              );
+            }
+            return Column(
+              children: items.map(
+                (a) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _QuestHistoryRow(activation: a, isDark: isDark),
+                ),
+              ).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _QuestHistoryRow extends StatelessWidget {
+  const _QuestHistoryRow({required this.activation, required this.isDark});
+
+  final QuestActivation activation;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final completed = activation.isCompleted;
+    final when = completed ? activation.completedAt : activation.activatedAt;
+    final whenLabel = when == null ? '' : DateFormat('MMM d').format(when.toLocal());
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF252525) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFFE2E2E6), width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            completed ? Icons.check_circle : Icons.bolt,
+            color: completed ? const Color(0xFF35B45A) : AppColors.accentPrimary,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              activation.quest.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF171717),
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            completed ? 'Completed${whenLabel.isEmpty ? '' : ' • $whenLabel'}' : 'In progress',
+            style: TextStyle(
+              color: completed ? const Color(0xFF35B45A) : const Color(0xFF8A8A92),
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -342,10 +457,18 @@ class _IdentityHeader extends ConsumerWidget {
 }
 
 class _SideQuestCard extends StatelessWidget {
-  const _SideQuestCard({required this.quest, required this.isDark, required this.onStart});
+  const _SideQuestCard({
+    required this.quest,
+    required this.isDark,
+    required this.onStart,
+    this.activation,
+    this.atLimit = false,
+  });
   final QuestResponse quest;
   final bool isDark;
   final VoidCallback onStart;
+  final QuestActivation? activation;
+  final bool atLimit;
 
   @override
   Widget build(BuildContext context) {
@@ -392,15 +515,47 @@ class _SideQuestCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          GestureDetector(
-            onTap: onStart,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-              decoration: BoxDecoration(color: AppColors.accentPrimary, borderRadius: BorderRadius.circular(8)),
-              child: const Text('Start', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
-            ),
-          ),
+          _buildTrailing(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTrailing() {
+    if (activation?.isCompleted ?? false) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFF35B45A).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.check_circle, color: Color(0xFF35B45A), size: 15),
+            SizedBox(width: 4),
+            Text('Done', style: TextStyle(color: Color(0xFF35B45A), fontWeight: FontWeight.w800, fontSize: 12)),
+          ],
+        ),
+      );
+    }
+    if (activation?.isActive ?? false) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        decoration: BoxDecoration(color: AppColors.ink, borderRadius: BorderRadius.circular(8)),
+        child: const Text('Started', style: TextStyle(color: Color(0xFFBFBFBF), fontWeight: FontWeight.w800, fontSize: 13)),
+      );
+    }
+    final disabled = atLimit;
+    return GestureDetector(
+      onTap: disabled ? null : onStart,
+      child: Opacity(
+        opacity: disabled ? 0.45 : 1,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          decoration: BoxDecoration(color: AppColors.accentPrimary, borderRadius: BorderRadius.circular(8)),
+          child: const Text('Start', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+        ),
       ),
     );
   }
@@ -427,7 +582,7 @@ class _JoinedEventCard extends StatelessWidget {
       friendsOnly: false,
       rating: 0,
       timing: MockEventTiming.today,
-      organizerName: event.organizerName ?? 'WhatsPopn Creator',
+      organizerName: event.organizerName ?? 'Fafo Creator',
       organizerContact: event.organizerContact ?? '',
       organizerInstagram: event.organizerInstagram ?? '',
       organizerVerified: true,
@@ -488,7 +643,7 @@ class _StatPill extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.actionLabel, this.onAction});
+  const _SectionHeader({required this.title, this.actionLabel = '', this.onAction});
 
   final String title;
   final String actionLabel;
@@ -509,17 +664,18 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        GestureDetector(
-          onTap: onAction,
-          child: Text(
-            actionLabel,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: AppColors.accentPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+        if (actionLabel.isNotEmpty)
+          GestureDetector(
+            onTap: onAction,
+            child: Text(
+              actionLabel,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: AppColors.accentPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-        ),
       ],
     );
   }

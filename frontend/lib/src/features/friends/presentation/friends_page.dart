@@ -89,12 +89,10 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
   }
 
   void _openNudgeFeed(PublicUserResponse user) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => FractionallySizedBox(
-        heightFactor: 0.92,
-        child: NudgeFeedSheet(
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => NudgeFeedSheet(
           feedType: NudgeFeedType.friend,
           targetId: user.uid,
           title: user.displayName.isEmpty ? '@${user.username}' : user.displayName,
@@ -146,7 +144,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
       builder: (context) => AlertDialog(
         title: const Text('Sync contacts'),
         content: const Text(
-          'WhatsPopn will request access to your phone contacts and only upload phone numbers to find friends already on WhatsPopn. We do not message contacts or notify non-users.',
+          'Fafo will request access to your phone contacts and only upload phone numbers to find friends already on Fafo. We do not message contacts or notify non-users.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
@@ -185,7 +183,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     try {
       final invite = await ref.read(friendsRepositoryProvider).createInvite();
       await Clipboard.setData(ClipboardData(text: invite.inviteUrl));
-      final message = Uri.encodeComponent('Join me on WhatsPopn: ${invite.inviteUrl}');
+      final message = Uri.encodeComponent('Join me on Fafo: ${invite.inviteUrl}');
       final whatsappUri = Uri.parse('whatsapp://send?text=$message');
       final canOpen = await canLaunchUrl(whatsappUri);
       if (canOpen) await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
@@ -265,7 +263,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                 const SizedBox(height: 18),
               ],
               if (_contactMatches.isNotEmpty) ...[
-                _ListHeader('Contacts on WhatsPopn'),
+                _ListHeader('Contacts on Fafo'),
                 ..._contactMatches.map((user) => _SearchResultRow(user: user, busy: _busy, onAdd: () => _runAction(() => ref.read(friendsRepositoryProvider).sendFriendRequest(uid: user.uid)))),
                 const SizedBox(height: 18),
               ],

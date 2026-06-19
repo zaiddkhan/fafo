@@ -4,6 +4,7 @@ module only controls copy, the on/off toggle, and configurable params.
 """
 
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -11,7 +12,11 @@ from app.audit import record_admin_action
 from app.dependencies import get_admin_user, validate_document_id
 from app.firebase import get_firestore
 from app.notification_catalog import NOTIFICATION_CATALOG, template_id
+from app.notifications.service import notifications
 from app.schemas import (
+    BroadcastTarget,
+    NotificationBroadcastRequest,
+    NotificationBroadcastResponse,
     NotificationTemplateResponse,
     NotificationTemplateUpdateRequest,
     NotificationTemplateVersion,
@@ -182,3 +187,37 @@ def rollback_template(template_id: str, version: int, admin: dict = Depends(get_
         metadata={"rolled_back_to": version, "new_version": prior_version + 1},
     )
     return _to_response(template_id, ref.get().to_dict())
+
+
+@router.post("/notifications/broadcast", response_model=NotificationBroadcastResponse)
+def broadcast(body: NotificationBroadcastRequest, admin: dict = Depends(get_admin_user)):
+    """Admin-initiated push to all users or a specific uid list.
+
+    Enqueues idempotent outbox docs (dedupe key = broadcast:{id}:{uid}) carrying inline
+    copy. Delivery is left to the cron dispatcher so a large fan-out never blocks this
+    request. Respects quiet hours and the global per-user daily cap.
+    """
+    db = get_firestore()
+    broadcast_id = str(uuid4())
+
+    if body.target == BroadcastTarget.uids:
+        uids = [validate_document_id(u) for u in body.uids]
+        if not uids:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No uids provided")
+    else:
+        uids = [doc.id for doc in db.collection("users").stream()]
+
+    created = notifications.enqueue(
+        template_id="admin.broadcast",
+        recipient_uids=uids,
+        override={"title": body.title, "body": body.body, "sound": body.sound},
+        data={"broadcast_id": broadcast_id},
+        dedupe_base=f"admin.broadcast:{broadcast_id}",
+        deliver_now=False,
+    )
+    record_admin_action(
+        db, admin["uid"], "notification.broadcast",
+        target_type="broadcast", target_id=broadcast_id,
+        metadata={"target": body.target.value, "enqueued": len(created)},
+    )
+    return NotificationBroadcastResponse(broadcast_id=broadcast_id, enqueued=len(created))

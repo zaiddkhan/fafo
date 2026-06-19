@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from google.cloud import firestore
 from google.cloud.firestore import SERVER_TIMESTAMP
 
 from app.dependencies import get_current_user, validate_document_id
 from app.firebase import get_firestore
+from app.notifications import triggers
 from app.routers.friends import public_user_from_doc
 from app.schemas import (
     GroupCreateRequest,
@@ -37,6 +38,10 @@ def _group_ref(db, group_id: str):
 
 def _is_member(db, group_id: str, uid: str) -> bool:
     return db.collection("groups").document(group_id).collection("members").document(uid).get().exists
+
+
+def _member_ids(db, group_id: str) -> list[str]:
+    return [doc.id for doc in db.collection("groups").document(group_id).collection("members").stream()]
 
 
 def _require_group(db, group_id: str):
@@ -78,6 +83,11 @@ def _save_negative_action(db, actor_uid: str, action_type: str, answers: list[st
         "created_at": SERVER_TIMESTAMP,
         **extra,
     })
+
+
+def _display_name(db, uid: str) -> str:
+    doc = db.collection("users").document(uid).get()
+    return (doc.to_dict() or {}).get("display_name", "Someone") if doc.exists else "Someone"
 
 
 def _member_responses(db, group_id: str, viewer_uid: str) -> list[GroupMemberResponse]:
@@ -204,7 +214,7 @@ def update_group(group_id: str, body: GroupUpdateRequest, current_user: dict = D
 
 
 @router.post("/{group_id}/invites", response_model=GroupInviteResponse, status_code=status.HTTP_201_CREATED)
-def invite_member(group_id: str, body: GroupInviteCreateRequest, current_user: dict = Depends(get_current_user)):
+def invite_member(group_id: str, body: GroupInviteCreateRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     uid = current_user["uid"]
     recipient_uid = validate_document_id(body.recipient_uid)
     if recipient_uid == uid:
@@ -232,11 +242,15 @@ def invite_member(group_id: str, body: GroupInviteCreateRequest, current_user: d
         "responded_at": None,
     })
     _notify(db, recipient_uid, "group_invite", {"group_id": group_id, "group_name": data.get("name", "")})
+    triggers.group_invite_received(
+        background_tasks, invite_id=invite_ref.id, group_id=group_id, recipient_uid=recipient_uid,
+        inviter_name=_display_name(db, uid), group_name=data.get("name", "your group"),
+    )
     return _invite_response(invite_ref.id, invite_ref.get().to_dict(), uid)
 
 
 @router.post("/invites/{invite_id}/accept", response_model=GroupInviteResponse)
-def accept_invite(invite_id: str, current_user: dict = Depends(get_current_user)):
+def accept_invite(invite_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     validate_document_id(invite_id)
     uid = current_user["uid"]
     db = get_firestore()
@@ -253,6 +267,13 @@ def accept_invite(invite_id: str, current_user: dict = Depends(get_current_user)
     group_ref.collection("members").document(uid).set({"uid": uid, "joined_at": now, "is_admin": False})
     group_ref.update({"updated_at": SERVER_TIMESTAMP})
     _notify(db, uid, "group_joined", {"group_id": data["group_id"], "group_name": group_data.get("name", "")})
+    # Notify existing members (everyone but the new joiner) that someone joined.
+    others = [m for m in _member_ids(db, data["group_id"]) if m != uid]
+    if others:
+        triggers.group_invite_accepted(
+            background_tasks, group_id=data["group_id"], recipient_uids=others,
+            member_name=_display_name(db, uid), group_name=group_data.get("name", "your group"),
+        )
     return _invite_response(invite_id, invite_ref.get().to_dict(), uid)
 
 
@@ -287,13 +308,13 @@ def transfer_ownership(group_id: str, body: GroupTransferRequest, current_user: 
 
 
 @router.delete("/{group_id}/members/{member_uid}", status_code=status.HTTP_200_OK)
-def remove_member(group_id: str, member_uid: str, body: NegativeActionAnswers, current_user: dict = Depends(get_current_user)):
+def remove_member(group_id: str, member_uid: str, body: NegativeActionAnswers, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     uid = current_user["uid"]
     member_uid = validate_document_id(member_uid)
     if member_uid == uid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Use leave group instead")
     db = get_firestore()
-    group_ref, _ = _require_admin(db, group_id, uid)
+    group_ref, group_data = _require_admin(db, group_id, uid)
     member_ref = group_ref.collection("members").document(member_uid)
     if not member_ref.get().exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
@@ -301,6 +322,10 @@ def remove_member(group_id: str, member_uid: str, body: NegativeActionAnswers, c
     group_ref.update({"updated_at": SERVER_TIMESTAMP})
     _save_negative_action(db, uid, "remove_group_member", body.answers, group_id=group_id, target_uid=member_uid)
     _notify(db, member_uid, "group_member_removed", {"group_id": group_id})
+    triggers.group_member_removed(
+        background_tasks, group_id=group_id, recipient_uid=member_uid,
+        group_name=group_data.get("name", "your group"),
+    )
     return {"detail": "Member removed"}
 
 
@@ -322,10 +347,10 @@ def leave_group(group_id: str, body: NegativeActionAnswers, current_user: dict =
 
 
 @router.delete("/{group_id}", status_code=status.HTTP_200_OK)
-def dissolve_group(group_id: str, body: NegativeActionAnswers, current_user: dict = Depends(get_current_user)):
+def dissolve_group(group_id: str, body: NegativeActionAnswers, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     uid = current_user["uid"]
     db = get_firestore()
-    group_ref, _ = _require_admin(db, group_id, uid)
+    group_ref, group_data = _require_admin(db, group_id, uid)
     member_ids = [doc.id for doc in group_ref.collection("members").stream()]
     for member_uid in member_ids:
         group_ref.collection("members").document(member_uid).delete()
@@ -336,4 +361,10 @@ def dissolve_group(group_id: str, body: NegativeActionAnswers, current_user: dic
         nudge_doc.reference.delete()
     group_ref.update({"dissolved": True, "dissolved_at": SERVER_TIMESTAMP, "updated_at": SERVER_TIMESTAMP})
     _save_negative_action(db, uid, "dissolve_group", body.answers, group_id=group_id)
+    recipients = [m for m in member_ids if m != uid]
+    if recipients:
+        triggers.group_dissolved(
+            background_tasks, group_id=group_id, recipient_uids=recipients,
+            group_name=group_data.get("name", "your group"),
+        )
     return {"detail": "Group dissolved"}

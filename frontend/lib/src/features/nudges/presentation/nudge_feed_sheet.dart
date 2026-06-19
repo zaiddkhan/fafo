@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/nudges/data/nudges_providers.dart';
@@ -330,7 +331,17 @@ class _NudgeBubble extends ConsumerWidget {
                               ),
                               onPressed: canRemind
                                   ? () async {
-                                      await ref.read(nudgesRepositoryProvider).remind(nudge.id);
+                                      final messenger = ScaffoldMessenger.of(context);
+                                      try {
+                                        await ref.read(nudgesRepositoryProvider).remind(nudge.id);
+                                        messenger.showSnackBar(
+                                          const SnackBar(content: Text('Reminder sent')),
+                                        );
+                                      } catch (e) {
+                                        messenger.showSnackBar(
+                                          SnackBar(content: Text(e.toString())),
+                                        );
+                                      }
                                       onChanged();
                                     }
                                   : null,
@@ -367,15 +378,46 @@ class _NudgeBubble extends ConsumerWidget {
   }
 
   void _showDetails(BuildContext context, String timerLabel) {
+    final location = nudge.location?.trim() ?? '';
+    final hasLocation = location.isNotEmpty;
+    final isLink = location.startsWith('http://') || location.startsWith('https://');
+
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(nudge.title),
-        content: Text([
-          if (nudge.location?.isNotEmpty == true) 'Location: ${nudge.location}',
-          'Remaining: $timerLabel',
-          if (nudge.expectedVoterCount > 1) 'Tally: ${nudge.yesCount}/${nudge.expectedVoterCount} in',
-        ].join('\n')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (hasLocation && !isLink) ...[
+              Text('Location: $location'),
+              const SizedBox(height: 8),
+            ],
+            Text('Remaining: $timerLabel'),
+            if (nudge.expectedVoterCount > 1) ...[
+              const SizedBox(height: 8),
+              Text('Tally: ${nudge.yesCount}/${nudge.expectedVoterCount} in'),
+            ],
+          ],
+        ),
+        actions: [
+          if (hasLocation && isLink)
+            TextButton.icon(
+              icon: const Icon(Icons.place_outlined, size: 18),
+              label: const Text('Open location'),
+              onPressed: () async {
+                final uri = Uri.tryParse(location);
+                if (uri != null) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }

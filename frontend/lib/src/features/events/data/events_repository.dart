@@ -11,6 +11,23 @@ final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
   return EventsRepository(ref.watch(dioProvider));
 });
 
+/// Bumped whenever the user creates / edits / cancels an event. The Explore
+/// (events list) and Creator Dashboard tabs live inside a persistent
+/// IndexedStack, so they watch this to re-fetch instead of relying on
+/// initState (which only runs once). Call [bumpEventsRevision] after a mutation.
+class EventsRevision extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
+}
+
+final eventsRevisionProvider = NotifierProvider<EventsRevision, int>(EventsRevision.new);
+
+void bumpEventsRevision(WidgetRef ref) {
+  ref.read(eventsRevisionProvider.notifier).bump();
+}
+
 class EventsRepository {
   EventsRepository(this._dio);
 

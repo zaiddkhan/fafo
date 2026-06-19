@@ -9,10 +9,20 @@ from fastapi import HTTPException
 from app.activity import record_meaningful_action
 from app.dependencies import get_admin_user, get_current_user, validate_document_id
 from app.firebase import get_firestore
-from app.schemas import Area, QuestCreateRequest, QuestDifficulty, QuestResponse, QuestUpdateRequest
+from app.schemas import (
+    Area,
+    QuestActivationResponse,
+    QuestActivationStatus,
+    QuestCreateRequest,
+    QuestDifficulty,
+    QuestResponse,
+    QuestUpdateRequest,
+)
 
 router = APIRouter(prefix="/quests", tags=["quests"])
 MAX_LIMIT = 100
+# Maximum number of quests a user can have active (started, not yet completed) at once.
+MAX_ACTIVE_QUESTS = 3
 
 
 def _area_from_data(data: dict | None) -> Area | None:
@@ -65,13 +75,42 @@ def list_quests(
     return results[:limit]
 
 
+def _activation_response(quest_data: dict, quest_id: str, activation: dict) -> QuestActivationResponse:
+    return QuestActivationResponse(
+        quest=_quest_response(quest_id, quest_data),
+        status=QuestActivationStatus(activation.get("status", QuestActivationStatus.active.value)),
+        activated_at=activation["activated_at"],
+        completed_at=activation.get("completed_at"),
+    )
+
+
+@router.get("/me/activations", response_model=list[QuestActivationResponse])
+def list_my_activations(current_user: dict = Depends(get_current_user)):
+    """Return the current user's started/completed quests (their Quest History)."""
+    uid = current_user["uid"]
+    db = get_firestore()
+    activations = (
+        db.collection("users").document(uid).collection("quest_activations").stream()
+    )
+    results: list[QuestActivationResponse] = []
+    for act in activations:
+        act_data = act.to_dict()
+        quest_doc = db.collection("quests").document(act.id).get()
+        if not quest_doc.exists:
+            continue
+        results.append(_activation_response(quest_doc.to_dict(), act.id, act_data))
+    results.sort(key=lambda a: a.activated_at, reverse=True)
+    return results
+
+
 @router.post("/{quest_id}/activate", status_code=status.HTTP_200_OK)
 def activate_quest(quest_id: str, current_user: dict = Depends(get_current_user)):
-    """Mark a Side Quest as activated by the current user.
+    """Mark a Side Quest as activated (started) by the current user.
 
     Activating a quest is a "meaningful action" that feeds the activity streak and
     the "Side Quests activated" profile stat. Idempotent: re-activating the same
-    quest does not double-count.
+    quest does not double-count. A user may only have ``MAX_ACTIVE_QUESTS`` quests
+    active at once.
     """
     validate_document_id(quest_id)
     uid = current_user["uid"]
@@ -82,15 +121,61 @@ def activate_quest(quest_id: str, current_user: dict = Depends(get_current_user)
     if not quest_doc.exists or not quest_doc.to_dict().get("published", True):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quest not found")
 
-    activation_ref = db.collection("users").document(uid).collection("quest_activations").document(quest_id)
+    activations_col = db.collection("users").document(uid).collection("quest_activations")
+    activation_ref = activations_col.document(quest_id)
     already_active = activation_ref.get().exists
-    activation_ref.set({"quest_id": quest_id, "activated_at": datetime.now(timezone.utc)})
+
+    if not already_active:
+        active_count = sum(
+            1
+            for a in activations_col.where("status", "==", QuestActivationStatus.active.value).stream()
+        )
+        if active_count >= MAX_ACTIVE_QUESTS:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"You can only have {MAX_ACTIVE_QUESTS} quests active at once. Complete or drop one first.",
+            )
+
+    activation_ref.set({
+        "quest_id": quest_id,
+        "status": QuestActivationStatus.active.value,
+        "activated_at": datetime.now(timezone.utc),
+    })
     if not already_active:
         record_meaningful_action(db, uid, "activate_quest", {"quest_id": quest_id})
         # Maintain the denormalized activation count surfaced in the admin Quest Manager.
         quest_ref.update({"activation_count": firestore.Increment(1)})
 
     return {"detail": "Quest activated", "quest_id": quest_id}
+
+
+@router.post("/{quest_id}/complete", status_code=status.HTTP_200_OK)
+def complete_quest(quest_id: str, current_user: dict = Depends(get_current_user)):
+    """Mark a started quest as completed, freeing up an active slot."""
+    validate_document_id(quest_id)
+    uid = current_user["uid"]
+    db = get_firestore()
+    activation_ref = db.collection("users").document(uid).collection("quest_activations").document(quest_id)
+    if not activation_ref.get().exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quest not started")
+    activation_ref.update({
+        "status": QuestActivationStatus.completed.value,
+        "completed_at": datetime.now(timezone.utc),
+    })
+    return {"detail": "Quest completed", "quest_id": quest_id}
+
+
+@router.delete("/{quest_id}/activate", status_code=status.HTTP_200_OK)
+def abandon_quest(quest_id: str, current_user: dict = Depends(get_current_user)):
+    """Drop a started quest, removing it from the user's active list."""
+    validate_document_id(quest_id)
+    uid = current_user["uid"]
+    db = get_firestore()
+    activation_ref = db.collection("users").document(uid).collection("quest_activations").document(quest_id)
+    if not activation_ref.get().exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quest not started")
+    activation_ref.delete()
+    return {"detail": "Quest dropped", "quest_id": quest_id}
 
 
 @router.post("", response_model=QuestResponse, status_code=status.HTTP_201_CREATED)

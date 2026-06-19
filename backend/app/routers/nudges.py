@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from google.cloud.firestore import SERVER_TIMESTAMP
 
 from app.activity import record_meaningful_action
 from app.dependencies import get_current_user, validate_document_id
 from app.firebase import get_firestore
+from app.notifications import triggers
 from app.schemas import NudgeCreateRequest, NudgeFeedType, NudgeRespondRequest, NudgeResponse, NudgeStatus, NudgeVote
 
 router = APIRouter(prefix="/nudges", tags=["nudges"])
@@ -34,6 +35,16 @@ def _group_feed_id(group_id: str) -> str:
 
 def _member_ids(db, group_id: str) -> list[str]:
     return [doc.id for doc in db.collection("groups").document(group_id).collection("members").stream()]
+
+
+def _display_name(db, uid: str) -> str:
+    doc = db.collection("users").document(uid).get()
+    return (doc.to_dict() or {}).get("display_name", "Someone") if doc.exists else "Someone"
+
+
+def _group_name(db, group_id: str) -> str:
+    doc = db.collection("groups").document(group_id).get()
+    return (doc.to_dict() or {}).get("name", "your group") if doc.exists else "your group"
 
 
 def _expected_voters(db, data: dict) -> list[str]:
@@ -155,7 +166,7 @@ def list_feed(feed_type: NudgeFeedType, target_id: str, limit: int = Query(defau
 
 
 @router.post("", response_model=NudgeResponse, status_code=status.HTTP_201_CREATED)
-def create_nudge(body: NudgeCreateRequest, current_user: dict = Depends(get_current_user)):
+def create_nudge(body: NudgeCreateRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     uid = current_user["uid"]
     db = get_firestore()
     feed_id, participants = _require_feed_access(db, uid, body.feed_type, body.target_id)
@@ -181,17 +192,28 @@ def create_nudge(body: NudgeCreateRequest, current_user: dict = Depends(get_curr
         "accepted_timer_started_at": None,
         "reminder_count": 0,
         "reminder_limit": reminder_limit,
-        "next_reminder_available_at": now + timedelta(minutes=5) if reminder_limit else None,
+        # First reminder is available immediately; a short cooldown is applied
+        # only after each reminder is sent (see send_reminder).
+        "next_reminder_available_at": None,
         "votes": {},
         "created_at": now,
         "resolved_at": None,
     })
     record_meaningful_action(db, uid, "send_nudge", {"nudge_id": ref.id})
+
+    # Fire-and-forget push to everyone expected to respond.
+    recipients = [u for u in participants if u != uid] if body.feed_type == NudgeFeedType.friend \
+        else [u for u in _member_ids(db, body.target_id) if u != uid]
+    if body.feed_type == NudgeFeedType.friend:
+        triggers.nudge_received(background_tasks, nudge_id=ref.id, recipient_uids=recipients, sender_name=_display_name(db, uid))
+    else:
+        triggers.group_nudge_received(background_tasks, nudge_id=ref.id, group_id=body.target_id, recipient_uids=recipients, group_name=_group_name(db, body.target_id))
+
     return _to_response(ref.id, ref.get().to_dict())
 
 
 @router.post("/{nudge_id}/respond", response_model=NudgeResponse)
-def respond_nudge(nudge_id: str, body: NudgeRespondRequest, current_user: dict = Depends(get_current_user)):
+def respond_nudge(nudge_id: str, body: NudgeRespondRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     validate_document_id(nudge_id)
     uid = current_user["uid"]
     db = get_firestore()
@@ -214,6 +236,10 @@ def respond_nudge(nudge_id: str, body: NudgeRespondRequest, current_user: dict =
         update["accepted_timer_started_at"] = now
         update["expires_at"] = now + timedelta(minutes=data["response_window_minutes"])
         record_meaningful_action(db, uid, "accept_nudge", {"nudge_id": nudge_id})
+        # Tell the sender their plan is happening (fire-and-forget).
+        sender = data.get("sender_uid")
+        if sender and sender != uid:
+            triggers.nudge_accepted(background_tasks, nudge_id=nudge_id, recipient_uids=[sender], friend_name=_display_name(db, uid))
     ref.update(update)
     data = {**data, **update}
     data = _expire_or_resolve(ref, data)
@@ -244,7 +270,7 @@ def send_reminder(nudge_id: str, current_user: dict = Depends(get_current_user))
     new_count = count + 1
     update = {
         "reminder_count": new_count,
-        "next_reminder_available_at": _now() + timedelta(minutes=5) if new_count < limit else None,
+        "next_reminder_available_at": _now() + timedelta(minutes=1) if new_count < limit else None,
     }
     ref.update(update)
     return _to_response(nudge_id, {**data, **update})

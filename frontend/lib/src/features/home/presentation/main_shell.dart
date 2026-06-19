@@ -10,6 +10,7 @@ import 'package:fafu/src/features/create/presentation/create_tab.dart';
 import 'package:fafu/src/features/events/presentation/events_list_page.dart';
 import 'package:fafu/src/features/home/presentation/home_page.dart';
 import 'package:fafu/src/features/profile/presentation/profile_page.dart';
+import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/quests/presentation/quests_page.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 
@@ -34,6 +35,16 @@ class _MainShellState extends ConsumerState<MainShell> {
   _FirstLaunchTooltipStep _tooltipStep = _FirstLaunchTooltipStep.map;
   bool _tooltipStarted = false;
   bool _tooltipCompleting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // The user is signed in and in the app shell — set up push (permission,
+    // FCM token registration, timezone). Fire-and-forget; never blocks the UI.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(pushServiceProvider).initialize();
+    });
+  }
 
   @override
   void dispose() {
@@ -367,7 +378,7 @@ class _FirstLaunchTooltipOverlay extends StatelessWidget {
         ),
       _FirstLaunchTooltipStep.sideQuests => (
           'Take on Side Quests',
-          'Tap Quests for WhatsPopn challenges around your city — quick solo missions to fill your free time.',
+          'Tap Quests for Fafo challenges around your city — quick solo missions to fill your free time.',
         ),
       _FirstLaunchTooltipStep.nudgeFeed => (
           'Nudge your friends',

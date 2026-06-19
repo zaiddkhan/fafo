@@ -201,6 +201,9 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
     final lng = _lng;
     final locationName = _locationName;
 
+    final organizerName = _organizerNameController.text.trim();
+    final organizerContact = _organizerContactController.text.trim();
+
     String? validation;
     if (title.isEmpty) {
       validation = 'Add a title for your event.';
@@ -208,6 +211,10 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       validation = 'Pick a category.';
     } else if (lat == null || lng == null || locationName == null) {
       validation = 'Set a location on the map.';
+    } else if (organizerName.isEmpty) {
+      validation = 'Add the organizer\'s full name so attendees know who is hosting.';
+    } else if (organizerContact.isEmpty) {
+      validation = 'Add a public organizer contact (email or phone).';
     }
     if (validation != null) {
       setState(() => _submitError = validation);
@@ -255,6 +262,9 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
         await repo.uploadBanner(created.id, _selectedCoverImage!);
       }
       if (!mounted) return;
+      // Tell the Explore + Creator Dashboard tabs (persistent in the shell's
+      // IndexedStack) to re-fetch so the new event shows up immediately.
+      bumpEventsRevision(ref);
       setState(() {
         _submitting = false;
         _published = true;
@@ -428,6 +438,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
               child: TextField(
                 controller: _descriptionController,
                 maxLines: 4,
+                maxLength: 1000,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: fieldText,
                   fontWeight: FontWeight.w600,

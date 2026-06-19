@@ -11,7 +11,7 @@ class MapConfig {
 
   static const attributionTitle = 'Map data licenses';
   static const attributionSummary =
-      'Vintage style by WhatsPopn. Basemap data by OpenMapTiles/OpenFreeMap. Map data © OpenStreetMap contributors.';
+      'Vintage style by Fafo. Basemap data by OpenMapTiles/OpenFreeMap. Map data © OpenStreetMap contributors.';
 
   static const openFreeMapUrl = 'https://openfreemap.org/';
   static const openStreetMapCopyrightUrl =

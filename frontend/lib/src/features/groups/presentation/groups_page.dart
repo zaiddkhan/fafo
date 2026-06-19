@@ -234,12 +234,10 @@ class _GroupCard extends StatelessWidget {
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             if (value == 'nudge') {
-              showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) => FractionallySizedBox(
-                  heightFactor: 0.85,
-                  child: NudgeFeedSheet(feedType: NudgeFeedType.group, targetId: group.id, title: group.name),
+              Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (context) => NudgeFeedSheet(feedType: NudgeFeedType.group, targetId: group.id, title: group.name),
                 ),
               );
             }

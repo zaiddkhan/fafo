@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -81,6 +82,9 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
 
   Future<void> _handleRegisterTap() async {
     if (_joining) return;
+
+    // Organizers attend their own event implicitly and can't RSVP as attendees.
+    if (_isOwner) return;
 
     if (_joined) {
       await _handleUnjoinTap();
@@ -214,7 +218,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       friendsOnly: false,
       rating: initial?.rating ?? 4.7,
       timing: initial?.timing ?? MockEventTiming.today,
-      organizerName: initial?.organizerName ?? 'WhatsPopn Creator',
+      organizerName: initial?.organizerName ?? 'Fafo Creator',
       organizerContact: initial?.organizerContact ?? '',
       organizerInstagram: initial?.organizerInstagram ?? '',
       organizerVerified: true,
@@ -250,13 +254,47 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     );
   }
 
+  /// True when the signed-in user is the event's organizer. Organizers attend
+  /// implicitly and can't join their own event as an attendee.
+  bool get _isOwner {
+    final me = FirebaseAuth.instance.currentUser?.uid;
+    final creator = _backendEvent?.creatorUid;
+    return me != null && creator != null && me == creator;
+  }
+
   String get _joinLabel {
+    if (_isOwner) return 'You\'re hosting this event';
     if (_joining) return 'Joining...';
     if (_joined) return 'Leave event';
     if (_joinWindowClosed) return 'Join window closed';
     if (_isFull) return 'Full';
     if (!_registrationOpen) return 'Registration Closed';
     return 'Join';
+  }
+
+  Future<void> _viewOnMap() async {
+    final event = _displayEvent;
+    if (event == null) return;
+    final lat = event.lat;
+    final lng = event.lng;
+    final label = Uri.encodeComponent(event.venue);
+    // Open the location in the device's maps app. Try a geo: URI first (Android),
+    // then fall back to a Google Maps web URL that works everywhere.
+    final geoUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng($label)');
+    final webUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    try {
+      if (await canLaunchUrl(geoUri)) {
+        await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the map.')),
+        );
+      }
+    }
   }
 
   Future<LottieComposition?> _decodeDotLottie(List<int> bytes) {
@@ -352,23 +390,6 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                         ),
                       ),
                       const Spacer(),
-                      GestureDetector(
-                        onTap: () {},
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.bgSecondary,
-                            border: AppChrome.outlineBorder,
-                          ),
-                          child: Icon(
-                            Icons.share_outlined,
-                            color: AppColors.textPrimary,
-                            size: 20,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -503,7 +524,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                               const SizedBox(width: AppSpacing.xs),
                               Text(
                                 event.eventType == 'spotlight'
-                                    ? 'WhatsPopn Today'
+                                    ? 'Fafo Today'
                                     : 'Featured nearby',
                                 style: theme.textTheme.labelLarge?.copyWith(
                                   color: AppColors.textSecondary,
@@ -566,14 +587,16 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                             horizontal: AppSpacing.lg,
                           ),
                           child: _ActionButton(
-                            icon: _joined
-                                ? Icons.check_circle_outline
-                                : Icons.how_to_reg_outlined,
+                            icon: _isOwner
+                                ? Icons.verified_user_outlined
+                                : (_joined
+                                    ? Icons.check_circle_outline
+                                    : Icons.how_to_reg_outlined),
                             label: _joinLabel,
-                            isActive:
+                            isActive: !_isOwner &&
                                 (_joined || (!_isFull && _registrationOpen && !_joinWindowClosed)) &&
                                 !_joining,
-                            onTap: _handleRegisterTap,
+                            onTap: _isOwner ? null : _handleRegisterTap,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xl),
@@ -632,7 +655,9 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                         right: 0,
                                         bottom: AppSpacing.sm,
                                         child: Center(
-                                          child: Container(
+                                          child: GestureDetector(
+                                            onTap: _viewOnMap,
+                                            child: Container(
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: AppSpacing.md,
                                               vertical: AppSpacing.sm,
@@ -676,6 +701,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                                 ),
                                               ],
                                             ),
+                                          ),
                                           ),
                                         ),
                                       ),
@@ -1073,7 +1099,7 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isActive;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

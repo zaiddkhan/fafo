@@ -159,9 +159,12 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.xl),
@@ -260,8 +263,10 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                 variant: AppButtonVariant.featured,
                 onPressed: _isComplete && !_verifying ? _verify : null,
               ),
-              const Spacer(),
+              const SizedBox(height: AppSpacing.xl),
             ],
+              ),
+            ),
           ),
         ),
       ),

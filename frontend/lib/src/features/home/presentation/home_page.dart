@@ -18,6 +18,8 @@ import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/features/location/selected_area_controller.dart';
 import 'package:fafu/src/features/search/presentation/search_page.dart';
+import 'package:fafu/src/features/users/data/users_repository.dart';
+import 'package:fafu/src/core/services/shared_preferences_provider.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
 
 enum _DateTimeFilter {
@@ -106,14 +108,43 @@ class HomePageState extends ConsumerState<HomePage> {
     }
   }
 
+  static const _cachedLatKey = 'home_map_last_lat';
+  static const _cachedLngKey = 'home_map_last_lng';
+
   Future<void> _resolveUserLocation() async {
-    // A manually chosen area (Settings) takes priority over GPS.
+    // A manually chosen area (Settings) takes priority over everything else.
     final chosen = ref.read(selectedAreaProvider);
     if (chosen != null) {
       _lat = chosen.lat;
       _lng = chosen.lng;
       return;
     }
+
+    // Default to the area the user set during onboarding / in their profile.
+    // This is why we don't need to prompt for GPS on every launch.
+    try {
+      final profile = await ref.read(currentProfileProvider.future);
+      final area = profile.area;
+      if (area != null) {
+        _lat = area.lat;
+        _lng = area.lng;
+        return;
+      }
+    } catch (_) {
+      // Profile not available yet — fall through to cache / GPS.
+    }
+
+    final prefs = ref.read(sharedPreferencesProvider).value;
+
+    // Reuse the last known location so a returning user isn't asked again.
+    final cachedLat = prefs?.getDouble(_cachedLatKey);
+    final cachedLng = prefs?.getDouble(_cachedLngKey);
+    if (cachedLat != null && cachedLng != null) {
+      _lat = cachedLat;
+      _lng = cachedLng;
+      return;
+    }
+
     try {
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -133,6 +164,9 @@ class HomePageState extends ConsumerState<HomePage> {
       );
       _lat = position.latitude;
       _lng = position.longitude;
+      // Cache so subsequent launches don't re-prompt.
+      await prefs?.setDouble(_cachedLatKey, _lat);
+      await prefs?.setDouble(_cachedLngKey, _lng);
     } catch (_) {
       _lat = _defaultLat;
       _lng = _defaultLng;
@@ -273,7 +307,7 @@ class HomePageState extends ConsumerState<HomePage> {
       friendsOnly: false,
       rating: 4.7,
       timing: timing,
-      organizerName: 'WhatsPopn Creator',
+      organizerName: 'Fafo Creator',
       organizerContact: '',
       organizerInstagram: '',
       organizerVerified: true,

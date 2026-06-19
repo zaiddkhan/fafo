@@ -34,4 +34,34 @@ class QuestsRepository {
       throw ApiException.fromDioError(e);
     }
   }
+
+  /// The current user's started/completed quests (their Quest History).
+  Future<List<QuestActivation>> getMyActivations() async {
+    try {
+      final response = await _dio.get('/quests/me/activations');
+      return (response.data as List)
+          .map((e) => QuestActivation.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// Marks a started quest as completed, freeing an active slot.
+  Future<void> completeQuest(String questId) async {
+    try {
+      await _dio.post('/quests/$questId/complete');
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// Drops a started quest from the user's active list.
+  Future<void> abandonQuest(String questId) async {
+    try {
+      await _dio.delete('/quests/$questId/activate');
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
 }

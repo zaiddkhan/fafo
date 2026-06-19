@@ -52,6 +52,12 @@ class ProfileSetupRequest(BaseModel):
     display_name: str = Field(min_length=1, max_length=50)
     username: str = Field(min_length=3, max_length=30, pattern=r"^[a-z0-9._]+$")
     area: Optional[Area] = None
+    # IANA timezone (e.g. "Asia/Kolkata") used for notification quiet hours.
+    timezone: Optional[str] = Field(default=None, max_length=64)
+
+
+class TimezoneUpdateRequest(BaseModel):
+    timezone: str = Field(min_length=1, max_length=64)
 
 
 class ProfileResponse(BaseModel):
@@ -439,6 +445,18 @@ class QuestResponse(BaseModel):
     updated_at: datetime
 
 
+class QuestActivationStatus(str, Enum):
+    active = "active"
+    completed = "completed"
+
+
+class QuestActivationResponse(BaseModel):
+    quest: QuestResponse
+    status: QuestActivationStatus
+    activated_at: datetime
+    completed_at: Optional[datetime] = None
+
+
 # --- Nudge Cards ---
 
 
@@ -694,3 +712,49 @@ class NotificationTemplateResponse(BaseModel):
     version: int = 1
     updated_at: Optional[datetime] = None
     updated_by: Optional[str] = None
+
+
+# --- Push: device registration ---
+
+
+class DevicePlatform(str, Enum):
+    ios = "ios"
+    android = "android"
+
+
+class DeviceRegisterRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=512)
+    platform: DevicePlatform
+
+
+class DeviceRegisterResponse(BaseModel):
+    registered: bool = True
+
+
+# --- Admin: broadcast push ---
+
+
+class BroadcastTarget(str, Enum):
+    all = "all"
+    uids = "uids"
+
+
+class NotificationBroadcastRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+    body: str = Field(min_length=1, max_length=500)
+    sound: Optional[str] = Field(default=None, max_length=60)
+    target: BroadcastTarget = BroadcastTarget.all
+    uids: list[str] = Field(default_factory=list, max_length=5000)
+
+
+class NotificationBroadcastResponse(BaseModel):
+    broadcast_id: str
+    enqueued: int
+
+
+# --- Internal cron ---
+
+
+class CronRunResponse(BaseModel):
+    job: str
+    summary: dict = Field(default_factory=dict)

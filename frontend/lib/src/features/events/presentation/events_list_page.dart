@@ -150,6 +150,9 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Re-fetch when an event is created/edited elsewhere (this tab is kept
+    // alive in the shell's IndexedStack, so initState only runs once).
+    ref.listen(eventsRevisionProvider, (_, _) => _loadEventsIndex());
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final pageBackground = isDark
@@ -196,7 +199,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
               else if (_error != null)
                 _ErrorState(message: _error!, onRetry: _loadEventsIndex)
               else ...[
-                _SectionTitle('WhatsPopn Today', color: headingColor),
+                _SectionTitle('Fafo Today', color: headingColor),
                 const SizedBox(height: 12),
                 if (_spotlightEvents.isEmpty)
                   _EmptyInline(

@@ -35,6 +35,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return MainShell.routePath;
       }
 
+      // A non-user following a shared event link must sign in first to see the
+      // details ("sign in first to know more"). Gate any deep link behind the
+      // splash/sign-in screen until onboarding is complete.
+      if (!isOnboarded && path.startsWith('/event/')) {
+        return SplashPage.routePath;
+      }
+
       return null;
     },
     routes: <RouteBase>[

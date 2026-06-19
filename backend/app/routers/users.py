@@ -15,6 +15,7 @@ from app.schemas import (
     ProfileSetupRequest,
     ProfileStatsResponse,
     PublicUserResponse,
+    TimezoneUpdateRequest,
     TooltipCompleteResponse,
     UsernameCheckResponse,
 )
@@ -103,6 +104,8 @@ def _reserve_username_txn(transaction, db, uid, body):
         "username": body.username,
         "onboarding_complete": True,
     }
+    if body.timezone:
+        update_data["timezone"] = body.timezone
     if body.area is not None:
         update_data["area"] = {
             "geopoint": GeoPoint(body.area.lat, body.area.lng),
@@ -126,6 +129,19 @@ def setup_profile(
     updated = _reserve_username_txn(transaction, db, uid, body)
 
     return _profile_from_doc(uid, updated)
+
+
+@router.put("/me/timezone", status_code=status.HTTP_200_OK)
+def update_timezone(body: TimezoneUpdateRequest, current_user: dict = Depends(get_current_user)):
+    """Store the user's IANA timezone for notification quiet-hours calculations.
+
+    Called by the app on launch (alongside device registration) so quiet hours track
+    the user's current zone even if they travel.
+    """
+    uid = current_user["uid"]
+    db = get_firestore()
+    db.collection("users").document(uid).update({"timezone": body.timezone})
+    return {"detail": "Timezone updated", "timezone": body.timezone}
 
 
 @router.post("/onboarding/first-launch-tooltip/complete", response_model=TooltipCompleteResponse)

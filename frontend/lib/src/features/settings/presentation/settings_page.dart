@@ -14,6 +14,7 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/theme_mode_controller.dart';
 import 'package:fafu/src/features/creators/presentation/creator_application_page.dart';
 import 'package:fafu/src/features/location/selected_area_controller.dart';
+import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
@@ -74,6 +75,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   /// Firebase (otherwise the Dio interceptor silently re-fetches a token), and
   /// drops the cached auth token.
   Future<void> _signOutLocally() async {
+    // Unregister the push token first, while the auth token is still valid.
+    await ref.read(pushServiceProvider).unregister();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(onboardingCompleteKey);
     await FirebaseAuth.instance.signOut();

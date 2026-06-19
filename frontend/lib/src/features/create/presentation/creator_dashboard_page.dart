@@ -124,6 +124,9 @@ class _CreatorDashboardPageState extends ConsumerState<CreatorDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Re-fetch when an event is created/edited elsewhere (this tab is kept
+    // alive in the shell's IndexedStack).
+    ref.listen(eventsRevisionProvider, (_, _) => _load());
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,

@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     HTTPException,
@@ -19,6 +20,8 @@ from app.activity import record_meaningful_action
 from app.dependencies import get_current_user, get_creator_user, validate_document_id
 from app.routers.friends import _is_online
 from app.firebase import get_firestore
+from app.notifications import triggers
+from app.notifications.service import notifications
 from app.geo import encode_geohash, geohash_bounds_for_radius
 from app.schemas import (
     EventCreateRequest,
@@ -142,9 +145,40 @@ def build_event_data(body: EventCreateRequest, creator_uid: str, *, seeded: bool
     }
 
 
+def _joinee_uids(db, event_id: str) -> list[str]:
+    return [d.id for d in db.collection("events").document(event_id).collection("joinees").stream()]
+
+
+def _notify_new_event_nearby(event_id: str, title: str, lat: float, lng: float, exclude_uid: str, radius_km: float = 15.0):
+    """Enqueue map-FOMO pushes to users whose saved area covers the new event.
+
+    Runs as a background task. Index-light: scans users with an `area` and filters by
+    haversine distance. Capped for safety; logs nothing user-facing.
+    """
+    db = get_firestore()
+    recipients = []
+    for doc in db.collection("users").limit(5000).stream():
+        if doc.id == exclude_uid:
+            continue
+        area = (doc.to_dict() or {}).get("area")
+        if not area or area.get("lat") is None or area.get("lng") is None:
+            continue
+        reach = area.get("radius_km", radius_km)
+        if _haversine_km(lat, lng, area["lat"], area["lng"]) <= reach:
+            recipients.append(doc.id)
+    if recipients:
+        notifications.enqueue(
+            template_id="map_fomo.new_event_nearby",
+            recipient_uids=recipients,
+            variables={"event_title": title},
+            data={"event_id": event_id},
+            dedupe_base=f"map_fomo.new_event_nearby:{event_id}",
+        )
+
+
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 def create_event(
-    body: EventCreateRequest, current_user: dict = Depends(get_creator_user)
+    body: EventCreateRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_creator_user)
 ):
     uid = current_user["uid"]
     db = get_firestore()
@@ -159,6 +193,11 @@ def create_event(
     event_data = build_event_data(body, uid)
     event_id = str(uuid4())
     db.collection("events").document(event_id).set(event_data)
+
+    # Map FOMO: fire-and-forget push to users with this area in range.
+    background_tasks.add_task(
+        _notify_new_event_nearby, event_id, body.title, body.lat, body.lng, uid
+    )
 
     return _event_to_response(event_id, event_data)
 
@@ -345,6 +384,7 @@ def get_event(event_id: str, current_user: dict = Depends(get_current_user)):
 def update_event(
     event_id: str,
     body: EventUpdateRequest,
+    background_tasks: BackgroundTasks,
     # Owner-gated below (creator_uid check), not is_creator-gated, so a revoked
     # creator can still edit/manage events they already created.
     current_user: dict = Depends(get_current_user),
@@ -396,6 +436,18 @@ def update_event(
     doc_ref.update(update)
 
     updated = doc_ref.get().to_dict()
+
+    # Notify joinees when details that affect attendance change (10-min cooldown is
+    # enforced inside the trigger's dedupe bucket).
+    notify_fields = {"title", "date_time", "location", "location_name", "registration_open"}
+    if notify_fields & set(update.keys()):
+        joinees = _joinee_uids(db, event_id)
+        if joinees:
+            triggers.event_edited(
+                background_tasks, event_id=event_id, recipient_uids=joinees,
+                event_title=updated.get("title", "An event"),
+            )
+
     return _event_to_response(event_id, updated)
 
 
@@ -403,6 +455,7 @@ def update_event(
 def cancel_event(
     event_id: str,
     body: EventCancelRequest,
+    background_tasks: BackgroundTasks,
     # Owner-gated below, not is_creator-gated (revoked creators can still cancel
     # their own active events).
     current_user: dict = Depends(get_current_user),
@@ -438,6 +491,17 @@ def cancel_event(
             "updated_at": datetime.now(timezone.utc),
         }
     )
+
+    # Tell joinees it's off, and cancel their pending time-pressure reminders.
+    joinees = _joinee_uids(db, event_id)
+    if joinees:
+        triggers.event_cancelled(
+            background_tasks, event_id=event_id, recipient_uids=joinees,
+            event_title=data.get("title", "An event"),
+        )
+        for joinee_uid in joinees:
+            background_tasks.add_task(triggers.cancel_event_reminders, event_id=event_id, uid=joinee_uid)
+
     if body.answers:
         db.collection("negative_action_responses").document(str(uuid4())).set({
             "actor_uid": uid,
@@ -460,6 +524,14 @@ def _join_event_txn(transaction, doc_ref, joinee_ref):
         )
 
     data = doc.to_dict()
+
+    # The organizer is implicitly attending; they cannot join their own event
+    # as a regular attendee.
+    if data.get("creator_uid") == joinee_ref.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You're hosting this event, so you can't join as an attendee.",
+        )
 
     if data.get("cancelled"):
         raise HTTPException(
@@ -504,7 +576,7 @@ def _join_event_txn(transaction, doc_ref, joinee_ref):
 
 
 @router.post("/{event_id}/join", response_model=EventJoinResponse)
-def join_event(event_id: str, current_user: dict = Depends(get_current_user)):
+def join_event(event_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     validate_document_id(event_id)
     uid = current_user["uid"]
     db = get_firestore()
@@ -515,6 +587,15 @@ def join_event(event_id: str, current_user: dict = Depends(get_current_user)):
     transaction = db.transaction()
     joined_at = _join_event_txn(transaction, doc_ref, joinee_ref)
     record_meaningful_action(db, uid, "join_event", {"event_id": event_id})
+
+    # Schedule this joinee's 24h/2h/30m time-pressure reminders (idempotent, future-dated).
+    event_data = doc_ref.get().to_dict() or {}
+    background_tasks.add_task(
+        triggers.schedule_event_reminders,
+        event_id=event_id, uid=uid,
+        event_title=event_data.get("title", "An event"),
+        start_dt=_ensure_utc(event_data["date_time"]),
+    )
 
     return EventJoinResponse(event_id=event_id, joined_at=joined_at)
 
@@ -545,6 +626,7 @@ def _unjoin_event_txn(transaction, doc_ref, joinee_ref):
 def unjoin_event(
     event_id: str,
     body: EventUnjoinRequest,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     validate_document_id(event_id)
@@ -566,6 +648,8 @@ def unjoin_event(
 
     transaction = db.transaction()
     _unjoin_event_txn(transaction, doc_ref, joinee_ref)
+    # Cancel this user's pending event reminders now that they've left.
+    background_tasks.add_task(triggers.cancel_event_reminders, event_id=event_id, uid=uid)
     if body.answers:
         db.collection("negative_action_responses").document(str(uuid4())).set({
             "actor_uid": uid,
