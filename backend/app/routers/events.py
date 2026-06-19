@@ -41,6 +41,7 @@ MAX_BANNER_BYTES = 5 * 1024 * 1024
 router = APIRouter(prefix="/events", tags=["events"])
 
 VISIBILITY_WINDOW_MINUTES = 10
+EVENT_EDIT_CUTOFF_MINUTES = 60
 DEFAULT_PAGE_LIMIT = 50
 MAX_PAGE_LIMIT = 100
 
@@ -57,6 +58,12 @@ def _ensure_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+def _optional_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return _ensure_utc(dt)
 
 
 def _is_spotlight_today(date_time: datetime) -> bool:
@@ -282,8 +289,8 @@ def list_events(
         for doc in query.stream():
             data = doc.to_dict()
 
-            event_time = _ensure_utc(data["date_time"])
-            if event_time < cutoff:
+            event_time = _optional_utc(data.get("date_time"))
+            if event_time is None or event_time < cutoff:
                 continue
 
             if event_type and _stored_event_type_to_response(data) != event_type:
@@ -324,7 +331,10 @@ def list_my_events(
     results = []
     for doc in query.stream():
         data = doc.to_dict()
-        if not include_archived and _ensure_utc(data["date_time"]) < cutoff:
+        event_time = _optional_utc(data.get("date_time"))
+        if event_time is None:
+            continue
+        if not include_archived and event_time < cutoff:
             continue
         results.append(_event_to_response(doc.id, data))
     results.sort(key=lambda e: e.date_time)
@@ -349,7 +359,8 @@ def list_joined_events(
         if not joinee_doc.exists:
             continue
         data = doc.to_dict()
-        if data.get("cancelled") or _ensure_utc(data["date_time"]) < cutoff:
+        event_time = _optional_utc(data.get("date_time"))
+        if data.get("cancelled") or event_time is None or event_time < cutoff:
             continue
         results.append(_event_to_response(doc.id, data, uid))
 
@@ -372,7 +383,8 @@ def get_event(event_id: str, current_user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(minutes=VISIBILITY_WINDOW_MINUTES)
 
-    if data.get("cancelled") or _ensure_utc(data["date_time"]) < cutoff:
+    event_time = _optional_utc(data.get("date_time"))
+    if data.get("cancelled") or event_time is None or event_time < cutoff:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Event not found"
         )
@@ -411,11 +423,33 @@ def update_event(
     for field, value in body.model_dump(exclude_unset=True).items():
         if field in ("lat", "lng"):
             continue
+        if field == "date_time" and value is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="date_time cannot be null",
+            )
         if field == "event_type" and value is not None:
             normalized_type = value.value if hasattr(value, "value") else value
             update["event_type"] = EventType.normal.value if normalized_type == EventType.spotlight.value else normalized_type
         else:
             update[field] = value
+
+    detail_fields = set(update.keys()) - {"registration_open"}
+    if body.lat is not None or body.lng is not None:
+        detail_fields.update({"location", "geohash"})
+    if detail_fields:
+        event_time = _optional_utc(data.get("date_time"))
+        if event_time is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Event has no valid date_time",
+            )
+        edit_cutoff = event_time - timedelta(minutes=EVENT_EDIT_CUTOFF_MINUTES)
+        if datetime.now(timezone.utc) >= edit_cutoff:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Event details can only be edited until 1 hour before the start time",
+            )
 
     if body.lat is not None and body.lng is not None:
         update["location"] = GeoPoint(body.lat, body.lng)
@@ -544,7 +578,12 @@ def _join_event_txn(transaction, doc_ref, joinee_ref):
         )
 
     now = datetime.now(timezone.utc)
-    event_time = _ensure_utc(data["date_time"])
+    event_time = _optional_utc(data.get("date_time"))
+    if event_time is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Event has no valid date_time",
+        )
     join_cutoff = event_time + timedelta(minutes=VISIBILITY_WINDOW_MINUTES)
 
     if now > join_cutoff:
@@ -590,12 +629,14 @@ def join_event(event_id: str, background_tasks: BackgroundTasks, current_user: d
 
     # Schedule this joinee's 24h/2h/30m time-pressure reminders (idempotent, future-dated).
     event_data = doc_ref.get().to_dict() or {}
-    background_tasks.add_task(
-        triggers.schedule_event_reminders,
-        event_id=event_id, uid=uid,
-        event_title=event_data.get("title", "An event"),
-        start_dt=_ensure_utc(event_data["date_time"]),
-    )
+    start_dt = _optional_utc(event_data.get("date_time"))
+    if start_dt is not None:
+        background_tasks.add_task(
+            triggers.schedule_event_reminders,
+            event_id=event_id, uid=uid,
+            event_title=event_data.get("title", "An event"),
+            start_dt=start_dt,
+        )
 
     return EventJoinResponse(event_id=event_id, joined_at=joined_at)
 
@@ -638,7 +679,12 @@ def unjoin_event(
 
     event_doc = doc_ref.get()
     if event_doc.exists:
-        event_time = _ensure_utc(event_doc.to_dict()["date_time"])
+        event_time = _optional_utc(event_doc.to_dict().get("date_time"))
+        if event_time is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Event has no valid date_time",
+            )
         leave_cutoff = event_time + timedelta(minutes=VISIBILITY_WINDOW_MINUTES)
         if datetime.now(timezone.utc) > leave_cutoff:
             raise HTTPException(

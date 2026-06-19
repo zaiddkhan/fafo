@@ -8,7 +8,6 @@ import 'package:fafu/src/features/create/presentation/create_event_page.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
-import 'package:fafu/src/shared/widgets/negative_action_dialog.dart';
 
 class CreatorDashboardPage extends ConsumerStatefulWidget {
   const CreatorDashboardPage({super.key});
@@ -21,7 +20,6 @@ class _CreatorDashboardPageState extends ConsumerState<CreatorDashboardPage> {
   bool _loading = true;
   String? _error;
   List<EventResponse> _events = const [];
-  final Map<String, List<JoineeResponse>> _joineesByEvent = {};
 
   @override
   void initState() {
@@ -58,68 +56,23 @@ class _CreatorDashboardPageState extends ConsumerState<CreatorDashboardPage> {
   }
 
   Future<void> _edit(EventResponse event) async {
-    final title = TextEditingController(text: event.title);
-    final description = TextEditingController(text: event.description ?? '');
-    final capacity = TextEditingController(text: event.capacity?.toString() ?? '');
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit event'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
-            TextField(controller: description, decoration: const InputDecoration(labelText: 'Description')),
-            TextField(controller: capacity, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Capacity')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
-        ],
-      ),
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => CreateEventPage(event: event)),
     );
-    if (saved != true) return;
-    await ref.read(eventsRepositoryProvider).updateEvent(
-      event.id,
-      EventUpdateRequest(
-        title: title.text.trim(),
-        description: description.text.trim().isEmpty ? null : description.text.trim(),
-        capacity: capacity.text.trim().isEmpty ? null : int.tryParse(capacity.text.trim()),
-      ),
-    );
-    await _load();
+    if (mounted) _load();
   }
 
   Future<void> _cancel(EventResponse event) async {
-    // PRD: cancelling an event is a negative action gated by a 3-to-5 question flow.
-    final answers = await showNegativeActionQuestionnaire(
-      context,
-      title: 'Cancel "${event.title}"?',
-      intro: 'Cancellation is irreversible and notifies everyone who joined. Confirm with a few questions.',
-      confirmLabel: 'Cancel event',
-      questions: const [
-        'Why are you cancelling this event?',
-        'Could anything have kept it running?',
-        'Anything attendees should know?',
-      ],
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => CancelEventPage(event: event)),
     );
-    if (answers == null) return;
-    await ref.read(eventsRepositoryProvider).cancelEvent(
-          event.id,
-          reason: answers.first,
-          answers: answers,
-        );
-    await _load();
+    if (mounted) _load();
   }
 
-  Future<void> _loadJoinees(EventResponse event) async {
-    if (_joineesByEvent.containsKey(event.id)) {
-      setState(() => _joineesByEvent.remove(event.id));
-      return;
-    }
-    final joinees = await ref.read(eventsRepositoryProvider).getJoinees(event.id, limit: 50);
-    if (mounted) setState(() => _joineesByEvent[event.id] = joinees);
+  Future<void> _openJoinees(EventResponse event) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => EventJoineesPage(event: event)),
+    );
   }
 
   @override
@@ -151,11 +104,10 @@ class _CreatorDashboardPageState extends ConsumerState<CreatorDashboardPage> {
               else
                 ..._events.map((event) => _CreatorEventCard(
                   event: event,
-                  joinees: _joineesByEvent[event.id],
                   onEdit: () => _edit(event),
                   onToggleRegistration: () => _toggleRegistration(event),
                   onCancel: () => _cancel(event),
-                  onJoinees: () => _loadJoinees(event),
+                  onJoinees: () => _openJoinees(event),
                 )),
             ],
           ),
@@ -168,7 +120,6 @@ class _CreatorDashboardPageState extends ConsumerState<CreatorDashboardPage> {
 class _CreatorEventCard extends StatelessWidget {
   const _CreatorEventCard({
     required this.event,
-    required this.joinees,
     required this.onEdit,
     required this.onToggleRegistration,
     required this.onCancel,
@@ -176,7 +127,6 @@ class _CreatorEventCard extends StatelessWidget {
   });
 
   final EventResponse event;
-  final List<JoineeResponse>? joinees;
   final VoidCallback onEdit;
   final VoidCallback onToggleRegistration;
   final VoidCallback onCancel;
@@ -185,6 +135,9 @@ class _CreatorEventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final canEditDetails = DateTime.now().isBefore(
+      event.dateTime.toLocal().subtract(const Duration(hours: 1)),
+    );
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Padding(
@@ -202,43 +155,259 @@ class _CreatorEventCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                OutlinedButton(onPressed: onEdit, child: const Text('Edit')),
+                OutlinedButton(
+                  onPressed: canEditDetails ? onEdit : null,
+                  child: Text(canEditDetails ? 'Edit' : 'Edit locked'),
+                ),
                 OutlinedButton(onPressed: onToggleRegistration, child: Text(event.registrationOpen ? 'Stop registration' : 'Reopen registration')),
                 OutlinedButton(onPressed: onJoinees, child: const Text('Joinees')),
                 OutlinedButton(onPressed: onCancel, child: const Text('Cancel')),
               ],
             ),
-            if (joinees != null) ...[
-              const Divider(height: 24),
-              if (joinees!.isEmpty)
-                const Text('No joinees yet.')
-              else
-                ...joinees!.map((j) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      CircleAvatar(backgroundImage: j.photoUrl == null ? null : NetworkImage(j.photoUrl!)),
-                      if (j.online)
-                        Positioned(
-                          right: -1,
-                          bottom: -1,
-                          child: Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4ED164),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.bgSecondary, width: 2),
+            if (!canEditDetails) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Details are locked within 1 hour of start time.',
+                style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class EventJoineesPage extends ConsumerStatefulWidget {
+  const EventJoineesPage({super.key, required this.event});
+
+  final EventResponse event;
+
+  @override
+  ConsumerState<EventJoineesPage> createState() => _EventJoineesPageState();
+}
+
+class _EventJoineesPageState extends ConsumerState<EventJoineesPage> {
+  bool _loading = true;
+  String? _error;
+  List<JoineeResponse> _joinees = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final joinees = await ref
+          .read(eventsRepositoryProvider)
+          .getJoinees(widget.event.id, limit: 100);
+      if (mounted) setState(() => _joinees = joinees);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(title: const Text('Joinees')),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [
+            Text(widget.event.title, style: theme.textTheme.titleLarge),
+            const SizedBox(height: 6),
+            Text(
+              '${widget.event.joineeCount} people joined',
+              style: theme.textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            if (_loading)
+              const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))
+            else if (_error != null)
+              Text(_error!, style: const TextStyle(color: Colors.red))
+            else if (_joinees.isEmpty)
+              const Text('No joinees yet.')
+            else
+              ..._joinees.map(
+                (j) => Card(
+                  child: ListTile(
+                    leading: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: j.photoUrl == null ? null : NetworkImage(j.photoUrl!),
+                          child: j.photoUrl == null ? Text(j.displayName.isNotEmpty ? j.displayName[0] : '@') : null,
+                        ),
+                        if (j.online)
+                          Positioned(
+                            right: -1,
+                            bottom: -1,
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF4ED164),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.bgSecondary, width: 2),
+                              ),
                             ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
+                    title: Text(j.displayName.isEmpty ? '@${j.username}' : j.displayName),
+                    subtitle: Text('@${j.username} • joined ${DateFormat('MMM d, h:mm a').format(j.joinedAt.toLocal())}'),
                   ),
-                  title: Text(j.displayName.isEmpty ? '@${j.username}' : j.displayName),
-                  subtitle: Text('@${j.username}'),
-                )),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CancelEventPage extends ConsumerStatefulWidget {
+  const CancelEventPage({super.key, required this.event});
+
+  final EventResponse event;
+
+  @override
+  ConsumerState<CancelEventPage> createState() => _CancelEventPageState();
+}
+
+class _CancelEventPageState extends ConsumerState<CancelEventPage> {
+  final _reasonController = TextEditingController();
+  final _preventionController = TextEditingController();
+  final _messageController = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    _preventionController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cancelEvent() async {
+    final reason = _reasonController.text.trim();
+    if (reason.isEmpty) {
+      setState(() => _error = 'Please add a cancellation reason.');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    final answers = [
+      reason,
+      _preventionController.text.trim(),
+      _messageController.text.trim(),
+    ].where((a) => a.isNotEmpty).toList(growable: false);
+    try {
+      await ref.read(eventsRepositoryProvider).cancelEvent(
+            widget.event.id,
+            reason: reason,
+            answers: answers,
+          );
+      if (!mounted) return;
+      bumpEventsRevision(ref);
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+          _error = e.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(title: const Text('Cancel event')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE5484D), width: 1.5),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('This cannot be undone', style: theme.textTheme.titleLarge?.copyWith(color: const Color(0xFFE5484D))),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Cancelling “${widget.event.title}” will remove it from discovery and notify everyone who joined.',
+                    style: theme.textTheme.bodyLarge?.copyWith(color: const Color(0xFF551B1B)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text('Why are you cancelling?', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _reasonController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Give attendees a clear reason',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text('Could anything have kept it running?', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _preventionController,
+              maxLines: 2,
+              decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Optional'),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text('Anything attendees should know?', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _messageController,
+              maxLines: 2,
+              decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Optional'),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(_error!, style: const TextStyle(color: Colors.red)),
             ],
+            const SizedBox(height: AppSpacing.xl),
+            AppButton(
+              label: _submitting ? 'Cancelling...' : 'Cancel event permanently',
+              variant: AppButtonVariant.featured,
+              onPressed: _submitting ? null : _cancelEvent,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(
+              onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+              child: const Text('Keep event'),
+            ),
           ],
         ),
       ),

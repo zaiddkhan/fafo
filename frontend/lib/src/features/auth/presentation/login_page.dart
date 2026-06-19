@@ -135,7 +135,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ? _sendOtp
                             : null,
                       ),
-                      const Spacer(),
+                      const SizedBox(height: AppSpacing.lg),
                       Center(
                         child: GestureDetector(
                           onTap: () =>

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:fafu/src/core/config/map_config.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/auth/presentation/login_page.dart';
@@ -87,14 +86,6 @@ class SplashPage extends StatelessWidget {
                 'By continuing, you agree to our Terms and Privacy Policy.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.labelSmall,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                MapConfig.attributionSummary,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppColors.textTertiary,
-                ),
               ),
               const SizedBox(height: AppSpacing.md),
             ],

@@ -135,7 +135,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                             ? _sendOtp
                             : null,
                       ),
-                      const Spacer(),
+                      const SizedBox(height: AppSpacing.lg),
                       Center(
                         child: GestureDetector(
                           onTap: () =>

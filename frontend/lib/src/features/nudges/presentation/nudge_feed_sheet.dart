@@ -378,44 +378,149 @@ class _NudgeBubble extends ConsumerWidget {
   }
 
   void _showDetails(BuildContext context, String timerLabel) {
+    final myUid = FirebaseAuth.instance.currentUser?.uid;
+    final isMine = nudge.senderUid == myUid;
+    final isAccepted = nudge.status == NudgeStatus.acceptedTimer ||
+        (nudge.isResolved && nudge.yesCount > 0);
     final location = nudge.location?.trim() ?? '';
     final hasLocation = location.isNotEmpty;
     final isLink = location.startsWith('http://') || location.startsWith('https://');
 
-    showDialog<void>(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(nudge.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (hasLocation && !isLink) ...[
-              Text('Location: $location'),
-              const SizedBox(height: 8),
-            ],
-            Text('Remaining: $timerLabel'),
-            if (nudge.expectedVoterCount > 1) ...[
-              const SizedBox(height: 8),
-              Text('Tally: ${nudge.yesCount}/${nudge.expectedVoterCount} in'),
-            ],
-          ],
-        ),
-        actions: [
-          if (hasLocation && isLink)
-            TextButton.icon(
-              icon: const Icon(Icons.place_outlined, size: 18),
-              label: const Text('Open location'),
-              onPressed: () async {
-                final uri = Uri.tryParse(location);
-                if (uri != null) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
-              },
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final bottom = MediaQuery.viewInsetsOf(context).bottom;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(18, 4, 18, 18 + bottom),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: palette.soft,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.ink, width: 1.2),
+                      ),
+                      child: const Center(child: Text('👉', style: TextStyle(fontSize: 22))),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nudge.title,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.ink),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            isMine ? 'Sent by you' : 'From $friendName',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF6D6D78)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                _NudgeDetailRow(icon: Icons.timer_outlined, label: 'Time left', value: _stateLabel(timerLabel, isAccepted)),
+                if (nudge.expectedVoterCount > 1) ...[
+                  const SizedBox(height: 10),
+                  _NudgeDetailRow(icon: Icons.groups_outlined, label: 'Tally', value: '${nudge.yesCount}/${nudge.expectedVoterCount} in'),
+                ],
+                if (hasLocation) ...[
+                  const SizedBox(height: 10),
+                  _NudgeDetailRow(
+                    icon: Icons.place_outlined,
+                    label: 'Location',
+                    value: isLink ? 'Map location shared' : location,
+                  ),
+                ],
+                const SizedBox(height: 18),
+                if (hasLocation && isLink)
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.map_outlined, size: 18),
+                      label: const Text('Open location'),
+                      onPressed: () async {
+                        final uri = Uri.tryParse(location);
+                        if (uri != null) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                    ),
+                  ),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
             ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _NudgeDetailRow extends StatelessWidget {
+  const _NudgeDetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F7FB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE1E3EA)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppColors.accentPrimary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF6D6D78)),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink),
+                ),
+              ],
+            ),
           ),
         ],
       ),

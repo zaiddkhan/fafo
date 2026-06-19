@@ -461,6 +461,16 @@ class HomePageState extends ConsumerState<HomePage> {
   Future<void> _onMapCreated(MapController controller) async {
     _mapController = controller;
 
+    // MapLibre's Android location component can throw a native
+    // SecurityException if enabled without a granted runtime permission. The
+    // exception is raised asynchronously from MapView.onStart, so a Dart
+    // try/catch around enableLocation() is not enough to prevent an app crash.
+    final permission = await Geolocator.checkPermission();
+    final hasLocationPermission =
+        permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+    if (!hasLocationPermission) return;
+
     try {
       await controller.enableLocation();
     } catch (_) {

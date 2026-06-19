@@ -156,6 +156,11 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final otpBoxWidth = ((MediaQuery.sizeOf(context).width -
+                (AppSpacing.lg * 2) -
+                (AppSpacing.sm * (_otpLength - 1))) /
+            _otpLength)
+        .clamp(38.0, 50.0);
 
     return Scaffold(
       body: SafeArea(
@@ -183,48 +188,55 @@ class _OtpPageState extends ConsumerState<OtpPage> {
               ),
               const SizedBox(height: AppSpacing.xxl),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(_otpLength, (i) {
-                  return SizedBox(
-                    width: 48,
-                    child: KeyboardListener(
-                      focusNode: FocusNode(),
-                      onKeyEvent: (event) => _onKeyDown(i, event),
-                      child: TextField(
-                        controller: _controllers[i],
-                        focusNode: _focusNodes[i],
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        maxLength: 1,
-                        style: theme.textTheme.displayMedium,
-                        onChanged: (v) => _onChanged(i, v),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: InputDecoration(
-                          counterText: '',
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md,
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      right: i == _otpLength - 1 ? 0 : AppSpacing.sm,
+                    ),
+                    child: SizedBox(
+                      width: otpBoxWidth,
+                      child: KeyboardListener(
+                        focusNode: FocusNode(skipTraversal: true),
+                        onKeyEvent: (event) => _onKeyDown(i, event),
+                        child: TextField(
+                          controller: _controllers[i],
+                          focusNode: _focusNodes[i],
+                          textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
+                          maxLength: 1,
+                          style: theme.textTheme.displayMedium?.copyWith(
+                            fontSize: 22,
                           ),
-                          filled: true,
-                          fillColor: _controllers[i].text.isNotEmpty
-                              ? AppColors.bgTertiary
-                              : AppColors.surface,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppChrome.controlRadius,
+                          onChanged: (v) => _onChanged(i, v),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          decoration: InputDecoration(
+                            counterText: '',
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.md,
                             ),
-                            borderSide: AppChrome.outlineSide.copyWith(
-                              color: _controllers[i].text.isNotEmpty
-                                  ? AppColors.accentPrimary
-                                  : AppColors.border,
+                            filled: true,
+                            fillColor: _controllers[i].text.isNotEmpty
+                                ? AppColors.bgTertiary
+                                : AppColors.surface,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppChrome.controlRadius,
+                              ),
+                              borderSide: AppChrome.outlineSide.copyWith(
+                                color: _controllers[i].text.isNotEmpty
+                                    ? AppColors.accentPrimary
+                                    : AppColors.border,
+                              ),
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppChrome.controlRadius,
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppChrome.controlRadius,
+                              ),
+                              borderSide: AppChrome.outlineSide,
                             ),
-                            borderSide: AppChrome.outlineSide,
                           ),
                         ),
                       ),

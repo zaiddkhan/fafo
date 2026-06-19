@@ -1,4 +1,4 @@
-package com.example.whatspoppn
+package com.example.fafo
 
 import io.flutter.embedding.android.FlutterActivity
 

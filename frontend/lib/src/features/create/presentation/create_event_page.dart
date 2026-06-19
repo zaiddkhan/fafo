@@ -23,10 +23,14 @@ const _defaultLat = 12.9716;
 const _defaultLng = 77.5946;
 
 class CreateEventPage extends ConsumerStatefulWidget {
-  const CreateEventPage({super.key});
+  const CreateEventPage({super.key, this.event});
 
   static const routeName = 'create-event';
   static const routePath = '/event/create';
+
+  /// When provided, this page works as the full-screen event editor using the
+  /// same UI as creation instead of the old compact edit dialog.
+  final EventResponse? event;
 
   @override
   ConsumerState<CreateEventPage> createState() => _CreateEventPageState();
@@ -60,9 +64,29 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
   String? _submitError;
   bool _published = false;
 
+  bool get _isEditing => widget.event != null;
+
   @override
   void initState() {
     super.initState();
+    final event = widget.event;
+    if (event != null) {
+      _titleController.text = event.title;
+      _descriptionController.text = event.description ?? '';
+      _organizerNameController.text = event.organizerName ?? '';
+      _organizerContactController.text = event.organizerContact ?? '';
+      _organizerInstagramController.text = event.organizerInstagram ?? '';
+      _capacityController.text = event.capacity?.toString() ?? '';
+      _customEmojiController.text = event.customEmoji ?? '';
+      _selectedCategoryId = event.categoryId;
+      _eventType = event.eventType == EventType.spotlight
+          ? EventType.normal
+          : event.eventType;
+      _selectedDateTime = event.dateTime.toLocal();
+      _lat = event.lat;
+      _lng = event.lng;
+      _locationName = event.locationName;
+    }
     _loadCategories();
   }
 
@@ -192,7 +216,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
     );
   }
 
-  Future<void> _publish() async {
+  Future<void> _submit() async {
     if (_submitting) return;
 
     final title = _titleController.text.trim();
@@ -212,7 +236,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
     } else if (lat == null || lng == null || locationName == null) {
       validation = 'Set a location on the map.';
     } else if (organizerName.isEmpty) {
-      validation = 'Add the organizer\'s full name so attendees know who is hosting.';
+      validation =
+          'Add the organizer\'s full name so attendees know who is hosting.';
     } else if (organizerContact.isEmpty) {
       validation = 'Add a public organizer contact (email or phone).';
     }
@@ -257,13 +282,38 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
 
     try {
       final repo = ref.read(eventsRepositoryProvider);
-      final created = await repo.createEvent(request);
-      if (_selectedCoverImage != null) {
-        await repo.uploadBanner(created.id, _selectedCoverImage!);
+      final editingEvent = widget.event;
+      if (editingEvent == null) {
+        final created = await repo.createEvent(request);
+        if (_selectedCoverImage != null) {
+          await repo.uploadBanner(created.id, _selectedCoverImage!);
+        }
+      } else {
+        await repo.updateEvent(
+          editingEvent.id,
+          EventUpdateRequest(
+            title: request.title,
+            description: request.description,
+            categoryId: request.categoryId,
+            eventType: request.eventType,
+            customEmoji: request.customEmoji,
+            lat: request.lat,
+            lng: request.lng,
+            locationName: request.locationName,
+            dateTime: request.dateTime,
+            capacity: request.capacity,
+            organizerName: request.organizerName,
+            organizerContact: request.organizerContact,
+            organizerInstagram: request.organizerInstagram,
+          ),
+        );
+        if (_selectedCoverImage != null) {
+          await repo.uploadBanner(editingEvent.id, _selectedCoverImage!);
+        }
       }
       if (!mounted) return;
       // Tell the Explore + Creator Dashboard tabs (persistent in the shell's
-      // IndexedStack) to re-fetch so the new event shows up immediately.
+      // IndexedStack) to re-fetch so the new/edited event shows up immediately.
       bumpEventsRevision(ref);
       setState(() {
         _submitting = false;
@@ -279,6 +329,11 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
   }
 
   void _resetForm() {
+    if (_isEditing || Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
     setState(() {
       _published = false;
       _titleController.clear();
@@ -287,7 +342,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       _organizerContactController.clear();
       _organizerInstagramController.clear();
       _capacityController.clear();
-    _customEmojiController.clear();
+      _customEmojiController.clear();
       _selectedCoverImage = null;
       _coverBytes = null;
       _eventType = EventType.normal;
@@ -296,7 +351,9 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       _lng = null;
       _locationName = null;
       _submitError = null;
-      _selectedCategoryId = _categories.isNotEmpty ? _categories.first.id : null;
+      _selectedCategoryId = _categories.isNotEmpty
+          ? _categories.first.id
+          : null;
     });
   }
 
@@ -328,7 +385,13 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
     final shadowColor = isDark ? Colors.white : const Color(0xFF2A2A2A);
 
     if (_published) {
-      return _SuccessView(onDone: _resetForm);
+      return _SuccessView(
+        title: _isEditing ? 'Event Updated!' : 'Event Published!',
+        body: _isEditing
+            ? 'Your event details have been saved.'
+            : 'Your event is now live and visible\nto everyone nearby.',
+        onDone: _resetForm,
+      );
     }
 
     return Scaffold(
@@ -338,7 +401,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 120),
           children: [
             Text(
-              'Create Event',
+              _isEditing ? 'Edit Event' : 'Create Event',
               style: theme.textTheme.displayLarge?.copyWith(
                 color: AppColors.accentPrimary,
                 fontSize: 30,
@@ -364,9 +427,16 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
                             image: MemoryImage(_coverBytes!),
                             fit: BoxFit.cover,
                           )
+                        : widget.event?.bannerUrl != null
+                        ? DecorationImage(
+                            image: NetworkImage(widget.event!.bannerUrl!),
+                            fit: BoxFit.cover,
+                          )
                         : null,
                   ),
-                  child: _selectedCoverImage == null
+                  child:
+                      _selectedCoverImage == null &&
+                          widget.event?.bannerUrl == null
                       ? Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -424,7 +494,11 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
                   color: fieldText,
                   fontWeight: FontWeight.w600,
                 ),
-                decoration: _fieldDecoration(theme, hintColor, 'Write title here'),
+                decoration: _fieldDecoration(
+                  theme,
+                  hintColor,
+                  'Write title here',
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -529,10 +603,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
             const SizedBox(height: 10),
             _buildCategorySelector(theme, isDark, outlineColor, hintColor),
             const SizedBox(height: 20),
-            _FieldLabel(
-              label: 'Capacity (optional)',
-              textColor: fieldText,
-            ),
+            _FieldLabel(label: 'Capacity (optional)', textColor: fieldText),
             const SizedBox(height: 8),
             _OutlinedFieldShell(
               backgroundColor: fieldBackground,
@@ -690,10 +761,11 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
             ],
             const SizedBox(height: 28),
             _PublishButton(
+              label: _isEditing ? 'Save Changes' : 'Publish Event',
               outlineColor: outlineColor,
               shadowColor: shadowColor,
               submitting: _submitting,
-              onTap: _publish,
+              onTap: _submit,
             ),
           ],
         ),
@@ -795,12 +867,14 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
 
 class _PublishButton extends StatelessWidget {
   const _PublishButton({
+    required this.label,
     required this.outlineColor,
     required this.shadowColor,
     required this.submitting,
     required this.onTap,
   });
 
+  final String label;
   final Color outlineColor;
   final Color shadowColor;
   final bool submitting;
@@ -847,7 +921,7 @@ class _PublishButton extends StatelessWidget {
                         ),
                       )
                     : Text(
-                        'Publish Event',
+                        label,
                         style: theme.textTheme.displayMedium?.copyWith(
                           color: const Color(0xFF1A1A1A),
                           fontSize: 20,
@@ -1034,8 +1108,14 @@ class _RaisedSurface extends StatelessWidget {
 }
 
 class _SuccessView extends StatelessWidget {
-  const _SuccessView({required this.onDone});
+  const _SuccessView({
+    required this.title,
+    required this.body,
+    required this.onDone,
+  });
 
+  final String title;
+  final String body;
   final VoidCallback onDone;
 
   @override
@@ -1065,10 +1145,10 @@ class _SuccessView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                Text('Event Published!', style: theme.textTheme.displayLarge),
+                Text(title, style: theme.textTheme.displayLarge),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Your event is now live and visible\nto everyone nearby.',
+                  body,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: AppColors.textSecondary,
