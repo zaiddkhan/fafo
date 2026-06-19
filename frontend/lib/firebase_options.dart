@@ -61,7 +61,9 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyD-1my_OECpsWsCX5n7FFZpC3BpCLNv_nE',
-    appId: '1:149624228243:android:ddeecc4628d636e748c066',
+    // Must match the applicationId (com.example.fafo) — the prior value pointed
+    // at the com.example.whatspoppn Firebase app, breaking FCM token registration.
+    appId: '1:149624228243:android:2624fb847f2bb6ef48c066',
     messagingSenderId: '149624228243',
     projectId: 'fafu-869a8',
     storageBucket: 'fafu-869a8.firebasestorage.app',

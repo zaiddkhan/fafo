@@ -108,6 +108,27 @@ class FriendResponse {
   }
 }
 
+class ContactMatchResponse {
+  const ContactMatchResponse({
+    required this.phone,
+    required this.normalizedPhone,
+    required this.user,
+  });
+
+  final String phone;
+  final String normalizedPhone;
+  final PublicUserResponse user;
+
+  factory ContactMatchResponse.fromJson(Map<String, dynamic> json) {
+    final phone = json['phone'] as String? ?? '';
+    return ContactMatchResponse(
+      phone: phone,
+      normalizedPhone: json['normalized_phone'] as String? ?? phone,
+      user: PublicUserResponse.fromJson(json['user'] as Map<String, dynamic>),
+    );
+  }
+}
+
 class FriendStatsResponse {
   const FriendStatsResponse({
     required this.friendsCount,

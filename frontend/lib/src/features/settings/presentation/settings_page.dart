@@ -30,11 +30,53 @@ class SettingsPage extends ConsumerStatefulWidget {
   ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
+/// SharedPreferences key for the per-device push opt-out.
+const _pushEnabledKey = 'push_notifications_enabled';
+
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _pushNotifications = true;
   bool _emailNotifications = false;
   bool _locationSharing = true;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      if (!mounted) return;
+      setState(() => _pushNotifications = prefs.getBool(_pushEnabledKey) ?? true);
+    });
+  }
+
+  /// Push is a per-device setting: turning it off unregisters this device's FCM
+  /// token (the backend stops sending here); turning it on re-registers. The
+  /// choice is persisted so it survives restarts.
+  Future<void> _setPushNotifications(bool enabled) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _pushNotifications = enabled;
+    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_pushEnabledKey, enabled);
+      final push = ref.read(pushServiceProvider);
+      if (enabled) {
+        await push.initialize();
+      } else {
+        await push.unregister();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _pushNotifications = !enabled);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update push setting: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<List<String>?> _negativeAnswers(String title) async {
     final controllers = List.generate(3, (_) => TextEditingController());
@@ -279,7 +321,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     icon: Icons.notifications_outlined,
                     title: 'Push Notifications',
                     value: _pushNotifications,
-                    onChanged: (v) => setState(() => _pushNotifications = v),
+                    onChanged: _busy ? null : _setPushNotifications,
                   ),
                   _SettingsToggle(
                     icon: Icons.email_outlined,
@@ -413,7 +455,7 @@ class _SettingsToggle extends StatelessWidget {
   final IconData icon;
   final String title;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -429,7 +471,10 @@ class _SettingsToggle extends StatelessWidget {
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
+            activeThumbColor: Colors.white,
             activeTrackColor: AppColors.accentPrimary,
+            inactiveThumbColor: AppColors.lightBgSecondary,
+            inactiveTrackColor: AppColors.ink,
           ),
         ],
       ),

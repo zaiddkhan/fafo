@@ -226,9 +226,24 @@ class _GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final borderRadius = BorderRadius.circular(16);
+
     return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      elevation: 0,
+      color: AppColors.bgSecondary,
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: borderRadius,
+        side: BorderSide(color: AppColors.border, width: 1.5),
+      ),
       child: ExpansionTile(
+        tilePadding: const EdgeInsets.fromLTRB(20, 10, 14, 10),
+        childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        shape: RoundedRectangleBorder(borderRadius: borderRadius),
+        collapsedShape: RoundedRectangleBorder(borderRadius: borderRadius),
+        backgroundColor: AppColors.bgSecondary,
+        collapsedBackgroundColor: AppColors.bgSecondary,
         title: Text(group.name),
         subtitle: Text('${group.members.length} member${group.members.length == 1 ? '' : 's'}'),
         trailing: PopupMenuButton<String>(
@@ -257,6 +272,8 @@ class _GroupCard extends StatelessWidget {
         children: group.members.map((member) {
           final canManage = _isAdmin && member.user.uid != group.adminUid;
           return ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            minLeadingWidth: 52,
             leading: Stack(
               clipBehavior: Clip.none,
               children: [

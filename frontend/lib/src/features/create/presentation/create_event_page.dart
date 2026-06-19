@@ -59,6 +59,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
   double? _lat;
   double? _lng;
   String? _locationName;
+  String? _address;
+  String? _locationDetails;
 
   bool _submitting = false;
   String? _submitError;
@@ -86,6 +88,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       _lat = event.lat;
       _lng = event.lng;
       _locationName = event.locationName;
+      _address = event.address;
+      _locationDetails = event.locationDetails;
     }
     _loadCategories();
   }
@@ -160,6 +164,9 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
           initialLat: centerLat,
           initialLng: centerLng,
           initialName: _locationName,
+          initialAddress: _address,
+          initialDetails: _locationDetails,
+          hasInitialPin: _lat != null && _lng != null,
         ),
       ),
     );
@@ -168,6 +175,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       _lat = result.lat;
       _lng = result.lng;
       _locationName = result.locationName;
+      _address = result.address;
+      _locationDetails = result.locationDetails;
     });
   }
 
@@ -273,6 +282,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       lat: lat!,
       lng: lng!,
       locationName: locationName!,
+      address: _address,
+      locationDetails: _locationDetails,
       dateTime: _selectedDateTime.toUtc(),
       capacity: capacity,
       organizerName: optional(_organizerNameController),
@@ -300,6 +311,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
             lat: request.lat,
             lng: request.lng,
             locationName: request.locationName,
+            address: request.address,
+            locationDetails: request.locationDetails,
             dateTime: request.dateTime,
             capacity: request.capacity,
             organizerName: request.organizerName,
@@ -350,6 +363,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       _lat = null;
       _lng = null;
       _locationName = null;
+      _address = null;
+      _locationDetails = null;
       _submitError = null;
       _selectedCategoryId = _categories.isNotEmpty
           ? _categories.first.id
@@ -569,12 +584,34 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
                     ),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: Text(
-                        _locationName ?? 'Pick location on map',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: _locationName != null ? fieldText : hintColor,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _locationName ?? 'Search for a place',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: _locationName != null
+                                  ? fieldText
+                                  : hintColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (_locationName != null &&
+                              (_locationDetails != null || _address != null))
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                _locationDetails ?? _address!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: hintColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     Icon(Icons.chevron_right, color: hintColor, size: 18),

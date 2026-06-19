@@ -22,12 +22,17 @@ class FriendsRepository {
     }
   }
 
-  Future<List<PublicUserResponse>> syncContacts(List<String> phoneNumbers) async {
+  Future<List<ContactMatchResponse>> syncContacts(
+    List<String> phoneNumbers,
+  ) async {
     try {
-      final response = await _dio.post('/friends/contacts/sync', data: {'phone_numbers': phoneNumbers});
+      final response = await _dio.post(
+        '/friends/contacts/sync',
+        data: {'phone_numbers': phoneNumbers},
+      );
       final data = response.data as Map<String, dynamic>;
       return (data['matches'] as List)
-          .map((e) => PublicUserResponse.fromJson((e as Map<String, dynamic>)['user'] as Map<String, dynamic>))
+          .map((e) => ContactMatchResponse.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
@@ -52,7 +57,9 @@ class FriendsRepository {
   Future<FriendStatsResponse> getStats() async {
     try {
       final response = await _dio.get('/friends/stats');
-      return FriendStatsResponse.fromJson(response.data as Map<String, dynamic>);
+      return FriendStatsResponse.fromJson(
+        response.data as Map<String, dynamic>,
+      );
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
@@ -95,10 +102,7 @@ class FriendsRepository {
     try {
       await _dio.post(
         '/friends/requests',
-        data: {
-          'recipient_uid': ?uid,
-          'username': ?username,
-        },
+        data: {'recipient_uid': ?uid, 'username': ?username},
       );
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);

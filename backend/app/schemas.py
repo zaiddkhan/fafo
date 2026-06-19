@@ -129,6 +129,7 @@ class ContactSyncRequest(BaseModel):
 
 class ContactMatchResponse(BaseModel):
     phone: str
+    normalized_phone: str
     user: PublicUserResponse
 
 
@@ -303,6 +304,8 @@ class EventCreateRequest(BaseModel):
     lat: float
     lng: float
     location_name: str = Field(min_length=1, max_length=200)
+    address: Optional[str] = Field(default=None, max_length=300)
+    location_details: Optional[str] = Field(default=None, max_length=200)
     date_time: datetime
     capacity: Optional[int] = Field(default=None, gt=0)
     organizer_name: Optional[str] = Field(default=None, max_length=100)
@@ -329,6 +332,8 @@ class EventUpdateRequest(BaseModel):
     lat: Optional[float] = None
     lng: Optional[float] = None
     location_name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    address: Optional[str] = Field(default=None, max_length=300)
+    location_details: Optional[str] = Field(default=None, max_length=200)
     date_time: Optional[datetime] = None
     capacity: Optional[int] = Field(default=None, gt=0)
     registration_open: Optional[bool] = None
@@ -348,6 +353,8 @@ class EventResponse(BaseModel):
     lat: float
     lng: float
     location_name: str
+    address: Optional[str] = None
+    location_details: Optional[str] = None
     date_time: datetime
     capacity: Optional[int]
     joinee_count: int
@@ -758,3 +765,26 @@ class NotificationBroadcastResponse(BaseModel):
 class CronRunResponse(BaseModel):
     job: str
     summary: dict = Field(default_factory=dict)
+
+
+# --- In-app notification inbox ---
+
+
+class NotificationResponse(BaseModel):
+    id: str
+    type: str
+    template_id: str
+    title: str
+    body: str
+    data: dict = Field(default_factory=dict)
+    read: bool = False
+    created_at: datetime
+
+
+class NotificationListResponse(BaseModel):
+    items: list[NotificationResponse] = Field(default_factory=list)
+    unread_count: int = 0
+
+
+class NotificationUnreadCountResponse(BaseModel):
+    unread_count: int = 0

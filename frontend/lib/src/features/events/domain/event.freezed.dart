@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$EventResponse {
 
- String get id;@JsonKey(name: 'creator_uid') String get creatorUid; String get title; String? get description;@JsonKey(name: 'category_id') String get categoryId;@JsonKey(name: 'event_type') EventType get eventType;@JsonKey(name: 'custom_emoji') String? get customEmoji; double get lat; double get lng;@JsonKey(name: 'location_name') String get locationName;@JsonKey(name: 'date_time') DateTime get dateTime; int? get capacity;@JsonKey(name: 'joinee_count') int get joineeCount;@JsonKey(name: 'registration_open') bool get registrationOpen; bool get cancelled;@JsonKey(name: 'banner_url') String? get bannerUrl;@JsonKey(name: 'organizer_name') String? get organizerName;@JsonKey(name: 'organizer_contact') String? get organizerContact;@JsonKey(name: 'organizer_instagram') String? get organizerInstagram;@JsonKey(name: 'is_joined') bool get isJoined;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;
+ String get id;@JsonKey(name: 'creator_uid') String get creatorUid; String get title; String? get description;@JsonKey(name: 'category_id') String get categoryId;@JsonKey(name: 'event_type') EventType get eventType;@JsonKey(name: 'custom_emoji') String? get customEmoji; double get lat; double get lng;@JsonKey(name: 'location_name') String get locationName; String? get address;@JsonKey(name: 'location_details') String? get locationDetails;@JsonKey(name: 'date_time') DateTime get dateTime; int? get capacity;@JsonKey(name: 'joinee_count') int get joineeCount;@JsonKey(name: 'registration_open') bool get registrationOpen; bool get cancelled;@JsonKey(name: 'banner_url') String? get bannerUrl;@JsonKey(name: 'organizer_name') String? get organizerName;@JsonKey(name: 'organizer_contact') String? get organizerContact;@JsonKey(name: 'organizer_instagram') String? get organizerInstagram;@JsonKey(name: 'is_joined') bool get isJoined;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;
 /// Create a copy of EventResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $EventResponseCopyWith<EventResponse> get copyWith => _$EventResponseCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventResponse&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorUid, creatorUid) || other.creatorUid == creatorUid)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.joineeCount, joineeCount) || other.joineeCount == joineeCount)&&(identical(other.registrationOpen, registrationOpen) || other.registrationOpen == registrationOpen)&&(identical(other.cancelled, cancelled) || other.cancelled == cancelled)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram)&&(identical(other.isJoined, isJoined) || other.isJoined == isJoined)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventResponse&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorUid, creatorUid) || other.creatorUid == creatorUid)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.address, address) || other.address == address)&&(identical(other.locationDetails, locationDetails) || other.locationDetails == locationDetails)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.joineeCount, joineeCount) || other.joineeCount == joineeCount)&&(identical(other.registrationOpen, registrationOpen) || other.registrationOpen == registrationOpen)&&(identical(other.cancelled, cancelled) || other.cancelled == cancelled)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram)&&(identical(other.isJoined, isJoined) || other.isJoined == isJoined)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,creatorUid,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,dateTime,capacity,joineeCount,registrationOpen,cancelled,bannerUrl,organizerName,organizerContact,organizerInstagram,isJoined,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,creatorUid,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,address,locationDetails,dateTime,capacity,joineeCount,registrationOpen,cancelled,bannerUrl,organizerName,organizerContact,organizerInstagram,isJoined,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'EventResponse(id: $id, creatorUid: $creatorUid, title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, dateTime: $dateTime, capacity: $capacity, joineeCount: $joineeCount, registrationOpen: $registrationOpen, cancelled: $cancelled, bannerUrl: $bannerUrl, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram, isJoined: $isJoined, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'EventResponse(id: $id, creatorUid: $creatorUid, title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, address: $address, locationDetails: $locationDetails, dateTime: $dateTime, capacity: $capacity, joineeCount: $joineeCount, registrationOpen: $registrationOpen, cancelled: $cancelled, bannerUrl: $bannerUrl, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram, isJoined: $isJoined, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $EventResponseCopyWith<$Res>  {
   factory $EventResponseCopyWith(EventResponse value, $Res Function(EventResponse) _then) = _$EventResponseCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'creator_uid') String creatorUid, String title, String? description,@JsonKey(name: 'category_id') String categoryId,@JsonKey(name: 'event_type') EventType eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double lat, double lng,@JsonKey(name: 'location_name') String locationName,@JsonKey(name: 'date_time') DateTime dateTime, int? capacity,@JsonKey(name: 'joinee_count') int joineeCount,@JsonKey(name: 'registration_open') bool registrationOpen, bool cancelled,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram,@JsonKey(name: 'is_joined') bool isJoined,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
+ String id,@JsonKey(name: 'creator_uid') String creatorUid, String title, String? description,@JsonKey(name: 'category_id') String categoryId,@JsonKey(name: 'event_type') EventType eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double lat, double lng,@JsonKey(name: 'location_name') String locationName, String? address,@JsonKey(name: 'location_details') String? locationDetails,@JsonKey(name: 'date_time') DateTime dateTime, int? capacity,@JsonKey(name: 'joinee_count') int joineeCount,@JsonKey(name: 'registration_open') bool registrationOpen, bool cancelled,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram,@JsonKey(name: 'is_joined') bool isJoined,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
 });
 
 
@@ -65,7 +65,7 @@ class _$EventResponseCopyWithImpl<$Res>
 
 /// Create a copy of EventResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? creatorUid = null,Object? title = null,Object? description = freezed,Object? categoryId = null,Object? eventType = null,Object? customEmoji = freezed,Object? lat = null,Object? lng = null,Object? locationName = null,Object? dateTime = null,Object? capacity = freezed,Object? joineeCount = null,Object? registrationOpen = null,Object? cancelled = null,Object? bannerUrl = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,Object? isJoined = null,Object? createdAt = null,Object? updatedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? creatorUid = null,Object? title = null,Object? description = freezed,Object? categoryId = null,Object? eventType = null,Object? customEmoji = freezed,Object? lat = null,Object? lng = null,Object? locationName = null,Object? address = freezed,Object? locationDetails = freezed,Object? dateTime = null,Object? capacity = freezed,Object? joineeCount = null,Object? registrationOpen = null,Object? cancelled = null,Object? bannerUrl = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,Object? isJoined = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,creatorUid: null == creatorUid ? _self.creatorUid : creatorUid // ignore: cast_nullable_to_non_nullable
@@ -77,7 +77,9 @@ as EventType,customEmoji: freezed == customEmoji ? _self.customEmoji : customEmo
 as String?,lat: null == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
 as double,lng: null == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
 as double,locationName: null == locationName ? _self.locationName : locationName // ignore: cast_nullable_to_non_nullable
-as String,dateTime: null == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
+as String,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String?,locationDetails: freezed == locationDetails ? _self.locationDetails : locationDetails // ignore: cast_nullable_to_non_nullable
+as String?,dateTime: null == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
 as DateTime,capacity: freezed == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
 as int?,joineeCount: null == joineeCount ? _self.joineeCount : joineeCount // ignore: cast_nullable_to_non_nullable
 as int,registrationOpen: null == registrationOpen ? _self.registrationOpen : registrationOpen // ignore: cast_nullable_to_non_nullable
@@ -174,10 +176,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_uid')  String creatorUid,  String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'joinee_count')  int joineeCount, @JsonKey(name: 'registration_open')  bool registrationOpen,  bool cancelled, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram, @JsonKey(name: 'is_joined')  bool isJoined, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_uid')  String creatorUid,  String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName,  String? address, @JsonKey(name: 'location_details')  String? locationDetails, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'joinee_count')  int joineeCount, @JsonKey(name: 'registration_open')  bool registrationOpen,  bool cancelled, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram, @JsonKey(name: 'is_joined')  bool isJoined, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EventResponse() when $default != null:
-return $default(_that.id,_that.creatorUid,_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.dateTime,_that.capacity,_that.joineeCount,_that.registrationOpen,_that.cancelled,_that.bannerUrl,_that.organizerName,_that.organizerContact,_that.organizerInstagram,_that.isJoined,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.creatorUid,_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.address,_that.locationDetails,_that.dateTime,_that.capacity,_that.joineeCount,_that.registrationOpen,_that.cancelled,_that.bannerUrl,_that.organizerName,_that.organizerContact,_that.organizerInstagram,_that.isJoined,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -195,10 +197,10 @@ return $default(_that.id,_that.creatorUid,_that.title,_that.description,_that.ca
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_uid')  String creatorUid,  String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'joinee_count')  int joineeCount, @JsonKey(name: 'registration_open')  bool registrationOpen,  bool cancelled, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram, @JsonKey(name: 'is_joined')  bool isJoined, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_uid')  String creatorUid,  String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName,  String? address, @JsonKey(name: 'location_details')  String? locationDetails, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'joinee_count')  int joineeCount, @JsonKey(name: 'registration_open')  bool registrationOpen,  bool cancelled, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram, @JsonKey(name: 'is_joined')  bool isJoined, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _EventResponse():
-return $default(_that.id,_that.creatorUid,_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.dateTime,_that.capacity,_that.joineeCount,_that.registrationOpen,_that.cancelled,_that.bannerUrl,_that.organizerName,_that.organizerContact,_that.organizerInstagram,_that.isJoined,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.creatorUid,_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.address,_that.locationDetails,_that.dateTime,_that.capacity,_that.joineeCount,_that.registrationOpen,_that.cancelled,_that.bannerUrl,_that.organizerName,_that.organizerContact,_that.organizerInstagram,_that.isJoined,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -215,10 +217,10 @@ return $default(_that.id,_that.creatorUid,_that.title,_that.description,_that.ca
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'creator_uid')  String creatorUid,  String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'joinee_count')  int joineeCount, @JsonKey(name: 'registration_open')  bool registrationOpen,  bool cancelled, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram, @JsonKey(name: 'is_joined')  bool isJoined, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'creator_uid')  String creatorUid,  String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName,  String? address, @JsonKey(name: 'location_details')  String? locationDetails, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'joinee_count')  int joineeCount, @JsonKey(name: 'registration_open')  bool registrationOpen,  bool cancelled, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram, @JsonKey(name: 'is_joined')  bool isJoined, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _EventResponse() when $default != null:
-return $default(_that.id,_that.creatorUid,_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.dateTime,_that.capacity,_that.joineeCount,_that.registrationOpen,_that.cancelled,_that.bannerUrl,_that.organizerName,_that.organizerContact,_that.organizerInstagram,_that.isJoined,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.creatorUid,_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.address,_that.locationDetails,_that.dateTime,_that.capacity,_that.joineeCount,_that.registrationOpen,_that.cancelled,_that.bannerUrl,_that.organizerName,_that.organizerContact,_that.organizerInstagram,_that.isJoined,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -230,7 +232,7 @@ return $default(_that.id,_that.creatorUid,_that.title,_that.description,_that.ca
 @JsonSerializable()
 
 class _EventResponse implements EventResponse {
-  const _EventResponse({required this.id, @JsonKey(name: 'creator_uid') required this.creatorUid, required this.title, this.description, @JsonKey(name: 'category_id') required this.categoryId, @JsonKey(name: 'event_type') required this.eventType, @JsonKey(name: 'custom_emoji') this.customEmoji, required this.lat, required this.lng, @JsonKey(name: 'location_name') required this.locationName, @JsonKey(name: 'date_time') required this.dateTime, this.capacity, @JsonKey(name: 'joinee_count') required this.joineeCount, @JsonKey(name: 'registration_open') required this.registrationOpen, required this.cancelled, @JsonKey(name: 'banner_url') this.bannerUrl, @JsonKey(name: 'organizer_name') this.organizerName, @JsonKey(name: 'organizer_contact') this.organizerContact, @JsonKey(name: 'organizer_instagram') this.organizerInstagram, @JsonKey(name: 'is_joined') this.isJoined = false, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt});
+  const _EventResponse({required this.id, @JsonKey(name: 'creator_uid') required this.creatorUid, required this.title, this.description, @JsonKey(name: 'category_id') required this.categoryId, @JsonKey(name: 'event_type') required this.eventType, @JsonKey(name: 'custom_emoji') this.customEmoji, required this.lat, required this.lng, @JsonKey(name: 'location_name') required this.locationName, this.address, @JsonKey(name: 'location_details') this.locationDetails, @JsonKey(name: 'date_time') required this.dateTime, this.capacity, @JsonKey(name: 'joinee_count') required this.joineeCount, @JsonKey(name: 'registration_open') required this.registrationOpen, required this.cancelled, @JsonKey(name: 'banner_url') this.bannerUrl, @JsonKey(name: 'organizer_name') this.organizerName, @JsonKey(name: 'organizer_contact') this.organizerContact, @JsonKey(name: 'organizer_instagram') this.organizerInstagram, @JsonKey(name: 'is_joined') this.isJoined = false, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt});
   factory _EventResponse.fromJson(Map<String, dynamic> json) => _$EventResponseFromJson(json);
 
 @override final  String id;
@@ -243,6 +245,8 @@ class _EventResponse implements EventResponse {
 @override final  double lat;
 @override final  double lng;
 @override@JsonKey(name: 'location_name') final  String locationName;
+@override final  String? address;
+@override@JsonKey(name: 'location_details') final  String? locationDetails;
 @override@JsonKey(name: 'date_time') final  DateTime dateTime;
 @override final  int? capacity;
 @override@JsonKey(name: 'joinee_count') final  int joineeCount;
@@ -269,16 +273,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventResponse&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorUid, creatorUid) || other.creatorUid == creatorUid)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.joineeCount, joineeCount) || other.joineeCount == joineeCount)&&(identical(other.registrationOpen, registrationOpen) || other.registrationOpen == registrationOpen)&&(identical(other.cancelled, cancelled) || other.cancelled == cancelled)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram)&&(identical(other.isJoined, isJoined) || other.isJoined == isJoined)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventResponse&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorUid, creatorUid) || other.creatorUid == creatorUid)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.address, address) || other.address == address)&&(identical(other.locationDetails, locationDetails) || other.locationDetails == locationDetails)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.joineeCount, joineeCount) || other.joineeCount == joineeCount)&&(identical(other.registrationOpen, registrationOpen) || other.registrationOpen == registrationOpen)&&(identical(other.cancelled, cancelled) || other.cancelled == cancelled)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram)&&(identical(other.isJoined, isJoined) || other.isJoined == isJoined)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,creatorUid,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,dateTime,capacity,joineeCount,registrationOpen,cancelled,bannerUrl,organizerName,organizerContact,organizerInstagram,isJoined,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,creatorUid,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,address,locationDetails,dateTime,capacity,joineeCount,registrationOpen,cancelled,bannerUrl,organizerName,organizerContact,organizerInstagram,isJoined,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'EventResponse(id: $id, creatorUid: $creatorUid, title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, dateTime: $dateTime, capacity: $capacity, joineeCount: $joineeCount, registrationOpen: $registrationOpen, cancelled: $cancelled, bannerUrl: $bannerUrl, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram, isJoined: $isJoined, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'EventResponse(id: $id, creatorUid: $creatorUid, title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, address: $address, locationDetails: $locationDetails, dateTime: $dateTime, capacity: $capacity, joineeCount: $joineeCount, registrationOpen: $registrationOpen, cancelled: $cancelled, bannerUrl: $bannerUrl, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram, isJoined: $isJoined, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -289,7 +293,7 @@ abstract mixin class _$EventResponseCopyWith<$Res> implements $EventResponseCopy
   factory _$EventResponseCopyWith(_EventResponse value, $Res Function(_EventResponse) _then) = __$EventResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'creator_uid') String creatorUid, String title, String? description,@JsonKey(name: 'category_id') String categoryId,@JsonKey(name: 'event_type') EventType eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double lat, double lng,@JsonKey(name: 'location_name') String locationName,@JsonKey(name: 'date_time') DateTime dateTime, int? capacity,@JsonKey(name: 'joinee_count') int joineeCount,@JsonKey(name: 'registration_open') bool registrationOpen, bool cancelled,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram,@JsonKey(name: 'is_joined') bool isJoined,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
+ String id,@JsonKey(name: 'creator_uid') String creatorUid, String title, String? description,@JsonKey(name: 'category_id') String categoryId,@JsonKey(name: 'event_type') EventType eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double lat, double lng,@JsonKey(name: 'location_name') String locationName, String? address,@JsonKey(name: 'location_details') String? locationDetails,@JsonKey(name: 'date_time') DateTime dateTime, int? capacity,@JsonKey(name: 'joinee_count') int joineeCount,@JsonKey(name: 'registration_open') bool registrationOpen, bool cancelled,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram,@JsonKey(name: 'is_joined') bool isJoined,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
 });
 
 
@@ -306,7 +310,7 @@ class __$EventResponseCopyWithImpl<$Res>
 
 /// Create a copy of EventResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? creatorUid = null,Object? title = null,Object? description = freezed,Object? categoryId = null,Object? eventType = null,Object? customEmoji = freezed,Object? lat = null,Object? lng = null,Object? locationName = null,Object? dateTime = null,Object? capacity = freezed,Object? joineeCount = null,Object? registrationOpen = null,Object? cancelled = null,Object? bannerUrl = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,Object? isJoined = null,Object? createdAt = null,Object? updatedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? creatorUid = null,Object? title = null,Object? description = freezed,Object? categoryId = null,Object? eventType = null,Object? customEmoji = freezed,Object? lat = null,Object? lng = null,Object? locationName = null,Object? address = freezed,Object? locationDetails = freezed,Object? dateTime = null,Object? capacity = freezed,Object? joineeCount = null,Object? registrationOpen = null,Object? cancelled = null,Object? bannerUrl = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,Object? isJoined = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_EventResponse(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,creatorUid: null == creatorUid ? _self.creatorUid : creatorUid // ignore: cast_nullable_to_non_nullable
@@ -318,7 +322,9 @@ as EventType,customEmoji: freezed == customEmoji ? _self.customEmoji : customEmo
 as String?,lat: null == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
 as double,lng: null == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
 as double,locationName: null == locationName ? _self.locationName : locationName // ignore: cast_nullable_to_non_nullable
-as String,dateTime: null == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
+as String,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String?,locationDetails: freezed == locationDetails ? _self.locationDetails : locationDetails // ignore: cast_nullable_to_non_nullable
+as String?,dateTime: null == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
 as DateTime,capacity: freezed == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
 as int?,joineeCount: null == joineeCount ? _self.joineeCount : joineeCount // ignore: cast_nullable_to_non_nullable
 as int,registrationOpen: null == registrationOpen ? _self.registrationOpen : registrationOpen // ignore: cast_nullable_to_non_nullable
@@ -341,7 +347,7 @@ as DateTime,
 /// @nodoc
 mixin _$EventCreateRequest {
 
- String get title; String? get description;@JsonKey(name: 'category_id') String get categoryId;@JsonKey(name: 'event_type') EventType get eventType;@JsonKey(name: 'custom_emoji') String? get customEmoji; double get lat; double get lng;@JsonKey(name: 'location_name') String get locationName;@JsonKey(name: 'date_time') DateTime get dateTime; int? get capacity;@JsonKey(name: 'organizer_name') String? get organizerName;@JsonKey(name: 'organizer_contact') String? get organizerContact;@JsonKey(name: 'organizer_instagram') String? get organizerInstagram;
+ String get title; String? get description;@JsonKey(name: 'category_id') String get categoryId;@JsonKey(name: 'event_type') EventType get eventType;@JsonKey(name: 'custom_emoji') String? get customEmoji; double get lat; double get lng;@JsonKey(name: 'location_name') String get locationName; String? get address;@JsonKey(name: 'location_details') String? get locationDetails;@JsonKey(name: 'date_time') DateTime get dateTime; int? get capacity;@JsonKey(name: 'organizer_name') String? get organizerName;@JsonKey(name: 'organizer_contact') String? get organizerContact;@JsonKey(name: 'organizer_instagram') String? get organizerInstagram;
 /// Create a copy of EventCreateRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -354,16 +360,16 @@ $EventCreateRequestCopyWith<EventCreateRequest> get copyWith => _$EventCreateReq
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventCreateRequest&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventCreateRequest&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.address, address) || other.address == address)&&(identical(other.locationDetails, locationDetails) || other.locationDetails == locationDetails)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,dateTime,capacity,organizerName,organizerContact,organizerInstagram);
+int get hashCode => Object.hash(runtimeType,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,address,locationDetails,dateTime,capacity,organizerName,organizerContact,organizerInstagram);
 
 @override
 String toString() {
-  return 'EventCreateRequest(title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, dateTime: $dateTime, capacity: $capacity, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram)';
+  return 'EventCreateRequest(title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, address: $address, locationDetails: $locationDetails, dateTime: $dateTime, capacity: $capacity, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram)';
 }
 
 
@@ -374,7 +380,7 @@ abstract mixin class $EventCreateRequestCopyWith<$Res>  {
   factory $EventCreateRequestCopyWith(EventCreateRequest value, $Res Function(EventCreateRequest) _then) = _$EventCreateRequestCopyWithImpl;
 @useResult
 $Res call({
- String title, String? description,@JsonKey(name: 'category_id') String categoryId,@JsonKey(name: 'event_type') EventType eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double lat, double lng,@JsonKey(name: 'location_name') String locationName,@JsonKey(name: 'date_time') DateTime dateTime, int? capacity,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram
+ String title, String? description,@JsonKey(name: 'category_id') String categoryId,@JsonKey(name: 'event_type') EventType eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double lat, double lng,@JsonKey(name: 'location_name') String locationName, String? address,@JsonKey(name: 'location_details') String? locationDetails,@JsonKey(name: 'date_time') DateTime dateTime, int? capacity,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram
 });
 
 
@@ -391,7 +397,7 @@ class _$EventCreateRequestCopyWithImpl<$Res>
 
 /// Create a copy of EventCreateRequest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? title = null,Object? description = freezed,Object? categoryId = null,Object? eventType = null,Object? customEmoji = freezed,Object? lat = null,Object? lng = null,Object? locationName = null,Object? dateTime = null,Object? capacity = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? title = null,Object? description = freezed,Object? categoryId = null,Object? eventType = null,Object? customEmoji = freezed,Object? lat = null,Object? lng = null,Object? locationName = null,Object? address = freezed,Object? locationDetails = freezed,Object? dateTime = null,Object? capacity = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,}) {
   return _then(_self.copyWith(
 title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
@@ -401,7 +407,9 @@ as EventType,customEmoji: freezed == customEmoji ? _self.customEmoji : customEmo
 as String?,lat: null == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
 as double,lng: null == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
 as double,locationName: null == locationName ? _self.locationName : locationName // ignore: cast_nullable_to_non_nullable
-as String,dateTime: null == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
+as String,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String?,locationDetails: freezed == locationDetails ? _self.locationDetails : locationDetails // ignore: cast_nullable_to_non_nullable
+as String?,dateTime: null == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
 as DateTime,capacity: freezed == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
 as int?,organizerName: freezed == organizerName ? _self.organizerName : organizerName // ignore: cast_nullable_to_non_nullable
 as String?,organizerContact: freezed == organizerContact ? _self.organizerContact : organizerContact // ignore: cast_nullable_to_non_nullable
@@ -491,10 +499,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName,  String? address, @JsonKey(name: 'location_details')  String? locationDetails, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EventCreateRequest() when $default != null:
-return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.dateTime,_that.capacity,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
+return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.address,_that.locationDetails,_that.dateTime,_that.capacity,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
   return orElse();
 
 }
@@ -512,10 +520,10 @@ return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName,  String? address, @JsonKey(name: 'location_details')  String? locationDetails, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)  $default,) {final _that = this;
 switch (_that) {
 case _EventCreateRequest():
-return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.dateTime,_that.capacity,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
+return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.address,_that.locationDetails,_that.dateTime,_that.capacity,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -532,10 +540,10 @@ return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String title,  String? description, @JsonKey(name: 'category_id')  String categoryId, @JsonKey(name: 'event_type')  EventType eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double lat,  double lng, @JsonKey(name: 'location_name')  String locationName,  String? address, @JsonKey(name: 'location_details')  String? locationDetails, @JsonKey(name: 'date_time')  DateTime dateTime,  int? capacity, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)?  $default,) {final _that = this;
 switch (_that) {
 case _EventCreateRequest() when $default != null:
-return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.dateTime,_that.capacity,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
+return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.address,_that.locationDetails,_that.dateTime,_that.capacity,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
   return null;
 
 }
@@ -547,7 +555,7 @@ return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_
 @JsonSerializable()
 
 class _EventCreateRequest implements EventCreateRequest {
-  const _EventCreateRequest({required this.title, this.description, @JsonKey(name: 'category_id') required this.categoryId, @JsonKey(name: 'event_type') this.eventType = EventType.normal, @JsonKey(name: 'custom_emoji') this.customEmoji, required this.lat, required this.lng, @JsonKey(name: 'location_name') required this.locationName, @JsonKey(name: 'date_time') required this.dateTime, this.capacity, @JsonKey(name: 'organizer_name') this.organizerName, @JsonKey(name: 'organizer_contact') this.organizerContact, @JsonKey(name: 'organizer_instagram') this.organizerInstagram});
+  const _EventCreateRequest({required this.title, this.description, @JsonKey(name: 'category_id') required this.categoryId, @JsonKey(name: 'event_type') this.eventType = EventType.normal, @JsonKey(name: 'custom_emoji') this.customEmoji, required this.lat, required this.lng, @JsonKey(name: 'location_name') required this.locationName, this.address, @JsonKey(name: 'location_details') this.locationDetails, @JsonKey(name: 'date_time') required this.dateTime, this.capacity, @JsonKey(name: 'organizer_name') this.organizerName, @JsonKey(name: 'organizer_contact') this.organizerContact, @JsonKey(name: 'organizer_instagram') this.organizerInstagram});
   factory _EventCreateRequest.fromJson(Map<String, dynamic> json) => _$EventCreateRequestFromJson(json);
 
 @override final  String title;
@@ -558,6 +566,8 @@ class _EventCreateRequest implements EventCreateRequest {
 @override final  double lat;
 @override final  double lng;
 @override@JsonKey(name: 'location_name') final  String locationName;
+@override final  String? address;
+@override@JsonKey(name: 'location_details') final  String? locationDetails;
 @override@JsonKey(name: 'date_time') final  DateTime dateTime;
 @override final  int? capacity;
 @override@JsonKey(name: 'organizer_name') final  String? organizerName;
@@ -577,16 +587,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventCreateRequest&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventCreateRequest&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.address, address) || other.address == address)&&(identical(other.locationDetails, locationDetails) || other.locationDetails == locationDetails)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,dateTime,capacity,organizerName,organizerContact,organizerInstagram);
+int get hashCode => Object.hash(runtimeType,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,address,locationDetails,dateTime,capacity,organizerName,organizerContact,organizerInstagram);
 
 @override
 String toString() {
-  return 'EventCreateRequest(title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, dateTime: $dateTime, capacity: $capacity, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram)';
+  return 'EventCreateRequest(title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, address: $address, locationDetails: $locationDetails, dateTime: $dateTime, capacity: $capacity, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram)';
 }
 
 
@@ -597,7 +607,7 @@ abstract mixin class _$EventCreateRequestCopyWith<$Res> implements $EventCreateR
   factory _$EventCreateRequestCopyWith(_EventCreateRequest value, $Res Function(_EventCreateRequest) _then) = __$EventCreateRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String title, String? description,@JsonKey(name: 'category_id') String categoryId,@JsonKey(name: 'event_type') EventType eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double lat, double lng,@JsonKey(name: 'location_name') String locationName,@JsonKey(name: 'date_time') DateTime dateTime, int? capacity,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram
+ String title, String? description,@JsonKey(name: 'category_id') String categoryId,@JsonKey(name: 'event_type') EventType eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double lat, double lng,@JsonKey(name: 'location_name') String locationName, String? address,@JsonKey(name: 'location_details') String? locationDetails,@JsonKey(name: 'date_time') DateTime dateTime, int? capacity,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram
 });
 
 
@@ -614,7 +624,7 @@ class __$EventCreateRequestCopyWithImpl<$Res>
 
 /// Create a copy of EventCreateRequest
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? title = null,Object? description = freezed,Object? categoryId = null,Object? eventType = null,Object? customEmoji = freezed,Object? lat = null,Object? lng = null,Object? locationName = null,Object? dateTime = null,Object? capacity = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? title = null,Object? description = freezed,Object? categoryId = null,Object? eventType = null,Object? customEmoji = freezed,Object? lat = null,Object? lng = null,Object? locationName = null,Object? address = freezed,Object? locationDetails = freezed,Object? dateTime = null,Object? capacity = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,}) {
   return _then(_EventCreateRequest(
 title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
@@ -624,7 +634,9 @@ as EventType,customEmoji: freezed == customEmoji ? _self.customEmoji : customEmo
 as String?,lat: null == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
 as double,lng: null == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
 as double,locationName: null == locationName ? _self.locationName : locationName // ignore: cast_nullable_to_non_nullable
-as String,dateTime: null == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
+as String,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String?,locationDetails: freezed == locationDetails ? _self.locationDetails : locationDetails // ignore: cast_nullable_to_non_nullable
+as String?,dateTime: null == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
 as DateTime,capacity: freezed == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
 as int?,organizerName: freezed == organizerName ? _self.organizerName : organizerName // ignore: cast_nullable_to_non_nullable
 as String?,organizerContact: freezed == organizerContact ? _self.organizerContact : organizerContact // ignore: cast_nullable_to_non_nullable
@@ -640,7 +652,7 @@ as String?,
 /// @nodoc
 mixin _$EventUpdateRequest {
 
- String? get title; String? get description;@JsonKey(name: 'category_id') String? get categoryId;@JsonKey(name: 'event_type') EventType? get eventType;@JsonKey(name: 'custom_emoji') String? get customEmoji; double? get lat; double? get lng;@JsonKey(name: 'location_name') String? get locationName;@JsonKey(name: 'date_time') DateTime? get dateTime; int? get capacity;@JsonKey(name: 'registration_open') bool? get registrationOpen;@JsonKey(name: 'organizer_name') String? get organizerName;@JsonKey(name: 'organizer_contact') String? get organizerContact;@JsonKey(name: 'organizer_instagram') String? get organizerInstagram;
+ String? get title; String? get description;@JsonKey(name: 'category_id') String? get categoryId;@JsonKey(name: 'event_type') EventType? get eventType;@JsonKey(name: 'custom_emoji') String? get customEmoji; double? get lat; double? get lng;@JsonKey(name: 'location_name') String? get locationName; String? get address;@JsonKey(name: 'location_details') String? get locationDetails;@JsonKey(name: 'date_time') DateTime? get dateTime; int? get capacity;@JsonKey(name: 'registration_open') bool? get registrationOpen;@JsonKey(name: 'organizer_name') String? get organizerName;@JsonKey(name: 'organizer_contact') String? get organizerContact;@JsonKey(name: 'organizer_instagram') String? get organizerInstagram;
 /// Create a copy of EventUpdateRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -653,16 +665,16 @@ $EventUpdateRequestCopyWith<EventUpdateRequest> get copyWith => _$EventUpdateReq
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventUpdateRequest&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.registrationOpen, registrationOpen) || other.registrationOpen == registrationOpen)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventUpdateRequest&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.address, address) || other.address == address)&&(identical(other.locationDetails, locationDetails) || other.locationDetails == locationDetails)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.registrationOpen, registrationOpen) || other.registrationOpen == registrationOpen)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,dateTime,capacity,registrationOpen,organizerName,organizerContact,organizerInstagram);
+int get hashCode => Object.hash(runtimeType,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,address,locationDetails,dateTime,capacity,registrationOpen,organizerName,organizerContact,organizerInstagram);
 
 @override
 String toString() {
-  return 'EventUpdateRequest(title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, dateTime: $dateTime, capacity: $capacity, registrationOpen: $registrationOpen, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram)';
+  return 'EventUpdateRequest(title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, address: $address, locationDetails: $locationDetails, dateTime: $dateTime, capacity: $capacity, registrationOpen: $registrationOpen, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram)';
 }
 
 
@@ -673,7 +685,7 @@ abstract mixin class $EventUpdateRequestCopyWith<$Res>  {
   factory $EventUpdateRequestCopyWith(EventUpdateRequest value, $Res Function(EventUpdateRequest) _then) = _$EventUpdateRequestCopyWithImpl;
 @useResult
 $Res call({
- String? title, String? description,@JsonKey(name: 'category_id') String? categoryId,@JsonKey(name: 'event_type') EventType? eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double? lat, double? lng,@JsonKey(name: 'location_name') String? locationName,@JsonKey(name: 'date_time') DateTime? dateTime, int? capacity,@JsonKey(name: 'registration_open') bool? registrationOpen,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram
+ String? title, String? description,@JsonKey(name: 'category_id') String? categoryId,@JsonKey(name: 'event_type') EventType? eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double? lat, double? lng,@JsonKey(name: 'location_name') String? locationName, String? address,@JsonKey(name: 'location_details') String? locationDetails,@JsonKey(name: 'date_time') DateTime? dateTime, int? capacity,@JsonKey(name: 'registration_open') bool? registrationOpen,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram
 });
 
 
@@ -690,7 +702,7 @@ class _$EventUpdateRequestCopyWithImpl<$Res>
 
 /// Create a copy of EventUpdateRequest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? title = freezed,Object? description = freezed,Object? categoryId = freezed,Object? eventType = freezed,Object? customEmoji = freezed,Object? lat = freezed,Object? lng = freezed,Object? locationName = freezed,Object? dateTime = freezed,Object? capacity = freezed,Object? registrationOpen = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? title = freezed,Object? description = freezed,Object? categoryId = freezed,Object? eventType = freezed,Object? customEmoji = freezed,Object? lat = freezed,Object? lng = freezed,Object? locationName = freezed,Object? address = freezed,Object? locationDetails = freezed,Object? dateTime = freezed,Object? capacity = freezed,Object? registrationOpen = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,}) {
   return _then(_self.copyWith(
 title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
@@ -700,6 +712,8 @@ as EventType?,customEmoji: freezed == customEmoji ? _self.customEmoji : customEm
 as String?,lat: freezed == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
 as double?,lng: freezed == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
 as double?,locationName: freezed == locationName ? _self.locationName : locationName // ignore: cast_nullable_to_non_nullable
+as String?,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String?,locationDetails: freezed == locationDetails ? _self.locationDetails : locationDetails // ignore: cast_nullable_to_non_nullable
 as String?,dateTime: freezed == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,capacity: freezed == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
 as int?,registrationOpen: freezed == registrationOpen ? _self.registrationOpen : registrationOpen // ignore: cast_nullable_to_non_nullable
@@ -791,10 +805,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? title,  String? description, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'event_type')  EventType? eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double? lat,  double? lng, @JsonKey(name: 'location_name')  String? locationName, @JsonKey(name: 'date_time')  DateTime? dateTime,  int? capacity, @JsonKey(name: 'registration_open')  bool? registrationOpen, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? title,  String? description, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'event_type')  EventType? eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double? lat,  double? lng, @JsonKey(name: 'location_name')  String? locationName,  String? address, @JsonKey(name: 'location_details')  String? locationDetails, @JsonKey(name: 'date_time')  DateTime? dateTime,  int? capacity, @JsonKey(name: 'registration_open')  bool? registrationOpen, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EventUpdateRequest() when $default != null:
-return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.dateTime,_that.capacity,_that.registrationOpen,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
+return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.address,_that.locationDetails,_that.dateTime,_that.capacity,_that.registrationOpen,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
   return orElse();
 
 }
@@ -812,10 +826,10 @@ return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? title,  String? description, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'event_type')  EventType? eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double? lat,  double? lng, @JsonKey(name: 'location_name')  String? locationName, @JsonKey(name: 'date_time')  DateTime? dateTime,  int? capacity, @JsonKey(name: 'registration_open')  bool? registrationOpen, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? title,  String? description, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'event_type')  EventType? eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double? lat,  double? lng, @JsonKey(name: 'location_name')  String? locationName,  String? address, @JsonKey(name: 'location_details')  String? locationDetails, @JsonKey(name: 'date_time')  DateTime? dateTime,  int? capacity, @JsonKey(name: 'registration_open')  bool? registrationOpen, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)  $default,) {final _that = this;
 switch (_that) {
 case _EventUpdateRequest():
-return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.dateTime,_that.capacity,_that.registrationOpen,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
+return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.address,_that.locationDetails,_that.dateTime,_that.capacity,_that.registrationOpen,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -832,10 +846,10 @@ return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? title,  String? description, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'event_type')  EventType? eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double? lat,  double? lng, @JsonKey(name: 'location_name')  String? locationName, @JsonKey(name: 'date_time')  DateTime? dateTime,  int? capacity, @JsonKey(name: 'registration_open')  bool? registrationOpen, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? title,  String? description, @JsonKey(name: 'category_id')  String? categoryId, @JsonKey(name: 'event_type')  EventType? eventType, @JsonKey(name: 'custom_emoji')  String? customEmoji,  double? lat,  double? lng, @JsonKey(name: 'location_name')  String? locationName,  String? address, @JsonKey(name: 'location_details')  String? locationDetails, @JsonKey(name: 'date_time')  DateTime? dateTime,  int? capacity, @JsonKey(name: 'registration_open')  bool? registrationOpen, @JsonKey(name: 'organizer_name')  String? organizerName, @JsonKey(name: 'organizer_contact')  String? organizerContact, @JsonKey(name: 'organizer_instagram')  String? organizerInstagram)?  $default,) {final _that = this;
 switch (_that) {
 case _EventUpdateRequest() when $default != null:
-return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.dateTime,_that.capacity,_that.registrationOpen,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
+return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_that.customEmoji,_that.lat,_that.lng,_that.locationName,_that.address,_that.locationDetails,_that.dateTime,_that.capacity,_that.registrationOpen,_that.organizerName,_that.organizerContact,_that.organizerInstagram);case _:
   return null;
 
 }
@@ -847,7 +861,7 @@ return $default(_that.title,_that.description,_that.categoryId,_that.eventType,_
 @JsonSerializable()
 
 class _EventUpdateRequest implements EventUpdateRequest {
-  const _EventUpdateRequest({this.title, this.description, @JsonKey(name: 'category_id') this.categoryId, @JsonKey(name: 'event_type') this.eventType, @JsonKey(name: 'custom_emoji') this.customEmoji, this.lat, this.lng, @JsonKey(name: 'location_name') this.locationName, @JsonKey(name: 'date_time') this.dateTime, this.capacity, @JsonKey(name: 'registration_open') this.registrationOpen, @JsonKey(name: 'organizer_name') this.organizerName, @JsonKey(name: 'organizer_contact') this.organizerContact, @JsonKey(name: 'organizer_instagram') this.organizerInstagram});
+  const _EventUpdateRequest({this.title, this.description, @JsonKey(name: 'category_id') this.categoryId, @JsonKey(name: 'event_type') this.eventType, @JsonKey(name: 'custom_emoji') this.customEmoji, this.lat, this.lng, @JsonKey(name: 'location_name') this.locationName, this.address, @JsonKey(name: 'location_details') this.locationDetails, @JsonKey(name: 'date_time') this.dateTime, this.capacity, @JsonKey(name: 'registration_open') this.registrationOpen, @JsonKey(name: 'organizer_name') this.organizerName, @JsonKey(name: 'organizer_contact') this.organizerContact, @JsonKey(name: 'organizer_instagram') this.organizerInstagram});
   factory _EventUpdateRequest.fromJson(Map<String, dynamic> json) => _$EventUpdateRequestFromJson(json);
 
 @override final  String? title;
@@ -858,6 +872,8 @@ class _EventUpdateRequest implements EventUpdateRequest {
 @override final  double? lat;
 @override final  double? lng;
 @override@JsonKey(name: 'location_name') final  String? locationName;
+@override final  String? address;
+@override@JsonKey(name: 'location_details') final  String? locationDetails;
 @override@JsonKey(name: 'date_time') final  DateTime? dateTime;
 @override final  int? capacity;
 @override@JsonKey(name: 'registration_open') final  bool? registrationOpen;
@@ -878,16 +894,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventUpdateRequest&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.registrationOpen, registrationOpen) || other.registrationOpen == registrationOpen)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventUpdateRequest&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.customEmoji, customEmoji) || other.customEmoji == customEmoji)&&(identical(other.lat, lat) || other.lat == lat)&&(identical(other.lng, lng) || other.lng == lng)&&(identical(other.locationName, locationName) || other.locationName == locationName)&&(identical(other.address, address) || other.address == address)&&(identical(other.locationDetails, locationDetails) || other.locationDetails == locationDetails)&&(identical(other.dateTime, dateTime) || other.dateTime == dateTime)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&(identical(other.registrationOpen, registrationOpen) || other.registrationOpen == registrationOpen)&&(identical(other.organizerName, organizerName) || other.organizerName == organizerName)&&(identical(other.organizerContact, organizerContact) || other.organizerContact == organizerContact)&&(identical(other.organizerInstagram, organizerInstagram) || other.organizerInstagram == organizerInstagram));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,dateTime,capacity,registrationOpen,organizerName,organizerContact,organizerInstagram);
+int get hashCode => Object.hash(runtimeType,title,description,categoryId,eventType,customEmoji,lat,lng,locationName,address,locationDetails,dateTime,capacity,registrationOpen,organizerName,organizerContact,organizerInstagram);
 
 @override
 String toString() {
-  return 'EventUpdateRequest(title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, dateTime: $dateTime, capacity: $capacity, registrationOpen: $registrationOpen, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram)';
+  return 'EventUpdateRequest(title: $title, description: $description, categoryId: $categoryId, eventType: $eventType, customEmoji: $customEmoji, lat: $lat, lng: $lng, locationName: $locationName, address: $address, locationDetails: $locationDetails, dateTime: $dateTime, capacity: $capacity, registrationOpen: $registrationOpen, organizerName: $organizerName, organizerContact: $organizerContact, organizerInstagram: $organizerInstagram)';
 }
 
 
@@ -898,7 +914,7 @@ abstract mixin class _$EventUpdateRequestCopyWith<$Res> implements $EventUpdateR
   factory _$EventUpdateRequestCopyWith(_EventUpdateRequest value, $Res Function(_EventUpdateRequest) _then) = __$EventUpdateRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String? title, String? description,@JsonKey(name: 'category_id') String? categoryId,@JsonKey(name: 'event_type') EventType? eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double? lat, double? lng,@JsonKey(name: 'location_name') String? locationName,@JsonKey(name: 'date_time') DateTime? dateTime, int? capacity,@JsonKey(name: 'registration_open') bool? registrationOpen,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram
+ String? title, String? description,@JsonKey(name: 'category_id') String? categoryId,@JsonKey(name: 'event_type') EventType? eventType,@JsonKey(name: 'custom_emoji') String? customEmoji, double? lat, double? lng,@JsonKey(name: 'location_name') String? locationName, String? address,@JsonKey(name: 'location_details') String? locationDetails,@JsonKey(name: 'date_time') DateTime? dateTime, int? capacity,@JsonKey(name: 'registration_open') bool? registrationOpen,@JsonKey(name: 'organizer_name') String? organizerName,@JsonKey(name: 'organizer_contact') String? organizerContact,@JsonKey(name: 'organizer_instagram') String? organizerInstagram
 });
 
 
@@ -915,7 +931,7 @@ class __$EventUpdateRequestCopyWithImpl<$Res>
 
 /// Create a copy of EventUpdateRequest
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? title = freezed,Object? description = freezed,Object? categoryId = freezed,Object? eventType = freezed,Object? customEmoji = freezed,Object? lat = freezed,Object? lng = freezed,Object? locationName = freezed,Object? dateTime = freezed,Object? capacity = freezed,Object? registrationOpen = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? title = freezed,Object? description = freezed,Object? categoryId = freezed,Object? eventType = freezed,Object? customEmoji = freezed,Object? lat = freezed,Object? lng = freezed,Object? locationName = freezed,Object? address = freezed,Object? locationDetails = freezed,Object? dateTime = freezed,Object? capacity = freezed,Object? registrationOpen = freezed,Object? organizerName = freezed,Object? organizerContact = freezed,Object? organizerInstagram = freezed,}) {
   return _then(_EventUpdateRequest(
 title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
@@ -925,6 +941,8 @@ as EventType?,customEmoji: freezed == customEmoji ? _self.customEmoji : customEm
 as String?,lat: freezed == lat ? _self.lat : lat // ignore: cast_nullable_to_non_nullable
 as double?,lng: freezed == lng ? _self.lng : lng // ignore: cast_nullable_to_non_nullable
 as double?,locationName: freezed == locationName ? _self.locationName : locationName // ignore: cast_nullable_to_non_nullable
+as String?,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
+as String?,locationDetails: freezed == locationDetails ? _self.locationDetails : locationDetails // ignore: cast_nullable_to_non_nullable
 as String?,dateTime: freezed == dateTime ? _self.dateTime : dateTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,capacity: freezed == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
 as int?,registrationOpen: freezed == registrationOpen ? _self.registrationOpen : registrationOpen // ignore: cast_nullable_to_non_nullable

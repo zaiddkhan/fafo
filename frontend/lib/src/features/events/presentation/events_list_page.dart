@@ -13,16 +13,6 @@ import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/shared/widgets/app_pressable.dart';
 
-enum _AreaFilter {
-  all('All areas'),
-  mumbai('Mumbai'),
-  bengaluru('Bengaluru');
-
-  const _AreaFilter(this.label);
-
-  final String label;
-}
-
 class EventsListPage extends ConsumerStatefulWidget {
   const EventsListPage({super.key, required this.events});
 
@@ -42,7 +32,6 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
 
   bool _loading = true;
   String? _error;
-  _AreaFilter _selectedArea = _AreaFilter.all;
   String? _selectedCategoryId;
   List<CategoryResponse> _categories = const [];
   List<EventResponse> _events = const [];
@@ -78,7 +67,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
           radiusKm: 70,
           limit: 100,
         ),
-        blogsRepo.getBlogs(city: _selectedBlogCity, limit: 10),
+        blogsRepo.getBlogs(city: 'Bengaluru', limit: 10),
       ]);
 
       final categories = results[0] as List<CategoryResponse>;
@@ -105,17 +94,8 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
     }
   }
 
-  String get _selectedBlogCity => switch (_selectedArea) {
-    _AreaFilter.mumbai => 'Mumbai',
-    _AreaFilter.bengaluru || _AreaFilter.all => 'Bengaluru',
-  };
-
-  List<EventResponse> get _areaFilteredEvents {
-    return _events.where(_matchesSelectedArea).toList(growable: false);
-  }
-
   List<EventResponse> get _filteredEvents {
-    return _areaFilteredEvents
+    return _events
         .where((event) {
           return _selectedCategoryId == null ||
               event.categoryId == _selectedCategoryId;
@@ -123,19 +103,9 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
         .toList(growable: false);
   }
 
-  bool _matchesSelectedArea(EventResponse event) {
-    final location = event.locationName.toLowerCase();
-    return switch (_selectedArea) {
-      _AreaFilter.all => true,
-      _AreaFilter.mumbai => location.contains('mumbai'),
-      _AreaFilter.bengaluru =>
-        location.contains('bengaluru') || location.contains('bangalore'),
-    };
-  }
-
   List<EventResponse> get _spotlightEvents {
     final today = DateTime.now();
-    return _areaFilteredEvents
+    return _events
         .where((event) {
           final local = event.dateTime.toLocal();
           return event.eventType == EventType.spotlight ||
@@ -210,8 +180,12 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
                   )
                 else
                   SizedBox(
-                    height: 210,
+                    height: 218,
                     child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 1,
+                        vertical: 4,
+                      ),
                       scrollDirection: Axis.horizontal,
                       itemBuilder: (context, index) => _SpotlightCard(
                         event: _spotlightEvents[index],
@@ -227,27 +201,6 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
                 _SectionTitle('City Reads', color: headingColor),
                 const SizedBox(height: 12),
                 SizedBox(height: 172, child: _BlogStrip(blogs: _blogs)),
-                const SizedBox(height: 28),
-                _SectionTitle('Areas', color: headingColor),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _AreaFilter.values
-                      .map(
-                        (area) => _CategoryChip(
-                          label: area.label,
-                          isSelected: area == _selectedArea,
-                          isDark: isDark,
-                          borderColor: borderColor,
-                          onTap: () {
-                            setState(() => _selectedArea = area);
-                            _loadEventsIndex();
-                          },
-                        ),
-                      )
-                      .toList(),
-                ),
                 const SizedBox(height: 28),
                 _SectionTitle('Categories', color: headingColor),
                 const SizedBox(height: 14),
@@ -283,7 +236,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
                 const SizedBox(height: 14),
                 if (_filteredEvents.isEmpty)
                   _EmptyInline(
-                    text: 'No events found for this area/category combination.',
+                    text: 'No events found for this category.',
                     textColor: bodyColor,
                     borderColor: borderColor,
                   )
@@ -358,7 +311,9 @@ class _EventListingCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push('/event/${event.id}'),
       child: Padding(
-        padding: const EdgeInsets.only(right: 6, bottom: 6),
+        // Keep enough breathing room for the offset shadow and rounded right
+        // corners so the card is not clipped by the list viewport.
+        padding: const EdgeInsets.only(right: 12, bottom: 8),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -374,6 +329,7 @@ class _EventListingCard extends StatelessWidget {
               ),
             ),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
               decoration: BoxDecoration(
                 color: surfaceColor,
@@ -383,7 +339,7 @@ class _EventListingCard extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 62,
+                    width: 82,
                     height: 62,
                     decoration: BoxDecoration(
                       color: surfaceColor,
@@ -393,7 +349,8 @@ class _EventListingCard extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     child: Image.network(
                       imageUrl,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.center,
                       errorBuilder: (context, error, stackTrace) => Icon(
                         Icons.event_rounded,
                         color: titleColor,
@@ -500,61 +457,66 @@ class _SpotlightCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: borderColor, width: 1.7),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(imageUrl, fit: BoxFit.cover),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.ink.withValues(alpha: 0.05),
-                    AppColors.ink.withValues(alpha: 0.82),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16.3),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ColoredBox(
+                color: Colors.white,
+                child: Image.network(imageUrl, fit: BoxFit.contain),
+              ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.ink.withValues(alpha: 0.05),
+                      AppColors.ink.withValues(alpha: 0.82),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'TODAY • ${category?.emoji ?? '⚡'} ${category?.name ?? 'Event'}',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        // Light blue reads on the photo's dark scrim; the medium
+                        // brand blue was invisible over images.
+                        color: AppColors.accentLight2,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      event.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontSize: 21,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      DateFormat('h:mm a').format(event.dateTime.toLocal()),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.86),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    'TODAY • ${category?.emoji ?? '⚡'} ${category?.name ?? 'Event'}',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      // Light blue reads on the photo's dark scrim; the medium
-                      // brand blue was invisible over images.
-                      color: AppColors.accentLight2,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    event.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontSize: 21,
-                      height: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    DateFormat('h:mm a').format(event.dateTime.toLocal()),
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.86),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -610,7 +572,8 @@ class _BlogCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              blog.imageUrl ?? 'https://picsum.photos/seed/blog-${blog.id}/900/600',
+              blog.imageUrl ??
+                  'https://picsum.photos/seed/blog-${blog.id}/900/600',
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) =>
                   Container(color: AppColors.accentPrimary),

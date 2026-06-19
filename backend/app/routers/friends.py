@@ -210,9 +210,11 @@ def sync_contacts(body: ContactSyncRequest, current_user: dict = Depends(get_cur
             if doc.id == uid:
                 continue
             data = doc.to_dict()
+            stored_phone = data.get("phone", "")
             matches.append(
                 ContactMatchResponse(
-                    phone=data.get("phone", ""),
+                    phone=stored_phone,
+                    normalized_phone=_normalize_phone(stored_phone),
                     user=public_user_from_doc(doc.id, data, uid),
                 )
             )

@@ -14,11 +14,11 @@ class QuestsPage extends ConsumerStatefulWidget {
 }
 
 class _QuestsPageState extends ConsumerState<QuestsPage> {
-  bool _busy = false;
+  final Set<String> _busyQuestIds = <String>{};
 
-  Future<void> _run(Future<void> Function() action) async {
-    if (_busy) return;
-    setState(() => _busy = true);
+  Future<void> _run(String questId, Future<void> Function() action) async {
+    if (_busyQuestIds.contains(questId)) return;
+    setState(() => _busyQuestIds.add(questId));
     final messenger = ScaffoldMessenger.of(context);
     try {
       await action();
@@ -26,7 +26,7 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(_friendlyError(e))));
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _busyQuestIds.remove(questId));
     }
   }
 
@@ -43,7 +43,8 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
 
     // Build a quick lookup of the user's started/completed quests.
     final byId = <String, QuestActivation>{
-      for (final a in activations.asData?.value ?? const <QuestActivation>[]) a.quest.id: a,
+      for (final a in activations.asData?.value ?? const <QuestActivation>[])
+        a.quest.id: a,
     };
     final activeCount = byId.values.where((a) => a.isActive).length;
     final atLimit = activeCount >= kMaxActiveQuests;
@@ -70,14 +71,27 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
               const SizedBox(height: 8),
               Text(
                 '$activeCount of $kMaxActiveQuests quests active',
-                style: const TextStyle(color: Color(0xFF6D6D78), fontWeight: FontWeight.w700, fontSize: 13),
+                style: const TextStyle(
+                  color: Color(0xFF6D6D78),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 22),
               quests.when(
-                loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)),
-                error: (error, _) => Text(error.toString(), style: const TextStyle(color: Color(0xFFE5484D))),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.accentPrimary,
+                  ),
+                ),
+                error: (error, _) => Text(
+                  error.toString(),
+                  style: const TextStyle(color: Color(0xFFE5484D)),
+                ),
                 data: (items) {
-                  if (items.isEmpty) return const Text('No side quests published yet.');
+                  if (items.isEmpty) {
+                    return const Text('No side quests published yet.');
+                  }
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -86,13 +100,20 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                         children: [
                           Text(
                             'Normal',
-                            style: theme.textTheme.displayMedium?.copyWith(color: AppColors.ink, fontSize: 18),
+                            style: theme.textTheme.displayMedium?.copyWith(
+                              color: AppColors.ink,
+                              fontSize: 18,
+                            ),
                           ),
                           GestureDetector(
                             onTap: () {},
                             child: Text(
                               'View All',
-                              style: TextStyle(color: AppColors.accentPrimary, fontWeight: FontWeight.w800, fontSize: 14),
+                              style: TextStyle(
+                                color: AppColors.accentPrimary,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         ],
@@ -106,10 +127,25 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                             quest: quest,
                             activation: activation,
                             atLimit: atLimit,
-                            busy: _busy,
-                            onStart: () => _run(() => ref.read(questsRepositoryProvider).activateQuest(quest.id)),
-                            onComplete: () => _run(() => ref.read(questsRepositoryProvider).completeQuest(quest.id)),
-                            onDrop: () => _run(() => ref.read(questsRepositoryProvider).abandonQuest(quest.id)),
+                            busy: _busyQuestIds.contains(quest.id),
+                            onStart: () => _run(
+                              quest.id,
+                              () => ref
+                                  .read(questsRepositoryProvider)
+                                  .activateQuest(quest.id),
+                            ),
+                            onComplete: () => _run(
+                              quest.id,
+                              () => ref
+                                  .read(questsRepositoryProvider)
+                                  .completeQuest(quest.id),
+                            ),
+                            onDrop: () => _run(
+                              quest.id,
+                              () => ref
+                                  .read(questsRepositoryProvider)
+                                  .abandonQuest(quest.id),
+                            ),
                           ),
                         );
                       }),
@@ -152,7 +188,8 @@ class _QuestCard extends StatelessWidget {
     };
     final isActive = activation?.isActive ?? false;
     final isCompleted = activation?.isCompleted ?? false;
-    final description = (quest.description != null && quest.description!.isNotEmpty)
+    final description =
+        (quest.description != null && quest.description!.isNotEmpty)
         ? quest.description!
         : 'Once you start, you will have 24 hrs to complete this quest';
 
@@ -172,7 +209,12 @@ class _QuestCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   quest.title,
-                  style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w900, fontSize: 16, height: 1.2),
+                  style: const TextStyle(
+                    color: AppColors.ink,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    height: 1.2,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -180,17 +222,31 @@ class _QuestCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(6)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                     child: Text(
                       quest.difficulty.badgeLabel,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     quest.difficulty.timeEstimate,
-                    style: const TextStyle(color: Color(0xFF6D6D78), fontWeight: FontWeight.w700, fontSize: 12),
+                    style: const TextStyle(
+                      color: Color(0xFF6D6D78),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -202,16 +258,34 @@ class _QuestCard extends StatelessWidget {
               children: const [
                 Icon(Icons.check_circle, color: Color(0xFF35B45A), size: 18),
                 SizedBox(width: 6),
-                Text('Completed', style: TextStyle(color: Color(0xFF35B45A), fontWeight: FontWeight.w900, fontSize: 14)),
+                Text(
+                  'Completed',
+                  style: TextStyle(
+                    color: Color(0xFF35B45A),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
           ] else if (isActive) ...[
             RichText(
               text: TextSpan(
-                style: const TextStyle(color: Color(0xFF3A3A40), fontWeight: FontWeight.w700, fontSize: 13, height: 1.3),
+                style: const TextStyle(
+                  color: Color(0xFF3A3A40),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  height: 1.3,
+                ),
                 children: const [
                   TextSpan(text: 'You have '),
-                  TextSpan(text: '24 hrs', style: TextStyle(decoration: TextDecoration.underline, fontWeight: FontWeight.w900)),
+                  TextSpan(
+                    text: '24 hrs',
+                    style: TextStyle(
+                      decoration: TextDecoration.underline,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   TextSpan(text: ' to complete this quest'),
                 ],
               ),
@@ -239,13 +313,20 @@ class _QuestCard extends StatelessWidget {
           ] else ...[
             Text(
               description,
-              style: const TextStyle(color: Color(0xFF6D6D78), fontWeight: FontWeight.w600, fontSize: 13, height: 1.35),
+              style: const TextStyle(
+                color: Color(0xFF6D6D78),
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                height: 1.35,
+              ),
             ),
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
               child: _QuestButton(
-                label: atLimit ? 'Limit reached ($kMaxActiveQuests active)' : 'Start',
+                label: atLimit
+                    ? 'Limit reached ($kMaxActiveQuests active)'
+                    : 'Start',
                 filled: true,
                 onTap: (busy || atLimit) ? null : onStart,
               ),
@@ -258,7 +339,11 @@ class _QuestCard extends StatelessWidget {
 }
 
 class _QuestButton extends StatelessWidget {
-  const _QuestButton({required this.label, required this.filled, required this.onTap});
+  const _QuestButton({
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
   final String label;
   final bool filled;
   final VoidCallback? onTap;
@@ -276,7 +361,9 @@ class _QuestButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: filled ? AppColors.accentPrimary : Colors.white,
             borderRadius: BorderRadius.circular(8),
-            border: filled ? null : Border.all(color: AppColors.ink, width: 1.4),
+            border: filled
+                ? null
+                : Border.all(color: AppColors.ink, width: 1.4),
           ),
           child: Text(
             label,

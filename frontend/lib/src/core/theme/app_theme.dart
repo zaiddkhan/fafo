@@ -104,15 +104,21 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.accentPrimary;
+            return Colors.white;
           }
           return AppColors.lightBgSecondary;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.accentLight1;
+            return AppColors.accentPrimary;
           }
-          return AppColors.lightBorder;
+          return AppColors.ink;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.transparent;
+          }
+          return AppColors.ink;
         }),
       ),
     );

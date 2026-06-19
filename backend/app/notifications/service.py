@@ -173,15 +173,33 @@ class NotificationService:
                     outbox.mark_skipped(db, dedupe_key_, "rate_limited")
                     return "skipped"
 
+            title = template.get("title") or "Fafu"
+            body = template.get("body", "").format_map(_SafeDict(data.get("variables", {})))
+
+            # Mirror into the user's in-app inbox before the push attempt, so the
+            # notification is visible in the app even when the user has no device
+            # tokens (push denied). Keyed by the dedupe key → idempotent across
+            # retries, and it never resets an already-read entry.
+            self._write_inbox(
+                db,
+                uid,
+                key=dedupe_key_,
+                type_=type_,
+                template_id=template_id,
+                title=title,
+                body=body,
+                data=data.get("data", {}),
+                now=now,
+            )
+
             tokens = self._device_tokens(db, uid)
             if not tokens:
                 outbox.mark_skipped(db, dedupe_key_, "no_devices")
                 return "skipped"
 
-            body = template.get("body", "").format_map(_SafeDict(data.get("variables", {})))
             result = fcm.send_to_tokens(
                 tokens,
-                title=template.get("title") or "Fafu",
+                title=title,
                 body=body,
                 data={**data.get("data", {}), "template_id": template_id, "type": type_},
                 sound=template.get("sound"),
@@ -233,6 +251,43 @@ class NotificationService:
             d.to_dict().get("token", d.id)
             for d in db.collection("users").document(uid).collection("devices").stream()
         ]
+
+    def _write_inbox(
+        self,
+        db,
+        uid: str,
+        *,
+        key: str,
+        type_: str,
+        template_id: str,
+        title: str,
+        body: str,
+        data: dict,
+        now: datetime,
+    ) -> None:
+        """Create the in-app inbox entry for a dispatched notification.
+
+        Create-if-absent (keyed by the outbox dedupe key) so a retry never
+        duplicates the entry nor flips `read` back to false. Best-effort: a
+        failure here must not abort dispatch.
+        """
+        try:
+            ref = db.collection("users").document(uid).collection("notifications").document(key)
+            if ref.get().exists:
+                return
+            ref.set(
+                {
+                    "type": type_,
+                    "template_id": template_id,
+                    "title": title,
+                    "body": body,
+                    "data": data or {},
+                    "read": False,
+                    "created_at": now,
+                }
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning("failed to write inbox entry for uid=%s key=%s", uid, key)
 
     def _prune_token(self, db, uid: str, token: str) -> None:
         try:

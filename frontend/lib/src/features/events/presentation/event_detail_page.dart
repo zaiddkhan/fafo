@@ -98,10 +98,18 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Join this event?'),
-        content: const Text('You can leave anytime up to 10 minutes after it starts.'),
+        content: const Text(
+          'You can leave anytime up to 10 minutes after it starts.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Join')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Join'),
+          ),
         ],
       ),
     );
@@ -179,9 +187,9 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       setState(() => _joined = false);
       await _loadEvent();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You left this event.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('You left this event.')));
       }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -281,7 +289,9 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     // Open the location in the device's maps app. Try a geo: URI first (Android),
     // then fall back to a Google Maps web URL that works everywhere.
     final geoUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng($label)');
-    final webUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    final webUri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
     try {
       if (await canLaunchUrl(geoUri)) {
         await launchUrl(geoUri, mode: LaunchMode.externalApplication);
@@ -414,11 +424,16 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  Image.network(
-                                    event.imageUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, e, s) =>
-                                        Container(color: AppColors.bgTertiary),
+                                  ColoredBox(
+                                    color: Colors.white,
+                                    child: Image.network(
+                                      event.imageUrl,
+                                      fit: BoxFit.contain,
+                                      alignment: Alignment.center,
+                                      errorBuilder: (_, e, s) => Container(
+                                        color: AppColors.bgTertiary,
+                                      ),
+                                    ),
                                   ),
                                   // Bottom gradient
                                   DecoratedBox(
@@ -590,11 +605,15 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                             icon: _isOwner
                                 ? Icons.verified_user_outlined
                                 : (_joined
-                                    ? Icons.check_circle_outline
-                                    : Icons.how_to_reg_outlined),
+                                      ? Icons.check_circle_outline
+                                      : Icons.how_to_reg_outlined),
                             label: _joinLabel,
-                            isActive: !_isOwner &&
-                                (_joined || (!_isFull && _registrationOpen && !_joinWindowClosed)) &&
+                            isActive:
+                                !_isOwner &&
+                                (_joined ||
+                                    (!_isFull &&
+                                        _registrationOpen &&
+                                        !_joinWindowClosed)) &&
                                 !_joining,
                             onTap: _isOwner ? null : _handleRegisterTap,
                           ),
@@ -639,7 +658,8 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                       IgnorePointer(
                                         child: MapLibreMap(
                                           options: MapOptions(
-                                            initStyle: MapConfig.vintageStyleUrl,
+                                            initStyle:
+                                                MapConfig.vintageStyleUrl,
                                             initCenter: Geographic(
                                               lon: event.lng,
                                               lat: event.lat,
@@ -658,50 +678,51 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                           child: GestureDetector(
                                             onTap: _viewOnMap,
                                             child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: AppSpacing.md,
-                                              vertical: AppSpacing.sm,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.accentPrimary,
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    AppChrome.controlRadius,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: AppSpacing.md,
+                                                    vertical: AppSpacing.sm,
                                                   ),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withValues(alpha: 0.4),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 4),
-                                                ),
-                                              ],
+                                              decoration: BoxDecoration(
+                                                color: AppColors.accentPrimary,
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                      AppChrome.controlRadius,
+                                                    ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(alpha: 0.4),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.map_outlined,
+                                                    color: Colors.white,
+                                                    size: 16,
+                                                  ),
+                                                  const SizedBox(
+                                                    width: AppSpacing.xs,
+                                                  ),
+                                                  Text(
+                                                    'View on map',
+                                                    style: theme
+                                                        .textTheme
+                                                        .labelLarge
+                                                        ?.copyWith(
+                                                          color: Colors.white,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(
-                                                  Icons.map_outlined,
-                                                  color: Colors.white,
-                                                  size: 16,
-                                                ),
-                                                const SizedBox(
-                                                  width: AppSpacing.xs,
-                                                ),
-                                                Text(
-                                                  'View on map',
-                                                  style: theme
-                                                      .textTheme
-                                                      .labelLarge
-                                                      ?.copyWith(
-                                                        color: Colors.white,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
                                           ),
                                         ),
                                       ),

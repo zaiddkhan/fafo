@@ -7,6 +7,8 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
+import 'package:fafu/src/features/notifications/data/notifications_repository.dart';
+import 'package:fafu/src/features/notifications/presentation/notifications_page.dart';
 import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
 import 'package:fafu/src/features/quests/data/quests_providers.dart';
 import 'package:fafu/src/features/quests/data/quests_repository.dart';
@@ -76,6 +78,8 @@ class ProfilePage extends ConsumerWidget {
                   ),
                 ),
                 const Spacer(),
+                _NotificationBell(isDark: isDark),
+                const SizedBox(width: 10),
                 if (profile.hasValue)
                   _HeaderIconButton(
                     icon: Icons.edit_outlined,
@@ -371,6 +375,74 @@ class _HeaderIconButton extends StatelessWidget {
           border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF171717)),
         ),
         child: Icon(icon, color: isDark ? Colors.white : const Color(0xFF171717), size: 20),
+      ),
+    );
+  }
+}
+
+/// Header bell that opens the in-app inbox, with an unread-count badge.
+class _NotificationBell extends ConsumerWidget {
+  const _NotificationBell({required this.isDark});
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(unreadNotificationsProvider).asData?.value ?? 0;
+    return GestureDetector(
+      onTap: () async {
+        await context.push(NotificationsPage.routePath);
+        // Returning from the inbox may have changed read state.
+        ref.invalidate(unreadNotificationsProvider);
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF252525) : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.8)
+                    : const Color(0xFF171717),
+              ),
+            ),
+            child: Icon(
+              Icons.notifications_none,
+              color: isDark ? Colors.white : const Color(0xFF171717),
+              size: 20,
+            ),
+          ),
+          if (unread > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18),
+                height: 18,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.accentPrimary,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF1F1F1F) : Colors.white,
+                    width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  unread > 99 ? '99+' : '$unread',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

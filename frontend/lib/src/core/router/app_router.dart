@@ -8,10 +8,12 @@ import 'package:fafu/src/features/auth/presentation/signup_page.dart';
 import 'package:fafu/src/features/chat/presentation/chat_page.dart';
 import 'package:fafu/src/features/creators/presentation/creator_application_page.dart';
 import 'package:fafu/src/features/events/presentation/event_detail_page.dart';
+import 'package:fafu/src/features/friends/presentation/contacts_sync_page.dart';
 import 'package:fafu/src/features/friends/presentation/friends_page.dart';
 import 'package:fafu/src/features/groups/presentation/groups_page.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
+import 'package:fafu/src/features/notifications/presentation/notifications_page.dart';
 import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
 import 'package:fafu/src/features/profile/presentation/public_profile_page.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
@@ -119,6 +121,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const FriendsPage(),
       ),
       GoRoute(
+        path: ContactsSyncPage.routePath,
+        name: ContactsSyncPage.routeName,
+        builder: (context, state) => const ContactsSyncPage(),
+      ),
+      GoRoute(
+        path: NotificationsPage.routePath,
+        name: NotificationsPage.routeName,
+        builder: (context, state) => const NotificationsPage(),
+      ),
+      GoRoute(
         path: GroupsPage.routePath,
         name: GroupsPage.routeName,
         builder: (context, state) => const GroupsPage(),
@@ -126,7 +138,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: PublicProfilePage.routePath,
         name: PublicProfilePage.routeName,
-        builder: (context, state) => PublicProfilePage(user: state.extra as PublicUserResponse),
+        builder: (context, state) =>
+            PublicProfilePage(user: state.extra as PublicUserResponse),
       ),
       GoRoute(
         path: CreatorApplicationPage.routePath,

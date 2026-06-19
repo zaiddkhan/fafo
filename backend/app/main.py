@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import CORS_ORIGINS, RATE_LIMIT_DEFAULT
 from app.firebase import init_firebase
-from app.routers import admin, auth, blogs, categories, console, creators, devices, events, friends, groups, internal_cron, nudges, quests, users
+from app.routers import admin, auth, blogs, categories, console, creators, devices, events, friends, groups, internal_cron, notifications, nudges, quests, users
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[RATE_LIMIT_DEFAULT])
 
@@ -45,6 +45,7 @@ app.include_router(groups.router)
 app.include_router(quests.router)
 app.include_router(nudges.router)
 app.include_router(devices.router)
+app.include_router(notifications.router)
 app.include_router(internal_cron.router)
 
 

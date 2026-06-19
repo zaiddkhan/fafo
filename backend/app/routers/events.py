@@ -103,6 +103,8 @@ def _event_to_response(doc_id: str, data: dict, current_uid: str | None = None) 
         lat=location.latitude,
         lng=location.longitude,
         location_name=data["location_name"],
+        address=data.get("address"),
+        location_details=data.get("location_details"),
         date_time=_ensure_utc(data["date_time"]),
         capacity=data.get("capacity"),
         joinee_count=data.get("joinee_count", 0),
@@ -135,6 +137,8 @@ def build_event_data(body: EventCreateRequest, creator_uid: str, *, seeded: bool
         "custom_emoji": body.custom_emoji,
         "location": GeoPoint(body.lat, body.lng),
         "location_name": body.location_name,
+        "address": body.address,
+        "location_details": body.location_details,
         "geohash": encode_geohash(body.lat, body.lng),
         "date_time": body.date_time,
         "capacity": body.capacity,
@@ -327,7 +331,10 @@ def list_my_events(
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(minutes=VISIBILITY_WINDOW_MINUTES)
 
-    query = db.collection("events").where("creator_uid", "==", uid).limit(limit)
+    # Do not apply Firestore limit before filtering out archived events. Without
+    # an explicit order, Firestore may return older creator docs first, causing
+    # newly-created upcoming events to be excluded from the dashboard entirely.
+    query = db.collection("events").where("creator_uid", "==", uid)
     results = []
     for doc in query.stream():
         data = doc.to_dict()
@@ -338,7 +345,7 @@ def list_my_events(
             continue
         results.append(_event_to_response(doc.id, data))
     results.sort(key=lambda e: e.date_time)
-    return results
+    return results[:limit]
 
 
 @router.get("/joined", response_model=list[EventResponse])

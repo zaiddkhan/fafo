@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,6 +12,7 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/friends/data/friends_providers.dart';
 import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
+import 'package:fafu/src/features/friends/presentation/contacts_sync_page.dart';
 import 'package:fafu/src/features/groups/presentation/groups_page.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
 import 'package:fafu/src/features/nudges/presentation/nudge_feed_sheet.dart';
@@ -38,12 +38,13 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
   String _query = '';
   bool _busy = false;
   _FriendsTab _tab = _FriendsTab.all;
-  List<PublicUserResponse> _contactMatches = const [];
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(friendsRepositoryProvider).updatePresence());
+    Future.microtask(
+      () => ref.read(friendsRepositoryProvider).updatePresence(),
+    );
   }
 
   @override
@@ -95,7 +96,9 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
         builder: (context) => NudgeFeedSheet(
           feedType: NudgeFeedType.friend,
           targetId: user.uid,
-          title: user.displayName.isEmpty ? '@${user.username}' : user.displayName,
+          title: user.displayName.isEmpty
+              ? '@${user.username}'
+              : user.displayName,
           photoUrl: user.photoUrl,
           online: user.online,
         ),
@@ -114,16 +117,35 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
           children: [
             const Text('Answer these quick questions to confirm.'),
             const SizedBox(height: 12),
-            TextField(controller: controllers[0], decoration: const InputDecoration(labelText: 'What happened?')),
-            TextField(controller: controllers[1], decoration: const InputDecoration(labelText: 'Was this accidental?')),
-            TextField(controller: controllers[2], decoration: const InputDecoration(labelText: 'Anything we should know?')),
+            TextField(
+              controller: controllers[0],
+              decoration: const InputDecoration(labelText: 'What happened?'),
+            ),
+            TextField(
+              controller: controllers[1],
+              decoration: const InputDecoration(
+                labelText: 'Was this accidental?',
+              ),
+            ),
+            TextField(
+              controller: controllers[2],
+              decoration: const InputDecoration(
+                labelText: 'Anything we should know?',
+              ),
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () {
-              final answers = controllers.map((c) => c.text.trim()).where((text) => text.isNotEmpty).toList();
+              final answers = controllers
+                  .map((c) => c.text.trim())
+                  .where((text) => text.isNotEmpty)
+                  .toList();
               if (answers.length < 3) return;
               Navigator.of(context).pop(answers);
             },
@@ -138,56 +160,25 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     return result;
   }
 
-  Future<void> _syncContactsPrompt() async {
-    final approved = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sync contacts'),
-        content: const Text(
-          'Fafo will request access to your phone contacts and only upload phone numbers to find friends already on Fafo. We do not message contacts or notify non-users.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Allow and sync')),
-        ],
-      ),
-    );
-    if (approved != true) return;
-    if (mounted) setState(() => _busy = true);
-    try {
-      final granted = await FlutterContacts.requestPermission(readonly: true);
-      if (!granted) {
-        if (mounted) _showSnack('Contacts permission denied');
-        return;
-      }
-      final contacts = await FlutterContacts.getContacts(withProperties: true);
-      final phones = contacts.expand((contact) => contact.phones).map((phone) => phone.number.trim()).where((phone) => phone.isNotEmpty).toSet().toList();
-      if (phones.isEmpty) {
-        if (mounted) _showSnack('No phone numbers found in contacts');
-        return;
-      }
-      final matches = await ref.read(friendsRepositoryProvider).syncContacts(phones);
-      if (mounted) setState(() => _contactMatches = matches);
-    } on ApiException catch (e) {
-      if (mounted) _showSnack(e.message);
-    } catch (e) {
-      if (mounted) _showSnack(e.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _createInvite() async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
       final invite = await ref.read(friendsRepositoryProvider).createInvite();
       await Clipboard.setData(ClipboardData(text: invite.inviteUrl));
-      final message = Uri.encodeComponent('Join me on Fafo: ${invite.inviteUrl}');
+      final message = Uri.encodeComponent(
+        'Join me on Fafo: ${invite.inviteUrl}',
+      );
       final whatsappUri = Uri.parse('whatsapp://send?text=$message');
       final canOpen = await canLaunchUrl(whatsappUri);
-      if (canOpen) await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
-      if (mounted) _showSnack('Invite link copied${canOpen ? ' and WhatsApp opened' : ''}');
+      if (canOpen) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+      }
+      if (mounted) {
+        _showSnack(
+          'Invite link copied${canOpen ? ' and WhatsApp opened' : ''}',
+        );
+      }
     } on ApiException catch (e) {
       if (mounted) _showSnack(e.message);
     } finally {
@@ -201,12 +192,25 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     final outgoing = ref.watch(outgoingFriendRequestsProvider);
     final friends = ref.watch(friendsListProvider);
     final blocked = ref.watch(blockedUsersProvider);
-    final search = _query.length >= 2 ? ref.watch(friendSearchProvider(_query)) : const AsyncValue<List<PublicUserResponse>>.data([]);
+    final search = _query.length >= 2
+        ? ref.watch(friendSearchProvider(_query))
+        : const AsyncValue<List<PublicUserResponse>>.data([]);
+
+    // Counts drive the segmented-tab badges; read straight from the lists we
+    // already watch so they stay in sync with what each tab shows.
+    final friendsCount = friends.asData?.value.length ?? 0;
+    final incomingCount = incoming.asData?.value.length ?? 0;
+    final outgoingCount = outgoing.asData?.value.length ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: widget.showBackButton
-          ? AppBar(leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).maybePop()))
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            )
           : null,
       body: SafeArea(
         child: RefreshIndicator(
@@ -221,36 +225,56 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                     child: Text(
                       'Friends',
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            color: AppColors.accentPrimary,
-                            fontSize: 28,
-                            height: 1,
-                          ),
+                        color: AppColors.accentPrimary,
+                        fontSize: 28,
+                        height: 1,
+                      ),
                     ),
                   ),
-                  _SmallActionButton(label: 'Groups', onTap: () => context.push(GroupsPage.routePath)),
-                ],
-              ),
-              const SizedBox(height: 32),
-              _SearchBox(controller: _searchController, onChanged: _onSearchChanged),
-              const SizedBox(height: 22),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _FilterChipButton(label: 'All Friends', selected: _tab == _FriendsTab.all, onTap: () => setState(() => _tab = _FriendsTab.all)),
-                  _FilterChipButton(label: 'New Requests', selected: _tab == _FriendsTab.incoming, onTap: () => setState(() => _tab = _FriendsTab.incoming)),
-                  _FilterChipButton(label: 'Pending Requests', selected: _tab == _FriendsTab.pending, onTap: () => setState(() => _tab = _FriendsTab.pending)),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  _TextAction(label: 'Sync Contacts', onTap: _busy ? null : _syncContactsPrompt),
-                  const SizedBox(width: 12),
-                  _TextAction(label: 'Invite Link', onTap: _busy ? null : _createInvite),
+                  _SmallActionButton(
+                    label: 'Groups',
+                    onTap: () => context.push(GroupsPage.routePath),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
+              _SearchBox(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+              ),
+              const SizedBox(height: 18),
+              _SegmentedTabs(
+                current: _tab,
+                onChanged: (tab) => setState(() => _tab = tab),
+                segments: [
+                  _TabSpec(_FriendsTab.all, 'Friends', friendsCount),
+                  _TabSpec(_FriendsTab.incoming, 'Requests', incomingCount),
+                  _TabSpec(_FriendsTab.pending, 'Sent', outgoingCount),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: _StickerAction(
+                      icon: Icons.contacts_outlined,
+                      label: 'Sync Contacts',
+                      onTap: _busy
+                          ? null
+                          : () => context.push(ContactsSyncPage.routePath),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _StickerAction(
+                      icon: Icons.ios_share,
+                      label: 'Invite Link',
+                      onTap: _busy ? null : _createInvite,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
               if (_query.length >= 2) ...[
                 _ListHeader('Search Results'),
                 search.when(
@@ -258,13 +282,22 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                   error: (e, _) => _ErrorBlock(error: e.toString()),
                   data: (users) => users.isEmpty
                       ? const _EmptyBlock(text: 'No users found.')
-                      : Column(children: users.map((user) => _SearchResultRow(user: user, busy: _busy, onAdd: () => _runAction(() => ref.read(friendsRepositoryProvider).sendFriendRequest(uid: user.uid)))).toList()),
+                      : Column(
+                          children: users
+                              .map(
+                                (user) => _SearchResultRow(
+                                  user: user,
+                                  busy: _busy,
+                                  onAdd: () => _runAction(
+                                    () => ref
+                                        .read(friendsRepositoryProvider)
+                                        .sendFriendRequest(uid: user.uid),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
                 ),
-                const SizedBox(height: 18),
-              ],
-              if (_contactMatches.isNotEmpty) ...[
-                _ListHeader('Contacts on Fafo'),
-                ..._contactMatches.map((user) => _SearchResultRow(user: user, busy: _busy, onAdd: () => _runAction(() => ref.read(friendsRepositoryProvider).sendFriendRequest(uid: user.uid)))),
                 const SizedBox(height: 18),
               ],
               if (_tab == _FriendsTab.all)
@@ -272,25 +305,48 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                   loading: () => const _LoadingBlock(),
                   error: (e, _) => _ErrorBlock(error: e.toString()),
                   data: (items) => items.isEmpty
-                      ? const _EmptyBlock(text: 'No friends yet. Search or invite someone.')
+                      ? const _AllFriendsEmpty()
                       : Column(
                           children: items
-                              .map((friend) => _FriendListCard(
-                                    user: friend.user,
-                                    statusText: _statusForFriend(friend.user),
-                                    onTap: () => _openNudgeFeed(friend.user),
-                                    onProfile: () => context.push(PublicProfilePage.routePath, extra: friend.user),
-                                    onUnfriend: () async {
-                                      final answers = await _negativeAnswers('Unfriend ${friend.user.displayName}?');
-                                      if (answers == null) return;
-                                      await _runAction(() => ref.read(friendsRepositoryProvider).unfriend(friend.user.uid, answers: answers));
-                                    },
-                                    onBlock: () async {
-                                      final answers = await _negativeAnswers('Block ${friend.user.displayName}?');
-                                      if (answers == null) return;
-                                      await _runAction(() => ref.read(friendsRepositoryProvider).blockUser(friend.user.uid, answers: answers));
-                                    },
-                                  ))
+                              .map(
+                                (friend) => _FriendListCard(
+                                  user: friend.user,
+                                  statusText: _statusForFriend(friend.user),
+                                  onTap: () => _openNudgeFeed(friend.user),
+                                  onProfile: () => context.push(
+                                    PublicProfilePage.routePath,
+                                    extra: friend.user,
+                                  ),
+                                  onUnfriend: () async {
+                                    final answers = await _negativeAnswers(
+                                      'Unfriend ${friend.user.displayName}?',
+                                    );
+                                    if (answers == null) return;
+                                    await _runAction(
+                                      () => ref
+                                          .read(friendsRepositoryProvider)
+                                          .unfriend(
+                                            friend.user.uid,
+                                            answers: answers,
+                                          ),
+                                    );
+                                  },
+                                  onBlock: () async {
+                                    final answers = await _negativeAnswers(
+                                      'Block ${friend.user.displayName}?',
+                                    );
+                                    if (answers == null) return;
+                                    await _runAction(
+                                      () => ref
+                                          .read(friendsRepositoryProvider)
+                                          .blockUser(
+                                            friend.user.uid,
+                                            answers: answers,
+                                          ),
+                                    );
+                                  },
+                                ),
+                              )
                               .toList(),
                         ),
                 ),
@@ -302,13 +358,23 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                       ? const _EmptyBlock(text: 'No new friend requests.')
                       : Column(
                           children: requests
-                              .map((request) => _RequestCard(
-                                    user: request.requester,
-                                    primaryLabel: 'Accept',
-                                    secondaryLabel: 'Decline',
-                                    onPrimary: () => _runAction(() => ref.read(friendsRepositoryProvider).acceptRequest(request.id)),
-                                    onSecondary: () => _runAction(() => ref.read(friendsRepositoryProvider).declineRequest(request.id)),
-                                  ))
+                              .map(
+                                (request) => _RequestCard(
+                                  user: request.requester,
+                                  primaryLabel: 'Accept',
+                                  secondaryLabel: 'Decline',
+                                  onPrimary: () => _runAction(
+                                    () => ref
+                                        .read(friendsRepositoryProvider)
+                                        .acceptRequest(request.id),
+                                  ),
+                                  onSecondary: () => _runAction(
+                                    () => ref
+                                        .read(friendsRepositoryProvider)
+                                        .declineRequest(request.id),
+                                  ),
+                                ),
+                              )
                               .toList(),
                         ),
                 ),
@@ -318,7 +384,17 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                   error: (e, _) => _ErrorBlock(error: e.toString()),
                   data: (requests) => requests.isEmpty
                       ? const _EmptyBlock(text: 'No pending sent requests.')
-                      : Column(children: requests.map((request) => _RequestCard(user: request.recipient, primaryLabel: 'Pending', onPrimary: null)).toList()),
+                      : Column(
+                          children: requests
+                              .map(
+                                (request) => _RequestCard(
+                                  user: request.recipient,
+                                  primaryLabel: 'Pending',
+                                  onPrimary: null,
+                                ),
+                              )
+                              .toList(),
+                        ),
                 ),
               const SizedBox(height: 24),
               blocked.when(
@@ -337,9 +413,18 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                               onPrimary: _busy
                                   ? null
                                   : () async {
-                                      final answers = await _negativeAnswers('Unblock ${blockedUser.user.displayName}?');
+                                      final answers = await _negativeAnswers(
+                                        'Unblock ${blockedUser.user.displayName}?',
+                                      );
                                       if (answers == null) return;
-                                      await _runAction(() => ref.read(friendsRepositoryProvider).unblockUser(blockedUser.user.uid, answers: answers));
+                                      await _runAction(
+                                        () => ref
+                                            .read(friendsRepositoryProvider)
+                                            .unblockUser(
+                                              blockedUser.user.uid,
+                                              answers: answers,
+                                            ),
+                                      );
                                     },
                             ),
                           ),
@@ -385,52 +470,294 @@ class _SearchBox extends StatelessWidget {
           filled: false,
           prefixIcon: Icon(Icons.search, color: Colors.black54, size: 24),
           hintText: 'Search Friends...',
-          hintStyle: TextStyle(color: Color(0xFF6D6D78), fontSize: 20, fontWeight: FontWeight.w900),
+          hintStyle: TextStyle(
+            color: Color(0xFF6D6D78),
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ),
     );
   }
 }
 
-class _FilterChipButton extends StatelessWidget {
-  const _FilterChipButton({required this.label, required this.selected, required this.onTap});
+/// Label + live count for one segment of [_SegmentedTabs].
+class _TabSpec {
+  const _TabSpec(this.tab, this.label, this.count);
+  final _FriendsTab tab;
   final String label;
+  final int count;
+}
+
+/// A single connected segmented control: equal-width segments inside one
+/// ink-outlined, offset-shadowed "sticker" bar. The selected segment fills with
+/// the accent; each segment carries a count badge when its count is non-zero.
+class _SegmentedTabs extends StatelessWidget {
+  const _SegmentedTabs({
+    required this.current,
+    required this.onChanged,
+    required this.segments,
+  });
+
+  final _FriendsTab current;
+  final ValueChanged<_FriendsTab> onChanged;
+  final List<_TabSpec> segments;
+
+  @override
+  Widget build(BuildContext context) {
+    const offset = 3.0;
+    return Padding(
+      padding: const EdgeInsets.only(right: offset, bottom: offset),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Transform.translate(
+              offset: const Offset(offset, offset),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.ink,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: AppColors.ink, width: 1.7),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8.3),
+              child: Row(
+                children: [
+                  for (var i = 0; i < segments.length; i++) ...[
+                    if (i > 0) Container(width: 1.7, color: AppColors.ink),
+                    Expanded(
+                      child: _Segment(
+                        spec: segments[i],
+                        selected: current == segments[i].tab,
+                        onTap: () => onChanged(segments[i].tab),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Segment extends StatelessWidget {
+  const _Segment({
+    required this.spec,
+    required this.selected,
+    required this.onTap,
+  });
+  final _TabSpec spec;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        color: selected ? AppColors.accentPrimary : Colors.white,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.accentPrimary : const Color(0xFFD9D9D9),
-          border: selected ? null : Border.all(color: AppColors.ink, width: 1.4),
-          borderRadius: BorderRadius.circular(7),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          style: TextStyle(color: selected ? Colors.white : AppColors.ink, fontSize: 13, fontWeight: FontWeight.w900),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(
+                spec.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? Colors.white : AppColors.ink,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            if (spec.count > 0) ...[
+              const SizedBox(width: 6),
+              _CountBadge(count: spec.count, selected: selected),
+            ],
+          ],
         ),
       ),
     );
   }
 }
 
-class _TextAction extends StatelessWidget {
-  const _TextAction({required this.label, required this.onTap});
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count, required this.selected});
+  final int count;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 19),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: selected ? Colors.white : AppColors.accentPrimary,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        count > 99 ? '99+' : '$count',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: selected ? AppColors.accentPrimary : Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+/// Pressable "sticker" action (icon + label) matching the app's ink-outline,
+/// offset-shadow chrome. Used for Sync Contacts / Invite Link.
+class _StickerAction extends StatelessWidget {
+  const _StickerAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
   final String label;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Text(label, style: TextStyle(color: onTap == null ? Colors.grey : AppColors.accentPrimary, fontWeight: FontWeight.w900)),
+    const offset = 3.0;
+    final enabled = onTap != null;
+    final contentColor = enabled ? AppColors.ink : const Color(0xFF9B9BA3);
+    return Padding(
+      padding: const EdgeInsets.only(right: offset, bottom: offset),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Transform.translate(
+              offset: const Offset(offset, offset),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.ink,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Container(
+              height: 48,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: AppColors.ink, width: 1.7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 19,
+                    color: enabled ? AppColors.accentPrimary : contentColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: contentColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Guiding empty state for the Friends tab — points to the two ways to grow a
+/// circle, which sit right above this block.
+class _AllFriendsEmpty extends StatelessWidget {
+  const _AllFriendsEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+      decoration: BoxDecoration(
+        color: AppColors.accentLightest,
+        border: Border.all(color: AppColors.ink, width: 1.7),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: AppColors.ink, width: 1.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.group_add_outlined,
+              color: AppColors.accentPrimary,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'No friends yet',
+            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+              color: AppColors.ink,
+              fontSize: 20,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Sync your contacts or share an invite link to start nudging friends.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.ink.withValues(alpha: 0.7),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -446,15 +773,32 @@ class _SmallActionButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: AppColors.ink, borderRadius: BorderRadius.circular(8)),
-        child: Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13)),
+        decoration: BoxDecoration(
+          color: AppColors.ink,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 13,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _FriendListCard extends StatelessWidget {
-  const _FriendListCard({required this.user, required this.statusText, required this.onTap, required this.onProfile, required this.onUnfriend, required this.onBlock});
+  const _FriendListCard({
+    required this.user,
+    required this.statusText,
+    required this.onTap,
+    required this.onProfile,
+    required this.onUnfriend,
+    required this.onBlock,
+  });
   final PublicUserResponse user;
   final String statusText;
   final VoidCallback onTap;
@@ -464,56 +808,83 @@ class _FriendListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = user.displayName.isEmpty ? '@${user.username}' : user.displayName;
+    final displayName = user.displayName.isEmpty
+        ? '@${user.username}'
+        : user.displayName;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.ink, width: 1.6),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          _Avatar(user: user, size: 48),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(displayName, style: TextStyle(color: AppColors.accentPrimary, fontWeight: FontWeight.w900, fontSize: 21, height: 1)),
-                const SizedBox(height: 7),
-                Text('• $statusText', style: const TextStyle(color: Color(0xFF74747D), fontWeight: FontWeight.w800, fontSize: 14)),
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.ink, width: 1.6),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            _Avatar(user: user, size: 48),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    displayName,
+                    style: TextStyle(
+                      color: AppColors.accentPrimary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 21,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    '• $statusText',
+                    style: const TextStyle(
+                      color: Color(0xFF74747D),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.more_horiz,
+                color: AppColors.ink,
+                size: 28,
+              ),
+              onSelected: (value) {
+                if (value == 'message') onTap();
+                if (value == 'profile') onProfile();
+                if (value == 'unfriend') onUnfriend();
+                if (value == 'block') onBlock();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'message', child: Text('Message')),
+                PopupMenuItem(value: 'profile', child: Text('View Profile')),
+                PopupMenuItem(value: 'unfriend', child: Text('Unfriend')),
+                PopupMenuItem(value: 'block', child: Text('Block')),
               ],
             ),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_horiz, color: AppColors.ink, size: 28),
-            onSelected: (value) {
-              if (value == 'message') onTap();
-              if (value == 'profile') onProfile();
-              if (value == 'unfriend') onUnfriend();
-              if (value == 'block') onBlock();
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'message', child: Text('Message')),
-              PopupMenuItem(value: 'profile', child: Text('View Profile')),
-              PopupMenuItem(value: 'unfriend', child: Text('Unfriend')),
-              PopupMenuItem(value: 'block', child: Text('Block')),
-            ],
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _RequestCard extends StatelessWidget {
-  const _RequestCard({required this.user, required this.primaryLabel, this.secondaryLabel, this.onPrimary, this.onSecondary});
+  const _RequestCard({
+    required this.user,
+    required this.primaryLabel,
+    this.secondaryLabel,
+    this.onPrimary,
+    this.onSecondary,
+  });
   final PublicUserResponse user;
   final String primaryLabel;
   final String? secondaryLabel;
@@ -522,11 +893,17 @@ class _RequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = user.displayName.isEmpty ? '@${user.username}' : user.displayName;
+    final displayName = user.displayName.isEmpty
+        ? '@${user.username}'
+        : user.displayName;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.ink, width: 1.4), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.ink, width: 1.4),
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Row(
         children: [
           _Avatar(user: user, size: 46),
@@ -536,13 +913,32 @@ class _RequestCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.accentPrimary, fontWeight: FontWeight.w900, fontSize: 19)),
+                Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.accentPrimary,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 19,
+                  ),
+                ),
                 if (user.displayName.isNotEmpty)
-                  Text('@${user.username}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF74747D), fontWeight: FontWeight.w700, fontSize: 13)),
+                  Text(
+                    '@${user.username}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF74747D),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
               ],
             ),
           ),
-          if (secondaryLabel != null) TextButton(onPressed: onSecondary, child: Text(secondaryLabel!)),
+          if (secondaryLabel != null)
+            TextButton(onPressed: onSecondary, child: Text(secondaryLabel!)),
           FilledButton(onPressed: onPrimary, child: Text(primaryLabel)),
         ],
       ),
@@ -551,7 +947,11 @@ class _RequestCard extends StatelessWidget {
 }
 
 class _SearchResultRow extends StatelessWidget {
-  const _SearchResultRow({required this.user, required this.busy, required this.onAdd});
+  const _SearchResultRow({
+    required this.user,
+    required this.busy,
+    required this.onAdd,
+  });
   final PublicUserResponse user;
   final bool busy;
   final VoidCallback onAdd;
@@ -567,7 +967,9 @@ class _SearchResultRow extends StatelessWidget {
         FriendshipStatus.blocked || FriendshipStatus.blockedBy => 'Unavailable',
         FriendshipStatus.none => 'Add',
       },
-      onPrimary: user.friendshipStatus == FriendshipStatus.none && !busy ? onAdd : null,
+      onPrimary: user.friendshipStatus == FriendshipStatus.none && !busy
+          ? onAdd
+          : null,
     );
   }
 }
@@ -579,7 +981,9 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = user.displayName.isEmpty ? user.username : user.displayName;
+    final displayName = user.displayName.isEmpty
+        ? user.username
+        : user.displayName;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -590,9 +994,23 @@ class _Avatar extends StatelessWidget {
             color: const Color(0xFFF7F7F7),
             border: Border.all(color: AppColors.ink, width: 2),
             borderRadius: BorderRadius.circular(8),
-            image: user.photoUrl == null ? null : DecorationImage(image: NetworkImage(user.photoUrl!), fit: BoxFit.cover),
+            image: user.photoUrl == null
+                ? null
+                : DecorationImage(
+                    image: NetworkImage(user.photoUrl!),
+                    fit: BoxFit.cover,
+                  ),
           ),
-          child: user.photoUrl == null ? Center(child: Text(displayName.isEmpty ? '🙂' : displayName.characters.first.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w900))) : null,
+          child: user.photoUrl == null
+              ? Center(
+                  child: Text(
+                    displayName.isEmpty
+                        ? '🙂'
+                        : displayName.characters.first.toUpperCase(),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                )
+              : null,
         ),
         if (user.online)
           Positioned(
@@ -601,7 +1019,11 @@ class _Avatar extends StatelessWidget {
             child: Container(
               width: 16,
               height: 16,
-              decoration: BoxDecoration(color: const Color(0xFF59E85D), border: Border.all(color: AppColors.ink, width: 1.2), borderRadius: BorderRadius.circular(3)),
+              decoration: BoxDecoration(
+                color: const Color(0xFF59E85D),
+                border: Border.all(color: AppColors.ink, width: 1.2),
+                borderRadius: BorderRadius.circular(3),
+              ),
             ),
           ),
       ],
@@ -614,27 +1036,48 @@ class _ListHeader extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Text(text, style: Theme.of(context).textTheme.displayMedium?.copyWith(color: AppColors.ink, fontSize: 20)),
-      );
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Text(
+      text,
+      style: Theme.of(
+        context,
+      ).textTheme.displayMedium?.copyWith(color: AppColors.ink, fontSize: 20),
+    ),
+  );
 }
 
 class _LoadingBlock extends StatelessWidget {
   const _LoadingBlock();
   @override
-  Widget build(BuildContext context) => const Padding(padding: EdgeInsets.all(AppSpacing.md), child: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)));
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.all(AppSpacing.md),
+    child: Center(
+      child: CircularProgressIndicator(color: AppColors.accentPrimary),
+    ),
+  );
 }
 
 class _EmptyBlock extends StatelessWidget {
   const _EmptyBlock({required this.text});
   final String text;
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.md), child: Text(text, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary)));
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+    child: Text(
+      text,
+      style: Theme.of(
+        context,
+      ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+    ),
+  );
 }
 
 class _ErrorBlock extends StatelessWidget {
   const _ErrorBlock({required this.error});
   final String error;
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.md), child: Text(error, style: const TextStyle(color: Color(0xFFE5484D))));
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+    child: Text(error, style: const TextStyle(color: Color(0xFFE5484D))),
+  );
 }

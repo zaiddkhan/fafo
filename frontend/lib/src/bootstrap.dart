@@ -1,4 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fafu/firebase_options.dart';
 import 'package:fafu/src/app.dart';
 import 'package:fafu/src/core/services/shared_preferences_provider.dart';
+import 'package:fafu/src/features/notifications/data/push_service.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +25,12 @@ Future<void> bootstrap() async {
     ).timeout(const Duration(seconds: 8));
   } catch (e, st) {
     debugPrint('Firebase init failed or timed out: $e\n$st');
+  }
+
+  // Register the background/terminated push handler (native platforms only).
+  // Must run before runApp so taps from a cold start are delivered.
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
 
   final prefs = await SharedPreferences.getInstance();
