@@ -247,7 +247,7 @@ def respond_nudge(nudge_id: str, body: NudgeRespondRequest, background_tasks: Ba
 
 
 @router.post("/{nudge_id}/remind", response_model=NudgeResponse)
-def send_reminder(nudge_id: str, current_user: dict = Depends(get_current_user)):
+def send_reminder(nudge_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     validate_document_id(nudge_id)
     uid = current_user["uid"]
     db = get_firestore()
@@ -273,6 +273,28 @@ def send_reminder(nudge_id: str, current_user: dict = Depends(get_current_user))
         "next_reminder_available_at": _now() + timedelta(minutes=1) if new_count < limit else None,
     }
     ref.update(update)
+
+    # Re-ping everyone still expected to respond. Fire-and-forget; never blocks.
+    recipients = _expected_voters(db, data)
+    if recipients:
+        if data["feed_type"] == NudgeFeedType.friend.value:
+            triggers.nudge_reminder(
+                background_tasks,
+                nudge_id=nudge_id,
+                recipient_uids=recipients,
+                reminder_count=new_count,
+                sender_name=_display_name(db, uid),
+            )
+        else:
+            triggers.nudge_reminder(
+                background_tasks,
+                nudge_id=nudge_id,
+                recipient_uids=recipients,
+                reminder_count=new_count,
+                group_id=data["target_id"],
+                group_name=_group_name(db, data["target_id"]),
+            )
+
     return _to_response(nudge_id, {**data, **update})
 
 

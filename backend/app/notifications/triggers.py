@@ -71,6 +71,41 @@ def group_nudge_received(background_tasks, *, nudge_id, group_id, recipient_uids
     )
 
 
+def nudge_reminder(
+    background_tasks,
+    *,
+    nudge_id,
+    recipient_uids,
+    reminder_count,
+    sender_name=None,
+    group_id=None,
+    group_name=None,
+):
+    """The sender re-pinged a still-open nudge. `reminder_count` is part of the
+    dedupe base so each reminder is a distinct, deliverable notification (rather
+    than collapsing into the original nudge). Group nudges use the dedicated
+    reminder template; friend nudges reuse the nudge-received copy.
+    """
+    if group_id is not None:
+        _send(
+            background_tasks,
+            template_id="groups.reminder_received",
+            recipient_uids=recipient_uids,
+            variables={"group_name": group_name or "your group"},
+            data={"nudge_id": nudge_id, "group_id": group_id},
+            dedupe_base=f"groups.reminder_received:{nudge_id}:{reminder_count}",
+        )
+    else:
+        _send(
+            background_tasks,
+            template_id="social_pull.nudge_received",
+            recipient_uids=recipient_uids,
+            variables={"sender_name": sender_name or "Someone"},
+            data={"nudge_id": nudge_id},
+            dedupe_base=f"social_pull.nudge_received:{nudge_id}:reminder:{reminder_count}",
+        )
+
+
 # --- Groups lifecycle ----------------------------------------------------------
 
 def group_invite_received(background_tasks, *, invite_id, group_id, recipient_uid, inviter_name, group_name):

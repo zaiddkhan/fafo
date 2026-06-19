@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.config import DISPATCH_MAX_ATTEMPTS
-from app.notifications import fcm, outbox
+from app.notifications import fcm, outbox, triggers
 from app.notifications.keys import dedupe_key
 from app.notifications.rate_limit import (
     defer_for_quiet_hours,
@@ -247,3 +247,53 @@ def test_inactivity_sweep_enqueues_once(db, captured_fcm):
     # Re-running the same day is a no-op (idempotent).
     summary2 = inactivity_sweep(now=now)
     assert summary2["warm"] == 0
+
+
+# --- Nudge reminders -----------------------------------------------------------
+
+
+def test_nudge_reminder_friend_sends_and_writes_inbox(db, captured_fcm):
+    _register_device(db, "friend1")
+    # background_tasks=None → synchronous enqueue + inline dispatch.
+    triggers.nudge_reminder(
+        None,
+        nudge_id="n1",
+        recipient_uids=["friend1"],
+        reminder_count=1,
+        sender_name="Sam",
+    )
+    assert len(captured_fcm["calls"]) == 1
+    assert captured_fcm["calls"][0]["body"] == "Plans are forming. Are you in or not?"
+
+    key = dedupe_key("social_pull.nudge_received:n1:reminder:1", "friend1")
+    inbox = (
+        db.collection("users").document("friend1").collection("notifications").document(key).get()
+    )
+    assert inbox.exists
+    assert inbox.to_dict()["data"]["nudge_id"] == "n1"
+
+
+def test_nudge_reminders_are_distinct_per_count(db, captured_fcm):
+    _register_device(db, "friend1")
+    triggers.nudge_reminder(
+        None, nudge_id="n1", recipient_uids=["friend1"], reminder_count=1, sender_name="Sam"
+    )
+    triggers.nudge_reminder(
+        None, nudge_id="n1", recipient_uids=["friend1"], reminder_count=2, sender_name="Sam"
+    )
+    # Each reminder is a distinct occurrence → two separate sends, not deduped.
+    assert len(captured_fcm["calls"]) == 2
+
+
+def test_group_nudge_reminder_uses_reminder_template(db, captured_fcm):
+    _register_device(db, "member1")
+    triggers.nudge_reminder(
+        None,
+        nudge_id="gn1",
+        recipient_uids=["member1"],
+        reminder_count=1,
+        group_id="grp1",
+        group_name="Squad",
+    )
+    assert len(captured_fcm["calls"]) == 1
+    assert captured_fcm["calls"][0]["body"] == "Reminder: the plan in Squad is still open."
