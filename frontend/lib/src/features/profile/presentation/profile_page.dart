@@ -54,12 +54,18 @@ class ProfilePage extends ConsumerWidget {
     final quests = ref.watch(questsListProvider);
     final activations = ref.watch(questActivationsProvider);
     final activationById = <String, QuestActivation>{
-      for (final a in activations.asData?.value ?? const <QuestActivation>[]) a.quest.id: a,
+      for (final a in activations.asData?.value ?? const <QuestActivation>[])
+        a.quest.id: a,
     };
     final activeCount = activationById.values.where((a) => a.isActive).length;
     final atQuestLimit = activeCount >= kMaxActiveQuests;
     final rsvpedEvents = savedEvents.take(3).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    ref.listen(eventsRevisionProvider, (_, _) {
+      ref.invalidate(_joinedEventsProvider);
+      ref.invalidate(profileStatsProvider);
+    });
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1F1F1F) : AppColors.bgPrimary,
@@ -85,7 +91,10 @@ class ProfilePage extends ConsumerWidget {
                     icon: Icons.edit_outlined,
                     isDark: isDark,
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => EditProfilePage(profile: profile.value!)),
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            EditProfilePage(profile: profile.value!),
+                      ),
                     ),
                   ),
                 if (profile.hasValue) const SizedBox(width: 10),
@@ -98,7 +107,14 @@ class ProfilePage extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             profile.when(
-              loading: () => const SizedBox(height: 64, child: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))),
+              loading: () => const SizedBox(
+                height: 64,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.accentPrimary,
+                  ),
+                ),
+              ),
               error: (_, _) => const SizedBox.shrink(),
               data: (p) => _IdentityHeader(profile: p, isDark: isDark),
             ),
@@ -108,15 +124,40 @@ class ProfilePage extends ConsumerWidget {
               error: (_, _) => const SizedBox.shrink(),
               data: (s) => Row(
                 children: [
-                  Expanded(child: _StatPill(label: 'Upcoming', value: '${s.upcomingEvents}')),
+                  Expanded(
+                    child: _StatPill(
+                      label: 'Upcoming',
+                      value: '${s.upcomingEvents}',
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  Expanded(child: _StatPill(label: 'Joined', value: '${s.eventsJoined}')),
+                  Expanded(
+                    child: _StatPill(
+                      label: 'Joined',
+                      value: '${s.eventsJoined}',
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  Expanded(child: _StatPill(label: 'Quests', value: '${s.sideQuestsActivated}')),
+                  Expanded(
+                    child: _StatPill(
+                      label: 'Quests',
+                      value: '${s.sideQuestsActivated}',
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  Expanded(child: _StatPill(label: 'Friends', value: '${s.friendsCount}')),
+                  Expanded(
+                    child: _StatPill(
+                      label: 'Friends',
+                      value: '${s.friendsCount}',
+                    ),
+                  ),
                   const SizedBox(width: 6),
-                  Expanded(child: _StatPill(label: 'Streak', value: '${s.currentStreak}')),
+                  Expanded(
+                    child: _StatPill(
+                      label: 'Streak',
+                      value: '${s.currentStreak}',
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -148,21 +189,26 @@ class ProfilePage extends ConsumerWidget {
                 }
                 if (events.isNotEmpty) {
                   return Column(
-                    children: events.take(3).map(
-                      (event) => Padding(
-                        padding: const EdgeInsets.only(bottom: 18),
-                        child: _JoinedEventCard(event: event),
-                      ),
-                    ).toList(),
+                    children: events
+                        .take(3)
+                        .map(
+                          (event) => Padding(
+                            padding: const EdgeInsets.only(bottom: 18),
+                            child: _JoinedEventCard(event: event),
+                          ),
+                        )
+                        .toList(),
                   );
                 }
                 return Column(
-                  children: rsvpedEvents.map(
-                    (event) => Padding(
-                      padding: const EdgeInsets.only(bottom: 18),
-                      child: _RsvpCard(event: event),
-                    ),
-                  ).toList(),
+                  children: rsvpedEvents
+                      .map(
+                        (event) => Padding(
+                          padding: const EdgeInsets.only(bottom: 18),
+                          child: _RsvpCard(event: event),
+                        ),
+                      )
+                      .toList(),
                 );
               },
             ),
@@ -170,19 +216,26 @@ class ProfilePage extends ConsumerWidget {
             _SectionHeader(
               title: 'Side Quests',
               actionLabel: 'View All',
-              onAction: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const QuestsPage()),
-              ),
+              onAction: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const QuestsPage())),
             ),
             const SizedBox(height: 12),
             quests.when(
               loading: () => const Padding(
                 padding: EdgeInsets.only(bottom: 18),
-                child: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.accentPrimary,
+                  ),
+                ),
               ),
               error: (error, _) => Padding(
                 padding: const EdgeInsets.only(bottom: 18),
-                child: Text(error.toString(), style: const TextStyle(color: Color(0xFFE5484D))),
+                child: Text(
+                  error.toString(),
+                  style: const TextStyle(color: Color(0xFFE5484D)),
+                ),
               ),
               data: (items) {
                 if (items.isEmpty) {
@@ -192,26 +245,26 @@ class ProfilePage extends ConsumerWidget {
                   );
                 }
                 return Column(
-                  children: items.take(4).map(
-                    (quest) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _SideQuestCard(
-                        quest: quest,
-                        isDark: isDark,
-                        activation: activationById[quest.id],
-                        atLimit: atQuestLimit,
-                        onStart: () => _startQuest(ref, context, quest.id),
-                      ),
-                    ),
-                  ).toList(),
+                  children: items
+                      .take(4)
+                      .map(
+                        (quest) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _SideQuestCard(
+                            quest: quest,
+                            isDark: isDark,
+                            activation: activationById[quest.id],
+                            atLimit: atQuestLimit,
+                            onStart: () => _startQuest(ref, context, quest.id),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 );
               },
             ),
             const SizedBox(height: 6),
-            _QuestHistorySection(
-              activations: activations,
-              isDark: isDark,
-            ),
+            _QuestHistorySection(activations: activations, isDark: isDark),
             const SizedBox(height: 6),
             _SectionHeader(
               title: 'Past Experiences',
@@ -236,17 +289,24 @@ final _joinedEventsProvider = FutureProvider.autoDispose<List<EventResponse>>(
 );
 
 /// Reverse-geocoded label for the profile's area coordinate.
-final _areaLabelProvider = FutureProvider.autoDispose.family<String?, ({double lat, double lng})>(
-  (ref, coord) => reverseGeocodeLabel(coord.lat, coord.lng),
-);
+final _areaLabelProvider = FutureProvider.autoDispose
+    .family<String?, ({double lat, double lng})>(
+      (ref, coord) => reverseGeocodeLabel(coord.lat, coord.lng),
+    );
 
-Future<void> _startQuest(WidgetRef ref, BuildContext context, String questId) async {
+Future<void> _startQuest(
+  WidgetRef ref,
+  BuildContext context,
+  String questId,
+) async {
   try {
     await ref.read(questsRepositoryProvider).activateQuest(questId);
     ref.invalidate(profileStatsProvider);
     ref.invalidate(questActivationsProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quest activated.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Quest activated.')));
     }
   } catch (e) {
     if (context.mounted) {
@@ -275,11 +335,16 @@ class _QuestHistorySection extends StatelessWidget {
         activations.when(
           loading: () => const Padding(
             padding: EdgeInsets.only(bottom: 18),
-            child: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)),
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.accentPrimary),
+            ),
           ),
           error: (error, _) => Padding(
             padding: const EdgeInsets.only(bottom: 18),
-            child: Text(error.toString(), style: const TextStyle(color: Color(0xFFE5484D))),
+            child: Text(
+              error.toString(),
+              style: const TextStyle(color: Color(0xFFE5484D)),
+            ),
           ),
           data: (items) {
             if (items.isEmpty) {
@@ -289,12 +354,14 @@ class _QuestHistorySection extends StatelessWidget {
               );
             }
             return Column(
-              children: items.map(
-                (a) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _QuestHistoryRow(activation: a, isDark: isDark),
-                ),
-              ).toList(),
+              children: items
+                  .map(
+                    (a) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _QuestHistoryRow(activation: a, isDark: isDark),
+                    ),
+                  )
+                  .toList(),
             );
           },
         ),
@@ -313,19 +380,28 @@ class _QuestHistoryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final completed = activation.isCompleted;
     final when = completed ? activation.completedAt : activation.activatedAt;
-    final whenLabel = when == null ? '' : DateFormat('MMM d').format(when.toLocal());
+    final whenLabel = when == null
+        ? ''
+        : DateFormat('MMM d').format(when.toLocal());
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF252525) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFFE2E2E6), width: 1),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.5)
+              : const Color(0xFFE2E2E6),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
           Icon(
             completed ? Icons.check_circle : Icons.bolt,
-            color: completed ? const Color(0xFF35B45A) : AppColors.accentPrimary,
+            color: completed
+                ? const Color(0xFF35B45A)
+                : AppColors.accentPrimary,
             size: 18,
           ),
           const SizedBox(width: 10),
@@ -343,9 +419,13 @@ class _QuestHistoryRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            completed ? 'Completed${whenLabel.isEmpty ? '' : ' • $whenLabel'}' : 'In progress',
+            completed
+                ? 'Completed${whenLabel.isEmpty ? '' : ' • $whenLabel'}'
+                : 'In progress',
             style: TextStyle(
-              color: completed ? const Color(0xFF35B45A) : const Color(0xFF8A8A92),
+              color: completed
+                  ? const Color(0xFF35B45A)
+                  : const Color(0xFF8A8A92),
               fontWeight: FontWeight.w700,
               fontSize: 11,
             ),
@@ -357,7 +437,11 @@ class _QuestHistoryRow extends StatelessWidget {
 }
 
 class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({required this.icon, required this.isDark, required this.onTap});
+  const _HeaderIconButton({
+    required this.icon,
+    required this.isDark,
+    required this.onTap,
+  });
   final IconData icon;
   final bool isDark;
   final VoidCallback onTap;
@@ -372,9 +456,17 @@ class _HeaderIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF252525) : Colors.white,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF171717)),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.8)
+                : const Color(0xFF171717),
+          ),
         ),
-        child: Icon(icon, color: isDark ? Colors.white : const Color(0xFF171717), size: 20),
+        child: Icon(
+          icon,
+          color: isDark ? Colors.white : const Color(0xFF171717),
+          size: 20,
+        ),
       ),
     );
   }
@@ -460,7 +552,9 @@ class _IdentityHeader extends ConsumerWidget {
     final areaLabel = area == null
         ? null
         : ref.watch(_areaLabelProvider((lat: area.lat, lng: area.lng)));
-    final name = profile.displayName.isEmpty ? '@${profile.username}' : profile.displayName;
+    final name = profile.displayName.isEmpty
+        ? '@${profile.username}'
+        : profile.displayName;
 
     return Row(
       children: [
@@ -470,16 +564,29 @@ class _IdentityHeader extends ConsumerWidget {
           decoration: BoxDecoration(
             color: AppColors.bgSecondary,
             shape: BoxShape.circle,
-            border: Border.all(color: isDark ? Colors.white24 : const Color(0xFF171717), width: 1.6),
+            border: Border.all(
+              color: isDark ? Colors.white24 : const Color(0xFF171717),
+              width: 1.6,
+            ),
             image: profile.photoUrl == null
                 ? null
-                : DecorationImage(image: NetworkImage(profile.photoUrl!), fit: BoxFit.cover),
+                : DecorationImage(
+                    image: NetworkImage(profile.photoUrl!),
+                    fit: BoxFit.cover,
+                  ),
           ),
           child: profile.photoUrl == null
               ? Center(
                   child: Text(
-                    (profile.displayName.isEmpty ? profile.username : profile.displayName).characters.first.toUpperCase(),
-                    style: theme.textTheme.displayMedium?.copyWith(fontSize: 24),
+                    (profile.displayName.isEmpty
+                            ? profile.username
+                            : profile.displayName)
+                        .characters
+                        .first
+                        .toUpperCase(),
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      fontSize: 24,
+                    ),
                   ),
                 )
               : null,
@@ -501,21 +608,31 @@ class _IdentityHeader extends ConsumerWidget {
               const SizedBox(height: 2),
               Text(
                 '@${profile.username}',
-                style: theme.textTheme.labelLarge?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w700),
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.place_outlined, size: 14, color: AppColors.textSecondary),
+                  Icon(
+                    Icons.place_outlined,
+                    size: 14,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       area == null
                           ? 'Area not set'
-                          : (areaLabel?.value ?? '${area.lat.toStringAsFixed(3)}, ${area.lng.toStringAsFixed(3)}'),
+                          : (areaLabel?.value ??
+                                '${area.lat.toStringAsFixed(3)}, ${area.lng.toStringAsFixed(3)}'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -554,7 +671,12 @@ class _SideQuestCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF252525) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.85) : const Color(0xFF171717), width: 1.4),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.85)
+              : const Color(0xFF171717),
+          width: 1.4,
+        ),
       ),
       child: Row(
         children: [
@@ -575,12 +697,32 @@ class _SideQuestCard extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(6)),
-                      child: Text(quest.difficulty.badgeLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        quest.difficulty.badgeLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    Text(quest.difficulty.timeEstimate, style: const TextStyle(color: Color(0xFF8A8A92), fontWeight: FontWeight.w700, fontSize: 11)),
+                    Text(
+                      quest.difficulty.timeEstimate,
+                      style: const TextStyle(
+                        color: Color(0xFF8A8A92),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -606,7 +748,14 @@ class _SideQuestCard extends StatelessWidget {
           children: [
             Icon(Icons.check_circle, color: Color(0xFF35B45A), size: 15),
             SizedBox(width: 4),
-            Text('Done', style: TextStyle(color: Color(0xFF35B45A), fontWeight: FontWeight.w800, fontSize: 12)),
+            Text(
+              'Done',
+              style: TextStyle(
+                color: Color(0xFF35B45A),
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
       );
@@ -614,8 +763,18 @@ class _SideQuestCard extends StatelessWidget {
     if (activation?.isActive ?? false) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        decoration: BoxDecoration(color: AppColors.ink, borderRadius: BorderRadius.circular(8)),
-        child: const Text('Started', style: TextStyle(color: Color(0xFFBFBFBF), fontWeight: FontWeight.w800, fontSize: 13)),
+        decoration: BoxDecoration(
+          color: AppColors.ink,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Text(
+          'Started',
+          style: TextStyle(
+            color: Color(0xFFBFBFBF),
+            fontWeight: FontWeight.w800,
+            fontSize: 13,
+          ),
+        ),
       );
     }
     final disabled = atLimit;
@@ -625,8 +784,18 @@ class _SideQuestCard extends StatelessWidget {
         opacity: disabled ? 0.45 : 1,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          decoration: BoxDecoration(color: AppColors.accentPrimary, borderRadius: BorderRadius.circular(8)),
-          child: const Text('Start', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+          decoration: BoxDecoration(
+            color: AppColors.accentPrimary,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            'Start',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
+          ),
         ),
       ),
     );
@@ -640,7 +809,9 @@ class _JoinedEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateLabel = DateFormat('EEE, MMM d • h:mm a').format(event.dateTime.toLocal());
+    final dateLabel = DateFormat(
+      'EEE, MMM d • h:mm a',
+    ).format(event.dateTime.toLocal());
     final mock = MockEvent(
       id: event.id,
       title: event.title,
@@ -658,7 +829,8 @@ class _JoinedEventCard extends StatelessWidget {
       organizerContact: event.organizerContact ?? '',
       organizerInstagram: event.organizerInstagram ?? '',
       organizerVerified: true,
-      imageUrl: event.bannerUrl ?? 'https://picsum.photos/seed/${event.id}/300/300',
+      imageUrl:
+          event.bannerUrl ?? 'https://picsum.photos/seed/${event.id}/300/300',
       eventType: event.eventType.name,
       customEmoji: event.customEmoji,
     );
@@ -700,13 +872,20 @@ class _StatPill extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(value, style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 16)),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.displayMedium?.copyWith(fontSize: 16),
+          ),
           const SizedBox(height: 3),
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.textSecondary),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -715,7 +894,11 @@ class _StatPill extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, this.actionLabel = '', this.onAction});
+  const _SectionHeader({
+    required this.title,
+    this.actionLabel = '',
+    this.onAction,
+  });
 
   final String title;
   final String actionLabel;

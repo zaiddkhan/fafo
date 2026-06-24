@@ -45,7 +45,10 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
 
   Future<void> _loadEventsIndex() async {
     setState(() {
-      _loading = true;
+      // Only show the full-page loading state for the first load. Later refreshes
+      // keep the current content on screen and use pull-to-refresh / silent
+      // revision refreshes instead of flashing a loader on every tab visit.
+      _loading = _events.isEmpty && _blogs.isEmpty;
       _error = null;
     });
 
@@ -70,21 +73,27 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
         blogsRepo.getBlogs(city: 'Bengaluru', limit: 10),
       ]);
 
-      final categories = results[0] as List<CategoryResponse>;
+      final categoriesResult = results[0] as List<CategoryResponse>;
       final mumbaiEvents = results[1] as List<EventResponse>;
       final bangaloreEvents = results[2] as List<EventResponse>;
-      final blogs = results[3] as List<BlogResponse>;
+      final blogsResult = results[3] as List<BlogResponse>;
       final eventsById = <String, EventResponse>{
         for (final event in [...mumbaiEvents, ...bangaloreEvents])
           event.id: event,
       };
       final events = eventsById.values.toList()
         ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+      final usingDemoEvents = events.isEmpty;
+      final categories = usingDemoEvents || categoriesResult.isEmpty
+          ? _demoCategories
+          : categoriesResult;
+      final displayEvents = usingDemoEvents ? _demoEvents : events;
+      final blogs = blogsResult.isEmpty ? _demoBlogs : blogsResult;
 
       if (!mounted) return;
       setState(() {
         _categories = categories;
-        _events = events;
+        _events = displayEvents;
         _blogs = blogs;
       });
     } catch (e) {
@@ -92,6 +101,122 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  static List<CategoryResponse> get _demoCategories => const [
+    CategoryResponse(
+      id: 'demo-music',
+      name: 'Live Music',
+      emoji: '🎸',
+      sortOrder: 1,
+    ),
+    CategoryResponse(
+      id: 'demo-food',
+      name: 'Food & Drinks',
+      emoji: '🍜',
+      sortOrder: 2,
+    ),
+    CategoryResponse(
+      id: 'demo-art',
+      name: 'Art & Culture',
+      emoji: '🎨',
+      sortOrder: 3,
+    ),
+  ];
+
+  static List<EventResponse> get _demoEvents {
+    final now = DateTime.now();
+    return [
+      EventResponse(
+        id: 'demo-spotlight-jazz',
+        creatorUid: 'demo',
+        title: 'Rooftop indie night',
+        description: 'A small live set with city views and new artists.',
+        categoryId: 'demo-music',
+        eventType: EventType.spotlight,
+        customEmoji: '🎸',
+        lat: _bangaloreLat,
+        lng: _bangaloreLng,
+        locationName: 'Indiranagar Social',
+        dateTime: DateTime(now.year, now.month, now.day, 20),
+        capacity: 80,
+        joineeCount: 42,
+        registrationOpen: true,
+        cancelled: false,
+        organizerName: 'Fafo Picks',
+        createdAt: now,
+        updatedAt: now,
+      ),
+      EventResponse(
+        id: 'demo-volunteer-cleanup',
+        creatorUid: 'demo',
+        title: 'Cubbon Park cleanup quest',
+        description: 'Meet new people while doing something useful.',
+        categoryId: 'demo-art',
+        eventType: EventType.volunteering,
+        customEmoji: '🤝',
+        lat: _bangaloreLat,
+        lng: _bangaloreLng,
+        locationName: 'Cubbon Park',
+        dateTime: now.add(const Duration(days: 1, hours: 3)),
+        capacity: 40,
+        joineeCount: 18,
+        registrationOpen: true,
+        cancelled: false,
+        organizerName: 'Fafo Community',
+        createdAt: now,
+        updatedAt: now,
+      ),
+      EventResponse(
+        id: 'demo-food-walk',
+        creatorUid: 'demo',
+        title: 'Late night dosa crawl',
+        description: 'A tiny food walk across local favourites.',
+        categoryId: 'demo-food',
+        eventType: EventType.normal,
+        customEmoji: '🍜',
+        lat: _bangaloreLat,
+        lng: _bangaloreLng,
+        locationName: 'Church Street',
+        dateTime: now.add(const Duration(days: 2, hours: 5)),
+        capacity: 24,
+        joineeCount: 11,
+        registrationOpen: true,
+        cancelled: false,
+        organizerName: 'Fafo Foodies',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ];
+  }
+
+  static List<BlogResponse> get _demoBlogs {
+    final now = DateTime.now();
+    return [
+      BlogResponse(
+        id: 'demo-blog-weekend',
+        city: 'Bengaluru',
+        title: 'What to do this weekend',
+        subtitle: 'Music, food walks, and low-effort hangs around the city.',
+        body: 'A quick guide to easy weekend plans.',
+        readTime: '3 min read',
+        published: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
+      BlogResponse(
+        id: 'demo-blog-first-hang',
+        city: 'Bengaluru',
+        title: 'How to pick your first Fafo hang',
+        subtitle:
+            'Start with small groups, public venues, and shared interests.',
+        body: 'Tips for new users choosing their first event.',
+        readTime: '2 min read',
+        published: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ];
   }
 
   List<EventResponse> get _filteredEvents {
@@ -162,9 +287,10 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
               ),
               const SizedBox(height: 22),
               if (_loading)
-                const Padding(
-                  padding: EdgeInsets.only(top: 80),
-                  child: Center(child: CircularProgressIndicator()),
+                _EventsIndexSkeleton(
+                  surfaceColor: cardSurface,
+                  borderColor: borderColor,
+                  mutedColor: bodyColor.withValues(alpha: 0.18),
                 )
               else if (_error != null)
                 _ErrorState(message: _error!, onRetry: _loadEventsIndex)
@@ -200,7 +326,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
                 const SizedBox(height: 28),
                 _SectionTitle('City Reads', color: headingColor),
                 const SizedBox(height: 12),
-                SizedBox(height: 172, child: _BlogStrip(blogs: _blogs)),
+                SizedBox(height: 180, child: _BlogStrip(blogs: _blogs)),
                 const SizedBox(height: 28),
                 _SectionTitle('Categories', color: headingColor),
                 const SizedBox(height: 14),
@@ -264,6 +390,157 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
   }
 }
 
+class _EventsIndexSkeleton extends StatelessWidget {
+  const _EventsIndexSkeleton({
+    required this.surfaceColor,
+    required this.borderColor,
+    required this.mutedColor,
+  });
+
+  final Color surfaceColor;
+  final Color borderColor;
+  final Color mutedColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SkeletonLine(width: 118, height: 18, color: mutedColor),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 218,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: 2,
+            separatorBuilder: (_, _) => const SizedBox(width: 14),
+            itemBuilder: (_, _) => _SkeletonBox(
+              width: 250,
+              height: 210,
+              surfaceColor: surfaceColor,
+              borderColor: borderColor,
+              mutedColor: mutedColor,
+            ),
+          ),
+        ),
+        const SizedBox(height: 28),
+        _SkeletonLine(width: 96, height: 18, color: mutedColor),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 120,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: 2,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (_, _) => _SkeletonBox(
+              width: 230,
+              height: 112,
+              surfaceColor: surfaceColor,
+              borderColor: borderColor,
+              mutedColor: mutedColor,
+            ),
+          ),
+        ),
+        const SizedBox(height: 28),
+        _SkeletonLine(width: 104, height: 18, color: mutedColor),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(
+            7,
+            (index) => _SkeletonLine(
+              width: index.isEven ? 82 : 112,
+              height: 28,
+              color: mutedColor,
+              radius: 6,
+            ),
+          ),
+        ),
+        const SizedBox(height: 28),
+        _SkeletonLine(width: 156, height: 18, color: mutedColor),
+        const SizedBox(height: 14),
+        for (var i = 0; i < 3; i++) ...[
+          _SkeletonBox(
+            width: double.infinity,
+            height: 96,
+            surfaceColor: surfaceColor,
+            borderColor: borderColor,
+            mutedColor: mutedColor,
+          ),
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({
+    required this.width,
+    required this.height,
+    required this.surfaceColor,
+    required this.borderColor,
+    required this.mutedColor,
+  });
+
+  final double width;
+  final double height;
+  final Color surfaceColor;
+  final Color borderColor;
+  final Color mutedColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SkeletonLine(width: 64, height: 42, color: mutedColor, radius: 10),
+          const Spacer(),
+          _SkeletonLine(width: double.infinity, height: 14, color: mutedColor),
+          const SizedBox(height: 8),
+          _SkeletonLine(width: 150, height: 14, color: mutedColor),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonLine extends StatelessWidget {
+  const _SkeletonLine({
+    required this.width,
+    required this.height,
+    required this.color,
+    this.radius = 999,
+  });
+
+  final double width;
+  final double height;
+  final Color color;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+}
+
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.title, {required this.color});
 
@@ -278,6 +555,52 @@ class _SectionTitle extends StatelessWidget {
       style: theme.textTheme.displayMedium?.copyWith(
         color: color,
         fontSize: 18,
+      ),
+    );
+  }
+}
+
+String _eventEmoji(EventResponse event, CategoryResponse? category) {
+  if (event.customEmoji?.isNotEmpty == true) return event.customEmoji!;
+  if (category?.emoji.isNotEmpty == true) return category!.emoji;
+  return switch (event.eventType) {
+    EventType.spotlight => '⭐',
+    EventType.volunteering => '🤝',
+    EventType.normal => '🎉',
+  };
+}
+
+class _EventIconTile extends StatelessWidget {
+  const _EventIconTile({
+    required this.emoji,
+    required this.eventType,
+    required this.iconSize,
+  });
+
+  final String emoji;
+  final EventType eventType;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = switch (eventType) {
+      EventType.spotlight => AppColors.accentWarm,
+      EventType.volunteering => const Color(0xFF4ADE80),
+      EventType.normal => AppColors.accentLight1,
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.18),
+        gradient: RadialGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.95),
+            accent.withValues(alpha: 0.24),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Text(emoji, style: TextStyle(fontSize: iconSize)),
       ),
     );
   }
@@ -305,8 +628,7 @@ class _EventListingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final imageUrl =
-        event.bannerUrl ?? 'https://picsum.photos/seed/${event.id}/600/600';
+    final emoji = _eventEmoji(event, category);
 
     return GestureDetector(
       onTap: () => context.push('/event/${event.id}'),
@@ -346,16 +668,10 @@ class _EventListingCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: borderColor, width: 1.2),
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.contain,
-                      alignment: Alignment.center,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                        Icons.event_rounded,
-                        color: titleColor,
-                        size: 28,
-                      ),
+                    child: _EventIconTile(
+                      emoji: emoji,
+                      eventType: event.eventType,
+                      iconSize: 30,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -415,8 +731,12 @@ class _EventListingCard extends StatelessWidget {
                         _CountPill(count: event.joineeCount),
                         const SizedBox(height: 10),
                         _CardButton(
-                          label: event.registrationOpen ? 'JOIN' : 'FULL',
-                          filled: event.registrationOpen,
+                          label: event.isJoined
+                              ? 'JOINED'
+                              : event.registrationOpen
+                              ? 'JOIN'
+                              : 'FULL',
+                          filled: event.registrationOpen || event.isJoined,
                           onTap: () => context.push('/event/${event.id}'),
                         ),
                       ],
@@ -446,8 +766,7 @@ class _SpotlightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final imageUrl =
-        event.bannerUrl ?? 'https://picsum.photos/seed/${event.id}/700/500';
+    final emoji = _eventEmoji(event, category);
 
     return GestureDetector(
       onTap: () => context.push('/event/${event.id}'),
@@ -462,9 +781,10 @@ class _SpotlightCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              ColoredBox(
-                color: Colors.white,
-                child: Image.network(imageUrl, fit: BoxFit.contain),
+              _EventIconTile(
+                emoji: emoji,
+                eventType: event.eventType,
+                iconSize: 72,
               ),
               DecoratedBox(
                 decoration: BoxDecoration(
@@ -535,8 +855,10 @@ class _BlogStrip extends StatelessWidget {
     }
     return ListView.separated(
       scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      padding: const EdgeInsets.fromLTRB(1, 0, 28, 8),
       itemBuilder: (context, index) => _BlogCard(blog: blogs[index]),
-      separatorBuilder: (_, _) => const SizedBox(width: 12),
+      separatorBuilder: (_, _) => const SizedBox(width: 14),
       itemCount: blogs.length,
     );
   }

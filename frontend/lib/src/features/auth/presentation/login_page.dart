@@ -43,25 +43,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _error = null;
     });
 
-    try {
-      final result = await ref
-          .read(authRepositoryProvider)
-          .verifyPhoneNumber(phoneNumber: _phoneNumber);
-      if (!mounted) return;
-      context.push(
-        OtpPage.routePath,
-        extra: {
-          'phoneNumber': _phoneNumber,
-          'verificationId': result.verificationId,
-          'resendToken': result.resendToken,
-        },
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _sendingOtp = false);
-    }
+    final pendingVerification = ref
+        .read(authRepositoryProvider)
+        .verifyPhoneNumber(phoneNumber: _phoneNumber);
+
+    if (!mounted) return;
+    setState(() => _sendingOtp = false);
+    context.push(
+      OtpPage.routePath,
+      extra: {
+        'phoneNumber': _phoneNumber,
+        'pendingVerification': pendingVerification,
+      },
+    );
   }
 
   @override

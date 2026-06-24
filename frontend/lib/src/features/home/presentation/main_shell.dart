@@ -25,7 +25,6 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
-  final _mapKey = GlobalKey();
   final _questsKey = GlobalKey();
   final _friendsKey = GlobalKey();
 
@@ -108,11 +107,18 @@ class _MainShellState extends ConsumerState<MainShell> {
   void _showTooltipOverlay() {
     _tooltipOverlay?.remove();
 
-    final targetRect = _rectFor(switch (_tooltipStep) {
-      _FirstLaunchTooltipStep.map => _mapKey,
-      _FirstLaunchTooltipStep.sideQuests => _questsKey,
-      _FirstLaunchTooltipStep.nudgeFeed => _friendsKey,
-    });
+    final targetRect = _tooltipStep == _FirstLaunchTooltipStep.map
+        ? Rect.fromLTWH(
+            16,
+            MediaQuery.paddingOf(context).top + 88,
+            MediaQuery.sizeOf(context).width - 32,
+            120,
+          )
+        : _rectFor(switch (_tooltipStep) {
+            _FirstLaunchTooltipStep.map => _questsKey,
+            _FirstLaunchTooltipStep.sideQuests => _questsKey,
+            _FirstLaunchTooltipStep.nudgeFeed => _friendsKey,
+          });
     if (targetRect == null) return;
 
     _tooltipOverlay = OverlayEntry(
@@ -138,24 +144,16 @@ class _MainShellState extends ConsumerState<MainShell> {
       extendBody: true,
       body: Stack(
         children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: KeyedSubtree(
-              key: ValueKey(_stackIndex),
-              child: IndexedStack(
-                index: _stackIndex,
-                children: [
-                  KeyedSubtree(key: _mapKey, child: const HomePage()),
-                  const EventsListPage(events: []),
-                  const QuestsPage(),
-                  const CreateTab(),
-                  const FriendsPage(showBackButton: false),
-                  const ProfilePage(savedEvents: []),
-                ],
-              ),
-            ),
+          IndexedStack(
+            index: _stackIndex,
+            children: [
+              const HomePage(),
+              const EventsListPage(events: []),
+              const QuestsPage(),
+              const CreateTab(),
+              const FriendsPage(showBackButton: false),
+              const ProfilePage(savedEvents: []),
+            ],
           ),
           Positioned(
             left: 0,
@@ -364,26 +362,26 @@ class _FirstLaunchTooltipOverlay extends StatelessWidget {
     final tooltipTop = isMapStep
         ? 92.0
         : (targetRect.top - liftAbove).clamp(16.0, size.height - 190.0);
-    final tooltipLeft = isMapStep
-        ? ((size.width - tooltipWidth) / 2).clamp(16.0, size.width)
-        : (targetRect.center.dx - tooltipWidth / 2).clamp(
-            16.0,
-            size.width - tooltipWidth - 16.0,
-          );
+    // Keep the instructional card centered on every step. Anchoring it to
+    // edge nav items made the card appear randomly left/right aligned.
+    final tooltipLeft = ((size.width - tooltipWidth) / 2).clamp(
+      16.0,
+      size.width - tooltipWidth - 16.0,
+    );
 
     final (title, body) = switch (step) {
       _FirstLaunchTooltipStep.map => (
-          'Explore what\'s popping',
-          'Use the map to discover nearby events, hangs, and pop-ups around you.',
-        ),
+        'Explore what\'s popping',
+        'Use the map to discover nearby events, hangs, and pop-ups around you.',
+      ),
       _FirstLaunchTooltipStep.sideQuests => (
-          'Take on Side Quests',
-          'Tap Quests for Fafo challenges around your city — quick solo missions to fill your free time.',
-        ),
+        'Take on Side Quests',
+        'Tap Quests for Fafo challenges around your city — quick solo missions to fill your free time.',
+      ),
       _FirstLaunchTooltipStep.nudgeFeed => (
-          'Nudge your friends',
-          'Add friends to swap time-bound nudge cards. Here\'s what a feed looks like:',
-        ),
+        'Nudge your friends',
+        'Add friends to swap time-bound nudge cards. Here\'s what a feed looks like:',
+      ),
     };
 
     return Material(
@@ -495,19 +493,33 @@ class _SampleNudgeFeed extends StatelessWidget {
                   borderRadius: BorderRadius.circular(7),
                   border: Border.all(color: Colors.black, width: 1.2),
                 ),
-                child: const Center(child: Text('☕', style: TextStyle(fontSize: 15))),
+                child: const Center(
+                  child: Text('☕', style: TextStyle(fontSize: 15)),
+                ),
               ),
               const SizedBox(width: 8),
               Text(
                 'Aanya',
-                style: TextStyle(color: AppColors.accentPrimary, fontWeight: FontWeight.w900, fontSize: 13),
+                style: TextStyle(
+                  color: AppColors.accentPrimary,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          const _SampleNudgeCard(title: 'Meet at coffee place', subtitle: 'Starting in 15 min', accepted: false),
+          const _SampleNudgeCard(
+            title: 'Meet at coffee place',
+            subtitle: 'Starting in 15 min',
+            accepted: false,
+          ),
           const SizedBox(height: 8),
-          const _SampleNudgeCard(title: 'Catch the 6pm gig?', subtitle: 'Accepted • 04:58', accepted: true),
+          const _SampleNudgeCard(
+            title: 'Catch the 6pm gig?',
+            subtitle: 'Accepted • 04:58',
+            accepted: true,
+          ),
         ],
       ),
     );
@@ -515,7 +527,11 @@ class _SampleNudgeFeed extends StatelessWidget {
 }
 
 class _SampleNudgeCard extends StatelessWidget {
-  const _SampleNudgeCard({required this.title, required this.subtitle, required this.accepted});
+  const _SampleNudgeCard({
+    required this.title,
+    required this.subtitle,
+    required this.accepted,
+  });
   final String title;
   final String subtitle;
   final bool accepted;
@@ -525,7 +541,9 @@ class _SampleNudgeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF111111) : Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF111111)
+            : Colors.white,
         borderRadius: BorderRadius.circular(7),
         border: Border.all(color: Colors.black, width: 1.2),
       ),
@@ -537,14 +555,22 @@ class _SampleNudgeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: accepted ? const Color(0xFFE5484D) : const Color(0xFF6D6D78),
+                    color: accepted
+                        ? const Color(0xFFE5484D)
+                        : const Color(0xFF6D6D78),
                   ),
                 ),
               ],
@@ -553,12 +579,18 @@ class _SampleNudgeCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: accepted ? const Color(0xFF38A849) : AppColors.accentPrimary,
+              color: accepted
+                  ? const Color(0xFF38A849)
+                  : AppColors.accentPrimary,
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               accepted ? 'YES' : 'Yes / No',
-              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],

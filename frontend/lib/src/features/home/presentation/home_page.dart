@@ -75,7 +75,9 @@ class HomePageState extends ConsumerState<HomePage> {
   double _lng = _defaultLng;
   bool _locationReady = false;
   bool _loadingEvents = true;
+  bool _locatingUser = false;
   String? _eventsError;
+  String? _locationNotice;
 
   @override
   void initState() {
@@ -104,6 +106,20 @@ class HomePageState extends ConsumerState<HomePage> {
     } finally {
       if (mounted) {
         setState(() => _locationReady = true);
+        if (_locationNotice != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted || _locationNotice == null) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_locationNotice!),
+                action: SnackBarAction(
+                  label: 'Settings',
+                  onPressed: Geolocator.openLocationSettings,
+                ),
+              ),
+            );
+          });
+        }
       }
     }
   }
@@ -120,8 +136,8 @@ class HomePageState extends ConsumerState<HomePage> {
       return;
     }
 
-    // Default to the area the user set during onboarding / in their profile.
-    // This is why we don't need to prompt for GPS on every launch.
+    // Prefer the area the user set during onboarding / in their profile.
+    // This prevents the map from asking for current location on every launch.
     try {
       final profile = await ref.read(currentProfileProvider.future);
       final area = profile.area;
@@ -131,12 +147,12 @@ class HomePageState extends ConsumerState<HomePage> {
         return;
       }
     } catch (_) {
-      // Profile not available yet — fall through to cache / GPS.
+      // Profile may not be available yet, fall through to cached/GPS/default.
     }
 
     final prefs = ref.read(sharedPreferencesProvider).value;
 
-    // Reuse the last known location so a returning user isn't asked again.
+    // Reuse the last known fix without prompting again.
     final cachedLat = prefs?.getDouble(_cachedLatKey);
     final cachedLng = prefs?.getDouble(_cachedLngKey);
     if (cachedLat != null && cachedLng != null) {
@@ -145,31 +161,89 @@ class HomePageState extends ConsumerState<HomePage> {
       return;
     }
 
+    // Only ask GPS automatically when there is no saved area or cached fix.
+    final gpsResolved = await _tryUseDeviceLocation(moveCamera: false);
+    if (gpsResolved) return;
+
+    _lat = _defaultLat;
+    _lng = _defaultLng;
+  }
+
+  Future<bool> _tryUseDeviceLocation({required bool moveCamera}) async {
+    final prefs = ref.read(sharedPreferencesProvider).value;
+
     try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _locationNotice = 'Turn on device location to show where you are.';
+        return false;
+      }
+
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return;
+      if (permission == LocationPermission.denied) {
+        _locationNotice =
+            'Location permission is needed to show where you are.';
+        return false;
+      }
+      if (permission == LocationPermission.deniedForever) {
+        _locationNotice =
+            'Enable location permission in settings to show where you are.';
+        return false;
       }
 
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 8),
+          timeLimit: Duration(seconds: 10),
         ),
       );
       _lat = position.latitude;
       _lng = position.longitude;
-      // Cache so subsequent launches don't re-prompt.
+      _locationNotice = null;
       await prefs?.setDouble(_cachedLatKey, _lat);
       await prefs?.setDouble(_cachedLngKey, _lng);
+
+      if (moveCamera) {
+        await _mapController?.animateCamera(
+          center: Geographic(lon: _lng, lat: _lat),
+          zoom: _initialMapZoom,
+          nativeDuration: const Duration(milliseconds: 700),
+        );
+        _rebuildVisibleEvents();
+      }
+      return true;
     } catch (_) {
-      _lat = _defaultLat;
-      _lng = _defaultLng;
+      _locationNotice = 'Could not refresh your location. Try again.';
+      return false;
+    }
+  }
+
+  Future<void> _centerOnUserLocation() async {
+    if (_locatingUser) return;
+    setState(() {
+      _locatingUser = true;
+      _locationNotice = null;
+    });
+
+    final resolved = await _tryUseDeviceLocation(moveCamera: true);
+    if (!mounted) return;
+
+    setState(() => _locatingUser = false);
+    if (!resolved && _locationNotice != null) {
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(_locationNotice!),
+          action: SnackBarAction(
+            label: 'Settings',
+            onPressed: Geolocator.openLocationSettings,
+          ),
+        ),
+      );
     }
   }
 
@@ -189,51 +263,56 @@ class HomePageState extends ConsumerState<HomePage> {
   /// edited events in real time.
   void _subscribeToEvents() {
     _eventsSub?.cancel();
-    _eventsSub = ref.read(eventsRepositoryProvider).streamEvents().listen(
-      (events) {
-        _rawEvents = events;
-        _rebuildVisibleEvents();
-        if (mounted && (_loadingEvents || _eventsError != null)) {
-          setState(() {
-            _loadingEvents = false;
-            _eventsError = null;
-          });
-        }
-      },
-      onError: (Object e) {
-        if (mounted) {
-          setState(() {
-            _eventsError = e.toString();
-            _loadingEvents = false;
-          });
-        }
-      },
-    );
+    _eventsSub = ref
+        .read(eventsRepositoryProvider)
+        .streamEvents()
+        .listen(
+          (events) {
+            _rawEvents = events;
+            _rebuildVisibleEvents();
+            if (mounted && (_loadingEvents || _eventsError != null)) {
+              setState(() {
+                _loadingEvents = false;
+                _eventsError = null;
+              });
+            }
+          },
+          onError: (Object e) {
+            if (mounted) {
+              setState(() {
+                _eventsError = e.toString();
+                _loadingEvents = false;
+              });
+            }
+          },
+        );
   }
 
   /// Recomputes the mapped/displayed events from the latest raw stream data and
   /// the currently selected category / event-type / visibility filters.
   void _rebuildVisibleEvents() {
-    final cutoff = DateTime.now().toUtc().subtract(
-          const Duration(minutes: 10),
+    final cutoff = DateTime.now().toUtc().subtract(const Duration(minutes: 10));
+    final visible = _rawEvents
+        .where((event) {
+          // An event stays visible until 10 minutes after its start time.
+          if (event.dateTime.toUtc().isBefore(cutoff)) return false;
+          if (_selectedCategoryId != null &&
+              event.categoryId != _selectedCategoryId) {
+            return false;
+          }
+          if (_selectedEventType != null &&
+              event.eventType != _selectedEventType) {
+            return false;
+          }
+          return true;
+        })
+        .map(
+          (event) => _eventResponseToMockEvent(
+            event,
+            _categoryNames[event.categoryId] ?? event.categoryId,
+            _categoryEmojis[event.categoryId],
+          ),
         );
-    final visible = _rawEvents.where((event) {
-      // An event stays visible until 10 minutes after its start time.
-      if (event.dateTime.toUtc().isBefore(cutoff)) return false;
-      if (_selectedCategoryId != null && event.categoryId != _selectedCategoryId) {
-        return false;
-      }
-      if (_selectedEventType != null && _effectiveType(event) != _selectedEventType) {
-        return false;
-      }
-      return true;
-    }).map(
-      (event) => _eventResponseToMockEvent(
-        event,
-        _categoryNames[event.categoryId] ?? event.categoryId,
-        _categoryEmojis[event.categoryId],
-      ),
-    );
 
     final next = visible.toList(growable: false);
     if (!mounted) {
@@ -250,14 +329,6 @@ class HomePageState extends ConsumerState<HomePage> {
         _pagedEvents = _orderedEventsAround(_selectedEvent!);
       }
     });
-  }
-
-  /// The type used for display/filtering: a normal event happening today is
-  /// surfaced as a Spotlight (matches the backend's spotlight-today rule).
-  EventType _effectiveType(EventResponse event) {
-    final isToday = DateUtils.isSameDay(event.dateTime.toLocal(), DateTime.now());
-    if (isToday && event.eventType == EventType.normal) return EventType.spotlight;
-    return event.eventType;
   }
 
   Future<void> _refreshBackendEvents() async {
@@ -311,7 +382,8 @@ class HomePageState extends ConsumerState<HomePage> {
       organizerContact: '',
       organizerInstagram: '',
       organizerVerified: true,
-      imageUrl: event.bannerUrl ?? 'https://picsum.photos/seed/${event.id}/600/800',
+      imageUrl:
+          event.bannerUrl ?? 'https://picsum.photos/seed/${event.id}/600/800',
       eventType: effectiveType,
       customEmoji: event.customEmoji ?? categoryEmoji,
     );
@@ -349,8 +421,7 @@ class HomePageState extends ConsumerState<HomePage> {
   }
 
   bool get _hasExtendedFilters =>
-      _selectedRadiusRange != _defaultRadiusRange ||
-      _minimumParticipants != 0;
+      _selectedRadiusRange != _defaultRadiusRange || _minimumParticipants != 0;
 
   String _eventTypeLabel(EventType type) {
     return switch (type) {
@@ -583,8 +654,6 @@ class HomePageState extends ConsumerState<HomePage> {
   }
 
   List<Marker> get _visibleMarkers {
-    if (!_eventsVisibleOnMap) return const [];
-
     return _filteredEvents
         .map(
           (event) => Marker(
@@ -655,6 +724,36 @@ class HomePageState extends ConsumerState<HomePage> {
             const Center(
               child: CircularProgressIndicator(color: AppColors.accentPrimary),
             ),
+
+          Positioned(
+            right: 14,
+            bottom: 174,
+            child: SafeArea(
+              top: false,
+              child: Material(
+                color: statusSurface,
+                elevation: 4,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: _centerOnUserLocation,
+                  child: SizedBox(
+                    width: 46,
+                    height: 46,
+                    child: _locatingUser
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.my_location_rounded,
+                            color: AppColors.accentPrimary,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
           // Top overlay: search + profile
           SafeArea(
@@ -729,12 +828,17 @@ class HomePageState extends ConsumerState<HomePage> {
                           label: _selectedCategoryId == null
                               ? 'All categories'
                               : _categories
-                                    .where((c) => c.id == _selectedCategoryId)
-                                    .map((c) => c.name)
-                                    .firstOrNull ??
-                                'Category',
+                                        .where(
+                                          (c) => c.id == _selectedCategoryId,
+                                        )
+                                        .map((c) => c.name)
+                                        .firstOrNull ??
+                                    'Category',
                           selected: _selectedCategoryId != null,
-                          items: <String?>[null, ..._categories.map((c) => c.id)],
+                          items: <String?>[
+                            null,
+                            ..._categories.map((c) => c.id),
+                          ],
                           value: _selectedCategoryId,
                           itemLabel: (value) => value == null
                               ? 'All categories'
@@ -829,7 +933,7 @@ class HomePageState extends ConsumerState<HomePage> {
           ),
 
           // Bottom: event pager (above nav bar)
-          if (_selectedEvent != null && _eventsVisibleOnMap)
+          if (_selectedEvent != null)
             Positioned(
               left: 0,
               right: 0,
@@ -851,9 +955,7 @@ class HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
-          if (_selectedEvent == null &&
-              _eventsVisibleOnMap &&
-              _filteredEvents.isNotEmpty)
+          if (_selectedEvent == null && _filteredEvents.isNotEmpty)
             Positioned(
               left: 0,
               right: 0,
@@ -933,18 +1035,7 @@ class _EventCard extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(5),
-                      child: Image.network(
-                        event.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: const Color(0xFF303030),
-                          child: const Icon(
-                            Icons.mic,
-                            color: Colors.white70,
-                            size: 22,
-                          ),
-                        ),
-                      ),
+                      child: _MockEventIconTile(event: event),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1024,6 +1115,37 @@ class _EventCard extends StatelessWidget {
   }
 }
 
+class _MockEventIconTile extends StatelessWidget {
+  const _MockEventIconTile({required this.event});
+
+  final MockEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = HomePageState.colorForEventType(event.eventType);
+    final emoji = event.customEmoji?.isNotEmpty == true
+        ? event.customEmoji!
+        : switch (event.eventType) {
+            'spotlight' => '⭐',
+            'volunteering' => '🤝',
+            _ => '🎉',
+          };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.18),
+        gradient: RadialGradient(
+          colors: [
+            Colors.white.withValues(alpha: 0.95),
+            accent.withValues(alpha: 0.24),
+          ],
+        ),
+      ),
+      child: Center(child: Text(emoji, style: const TextStyle(fontSize: 24))),
+    );
+  }
+}
+
 class _EventMapMarker extends StatelessWidget {
   const _EventMapMarker({required this.event});
 
@@ -1032,7 +1154,13 @@ class _EventMapMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pinColor = HomePageState.colorForEventType(event.eventType);
-    final emoji = event.customEmoji?.isNotEmpty == true ? event.customEmoji! : '📍';
+    final emoji = event.customEmoji?.isNotEmpty == true
+        ? event.customEmoji!
+        : switch (event.eventType) {
+            'spotlight' => '⭐',
+            'volunteering' => '🤝',
+            _ => '🎉',
+          };
 
     return SizedBox(
       width: 48,
@@ -1080,7 +1208,12 @@ class _EmojiPinPainter extends CustomPainter {
     final path = Path()
       ..addOval(Rect.fromCircle(center: circleCenter, radius: radius))
       ..moveTo(centerX - 10, size.height * 0.68)
-      ..quadraticBezierTo(centerX, size.height, centerX + 10, size.height * 0.68)
+      ..quadraticBezierTo(
+        centerX,
+        size.height,
+        centerX + 10,
+        size.height * 0.68,
+      )
       ..close();
 
     canvas.drawShadow(path, const Color(0x66000000), 5, true);
@@ -1209,26 +1342,27 @@ class _FilterMenuChip<T> extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return PopupMenuButton<T>(
-      initialValue: value,
+    final selectedIndex = items.indexWhere((item) => item == value);
+
+    return PopupMenuButton<int>(
+      initialValue: selectedIndex < 0 ? null : selectedIndex,
       tooltip: '',
       color: isDark ? const Color(0xFF111111) : Colors.white,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onSelected: onSelected,
-      itemBuilder: (context) => items
-          .map(
-            (item) => PopupMenuItem<T>(
-              value: item,
-              child: Text(
-                itemLabel(item),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: isDark ? Colors.white : AppColors.textPrimary,
-                ),
-              ),
+      onSelected: (index) => onSelected(items[index]),
+      itemBuilder: (context) => List.generate(items.length, (index) {
+        final item = items[index];
+        return PopupMenuItem<int>(
+          value: index,
+          child: Text(
+            itemLabel(item),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: isDark ? Colors.white : AppColors.textPrimary,
             ),
-          )
-          .toList(),
+          ),
+        );
+      }),
       child: _BaseFilterChip(
         icon: icon,
         label: label,

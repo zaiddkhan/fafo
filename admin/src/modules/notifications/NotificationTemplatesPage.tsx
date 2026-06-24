@@ -266,7 +266,7 @@ function EditTemplateModal({
                     W
                   </div>
                   <span className="text-xs font-semibold uppercase tracking-wide text-white/70">
-                    WhatsPopn
+                    Fafo
                   </span>
                 </div>
                 <span className="text-xs text-white/50">now</span>

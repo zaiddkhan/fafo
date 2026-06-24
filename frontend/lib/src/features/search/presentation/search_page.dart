@@ -107,7 +107,7 @@ class _SearchPageState extends State<SearchPage> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 itemCount: _categories.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (context, index) =>
                     const SizedBox(width: AppSpacing.sm),
                 itemBuilder: (context, index) {
                   final cat = _categories[index];
@@ -167,7 +167,7 @@ class _SearchPageState extends State<SearchPage> {
                         horizontal: AppSpacing.md,
                       ),
                       itemCount: results.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (context, index) =>
                           const SizedBox(height: AppSpacing.md),
                       itemBuilder: (context, index) {
                         final event = results[index];

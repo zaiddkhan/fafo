@@ -6,8 +6,8 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/app_theme.dart';
 import 'package:fafu/src/core/theme/theme_mode_controller.dart';
 
-class FafuApp extends ConsumerWidget {
-  const FafuApp({super.key});
+class FafoApp extends ConsumerWidget {
+  const FafoApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

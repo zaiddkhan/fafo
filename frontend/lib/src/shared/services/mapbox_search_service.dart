@@ -75,7 +75,10 @@ class MapboxSearchService {
 
   static String _generateSessionToken() {
     final rand = Random();
-    return List.generate(16, (_) => rand.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+    return List.generate(
+      16,
+      (_) => rand.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
   }
 
   /// Returns autocomplete suggestions for [query]. [proximityLat]/[proximityLng]
@@ -134,16 +137,22 @@ class MapboxSearchService {
     if (feature is! Map<String, dynamic>) return null;
 
     final geometry = feature['geometry'];
-    final coords = geometry is Map<String, dynamic> ? geometry['coordinates'] : null;
+    final coords = geometry is Map<String, dynamic>
+        ? geometry['coordinates']
+        : null;
     if (coords is! List || coords.length < 2) return null;
     final lng = (coords[0] as num?)?.toDouble();
     final lat = (coords[1] as num?)?.toDouble();
     if (lat == null || lng == null) return null;
 
     final props = feature['properties'];
-    final propsMap = props is Map<String, dynamic> ? props : const <String, dynamic>{};
+    final propsMap = props is Map<String, dynamic>
+        ? props
+        : const <String, dynamic>{};
     final name = propsMap['name'] as String? ?? suggestion.name;
-    final address = (propsMap['full_address'] ?? propsMap['place_formatted']) as String? ?? '';
+    final address =
+        (propsMap['full_address'] ?? propsMap['place_formatted']) as String? ??
+        '';
 
     return MapboxPlace(name: name, address: address, lat: lat, lng: lng);
   }

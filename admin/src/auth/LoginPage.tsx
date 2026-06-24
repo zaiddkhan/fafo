@@ -38,7 +38,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-full items-center justify-center p-4">
       <Card className="w-full max-w-sm">
-        <h1 className="text-xl font-extrabold text-brand-600">WhatsPopn Admin</h1>
+        <h1 className="text-xl font-extrabold text-brand-600">Fafo Admin</h1>
         <p className="mb-5 mt-1 text-sm text-gray-500">
           Sign in with your admin account.
         </p>

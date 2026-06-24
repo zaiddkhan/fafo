@@ -40,7 +40,7 @@ Future<void> bootstrap() async {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(AsyncValue.data(prefs)),
       ],
-      child: const FafuApp(),
+      child: const FafoApp(),
     ),
   );
 }

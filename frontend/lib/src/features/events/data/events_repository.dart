@@ -22,7 +22,9 @@ class EventsRevision extends Notifier<int> {
   void bump() => state++;
 }
 
-final eventsRevisionProvider = NotifierProvider<EventsRevision, int>(EventsRevision.new);
+final eventsRevisionProvider = NotifierProvider<EventsRevision, int>(
+  EventsRevision.new,
+);
 
 void bumpEventsRevision(WidgetRef ref) {
   ref.read(eventsRevisionProvider.notifier).bump();
@@ -51,7 +53,10 @@ class EventsRepository {
         );
   }
 
-  static EventResponse? _eventFromFirestore(String id, Map<String, dynamic> data) {
+  static EventResponse? _eventFromFirestore(
+    String id,
+    Map<String, dynamic> data,
+  ) {
     final location = data['location'];
     if (location is! GeoPoint) return null;
     final dateTime = _toDate(data['date_time']);
@@ -127,7 +132,9 @@ class EventsRepository {
     }
   }
 
-  Future<List<EventResponse>> getMyEvents({bool includeArchived = false}) async {
+  Future<List<EventResponse>> getMyEvents({
+    bool includeArchived = false,
+  }) async {
     try {
       final response = await _dio.get(
         '/events/mine',
@@ -218,17 +225,19 @@ class EventsRepository {
     EventUpdateRequest request,
   ) async {
     try {
-      final response = await _dio.put(
-        '/events/$eventId',
-        data: request.toJson(),
-      );
+      final data = request.toJson()..removeWhere((key, value) => value == null);
+      final response = await _dio.put('/events/$eventId', data: data);
       return EventResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
   }
 
-  Future<void> cancelEvent(String eventId, {required String reason, List<String> answers = const []}) async {
+  Future<void> cancelEvent(
+    String eventId, {
+    required String reason,
+    List<String> answers = const [],
+  }) async {
     try {
       await _dio.post(
         '/events/$eventId/cancel',
@@ -248,7 +257,11 @@ class EventsRepository {
     }
   }
 
-  Future<void> unjoinEvent(String eventId, {required UnjoinReason reason, List<String> answers = const []}) async {
+  Future<void> unjoinEvent(
+    String eventId, {
+    required UnjoinReason reason,
+    List<String> answers = const [],
+  }) async {
     try {
       await _dio.delete(
         '/events/$eventId/join',

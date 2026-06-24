@@ -30,7 +30,7 @@ ADMIN_COOKIE_SECURE = os.getenv("ADMIN_COOKIE_SECURE", "false").lower() == "true
 RATE_LIMIT_DEFAULT = os.getenv("RATE_LIMIT_DEFAULT", "60/minute")
 RATE_LIMIT_AUTH = os.getenv("RATE_LIMIT_AUTH", "10/minute")
 FRIEND_INVITE_BASE_URL = os.getenv(
-    "FRIEND_INVITE_BASE_URL", "https://whatspopn.app/invite"
+    "FRIEND_INVITE_BASE_URL", "https://getfafo.app/invite"
 )
 
 # --- Push notifications ---

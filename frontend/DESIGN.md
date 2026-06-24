@@ -1,19 +1,19 @@
-# Fafu Design System
+# Fafo Design System
 
-This document is the design source of truth for Fafu.
+This document is the design source of truth for Fafo.
 
 The product is an event discovery and social coordination app. The UI should feel lively, local, tactile, and a little playful, not sterile. The current visual language already points in the right direction: clean cool-toned surfaces, bold blue highlights, dark outlines, chunky geometry, and compact futuristic typography.
 
 ## Brand Direction
 
-Fafu should feel like:
+Fafo should feel like:
 
 - A city flyer wall cleaned up into an app
 - Social and energetic, not luxury or corporate
 - Tactile and slightly comic-book, not glassy or soft
 - High-contrast and fast to scan
 
-Fafu should not feel like:
+Fafo should not feel like:
 
 - Generic SaaS
 - Premium-black nightlife branding

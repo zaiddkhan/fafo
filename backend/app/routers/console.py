@@ -3,7 +3,7 @@
 Protected by a single email + password (set via ADMIN_EMAIL / ADMIN_PASSWORD
 env vars). On success an HMAC-signed session cookie is issued. This is separate
 from the JSON `/admin/*` API (which is gated by Firebase + ADMIN_UIDS); the
-console is meant to be opened in a browser by the WhatsPopn team.
+console is meant to be opened in a browser by the Fafo team.
 """
 
 import base64
@@ -125,7 +125,7 @@ def _page(body: str) -> HTMLResponse:
     return HTMLResponse(
         f"<!doctype html><html><head><meta charset='utf-8'>"
         f"<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        f"<title>WhatsPopn Console</title>{_STYLE}</head><body>{body}</body></html>"
+        f"<title>Fafo Console</title>{_STYLE}</head><body>{body}</body></html>"
     )
 
 
@@ -139,7 +139,7 @@ def _login_page(error: str | None = None) -> HTMLResponse:
     err_html = f"<div class='err'>{html.escape(error)}</div>" if error else ""
     return _page(
         "<div class='login'><div class='card'>"
-        "<h2>WhatsPopn Console</h2>"
+        "<h2>Fafo Console</h2>"
         "<p class='muted'>Sign in to manage creator requests.</p>"
         f"{err_html}"
         "<form method='post' action='/console/login'>"
@@ -218,7 +218,7 @@ def _dashboard_page() -> HTMLResponse:
         )
 
     return _page(
-        "<div class='topbar'><h1>WhatsPopn Console</h1>"
+        "<div class='topbar'><h1>Fafo Console</h1>"
         "<a href='/console/logout'>Sign out</a></div>"
         "<div class='wrap'><div class='card'>"
         f"<p class='muted'>Creator requests &middot; <span class='count'>{pending_count}</span> pending</p>"

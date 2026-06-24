@@ -1,5 +1,5 @@
 
-Project Name: WhatsPopn
+Project Name: Fafo
 
 
 
@@ -14,7 +14,7 @@ App Discovery Document.
 
 
 From	To
-Abhiraj Sakargaye	WhatsPopn Team
+Abhiraj Sakargaye	Fafo Team
 abhiraj@singlebit.xyz	
 +91 9301951512	
 Table of Contents
@@ -27,7 +27,7 @@ Table of Contents
 
 
 1. Overview.
-WhatsPopn is building a mobile application centred around community based event discovery and map-based exploration.
+Fafo is building a mobile application centred around community based event discovery and map-based exploration.
 
 The goal of this engagement is to produce a fully functional static app UI that can be presented to investors and early adopters to validate the concept and attract support.
 

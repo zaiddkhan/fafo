@@ -454,24 +454,32 @@ class _SearchBox extends StatelessWidget {
     return Container(
       height: 64,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.ink, width: 1.7),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border, width: 1.7),
         borderRadius: BorderRadius.circular(12),
       ),
       alignment: Alignment.center,
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-        decoration: const InputDecoration(
+        style: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+        ),
+        decoration: InputDecoration(
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
           filled: false,
-          prefixIcon: Icon(Icons.search, color: Colors.black54, size: 24),
+          prefixIcon: Icon(
+            Icons.search,
+            color: AppColors.textSecondary,
+            size: 24,
+          ),
           hintText: 'Search Friends...',
           hintStyle: TextStyle(
-            color: Color(0xFF6D6D78),
+            color: AppColors.textSecondary,
             fontSize: 20,
             fontWeight: FontWeight.w900,
           ),
@@ -525,8 +533,8 @@ class _SegmentedTabs extends StatelessWidget {
           Container(
             height: 46,
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: AppColors.ink, width: 1.7),
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.border, width: 1.7),
               borderRadius: BorderRadius.circular(10),
             ),
             child: ClipRRect(
@@ -534,7 +542,7 @@ class _SegmentedTabs extends StatelessWidget {
               child: Row(
                 children: [
                   for (var i = 0; i < segments.length; i++) ...[
-                    if (i > 0) Container(width: 1.7, color: AppColors.ink),
+                    if (i > 0) Container(width: 1.7, color: AppColors.border),
                     Expanded(
                       child: _Segment(
                         spec: segments[i],
@@ -570,7 +578,7 @@ class _Segment extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        color: selected ? AppColors.accentPrimary : Colors.white,
+        color: selected ? AppColors.accentPrimary : AppColors.surface,
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Row(
@@ -583,7 +591,7 @@ class _Segment extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: selected ? Colors.white : AppColors.ink,
+                  color: selected ? Colors.white : AppColors.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                 ),
@@ -611,14 +619,14 @@ class _CountBadge extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 19),
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
-        color: selected ? Colors.white : AppColors.accentPrimary,
+        color: selected ? AppColors.surface : AppColors.accentPrimary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         count > 99 ? '99+' : '$count',
         textAlign: TextAlign.center,
         style: TextStyle(
-          color: selected ? AppColors.accentPrimary : Colors.white,
+          color: selected ? AppColors.accentPrimary : AppColors.surface,
           fontSize: 12,
           fontWeight: FontWeight.w900,
         ),
@@ -643,7 +651,9 @@ class _StickerAction extends StatelessWidget {
   Widget build(BuildContext context) {
     const offset = 3.0;
     final enabled = onTap != null;
-    final contentColor = enabled ? AppColors.ink : const Color(0xFF9B9BA3);
+    final contentColor = enabled
+        ? AppColors.textPrimary
+        : AppColors.textTertiary;
     return Padding(
       padding: const EdgeInsets.only(right: offset, bottom: offset),
       child: Stack(
@@ -654,7 +664,7 @@ class _StickerAction extends StatelessWidget {
               offset: const Offset(offset, offset),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppColors.ink,
+                  color: AppColors.border,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -668,8 +678,8 @@ class _StickerAction extends StatelessWidget {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: AppColors.ink, width: 1.7),
+                color: AppColors.surface,
+                border: Border.all(color: AppColors.border, width: 1.7),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -716,8 +726,10 @@ class _AllFriendsEmpty extends StatelessWidget {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: BoxDecoration(
-        color: AppColors.accentLightest,
-        border: Border.all(color: AppColors.ink, width: 1.7),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.surface
+            : AppColors.accentLightest,
+        border: Border.all(color: AppColors.border, width: 1.7),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -727,8 +739,8 @@ class _AllFriendsEmpty extends StatelessWidget {
             height: 56,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: AppColors.ink, width: 1.7),
+              color: AppColors.surface,
+              border: Border.all(color: AppColors.border, width: 1.7),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -741,7 +753,7 @@ class _AllFriendsEmpty extends StatelessWidget {
           Text(
             'No friends yet',
             style: Theme.of(context).textTheme.displayMedium?.copyWith(
-              color: AppColors.ink,
+              color: AppColors.textPrimary,
               fontSize: 20,
             ),
           ),
@@ -750,7 +762,7 @@ class _AllFriendsEmpty extends StatelessWidget {
             'Sync your contacts or share an invite link to start nudging friends.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppColors.ink.withValues(alpha: 0.7),
+              color: AppColors.textSecondary,
               fontSize: 14,
               fontWeight: FontWeight.w700,
               height: 1.35,
@@ -818,8 +830,8 @@ class _FriendListCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: AppColors.ink, width: 1.6),
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.border, width: 1.6),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -832,29 +844,31 @@ class _FriendListCard extends StatelessWidget {
                 children: [
                   Text(
                     displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: AppColors.accentPrimary,
                       fontWeight: FontWeight.w900,
-                      fontSize: 21,
-                      height: 1,
+                      fontSize: 18,
+                      height: 1.05,
                     ),
                   ),
                   const SizedBox(height: 7),
                   Text(
                     '• $statusText',
-                    style: const TextStyle(
-                      color: Color(0xFF74747D),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
                       fontWeight: FontWeight.w800,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
                   ),
                 ],
               ),
             ),
             PopupMenuButton<String>(
-              icon: const Icon(
+              icon: Icon(
                 Icons.more_horiz,
-                color: AppColors.ink,
+                color: AppColors.textPrimary,
                 size: 28,
               ),
               onSelected: (value) {
@@ -900,8 +914,8 @@ class _RequestCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.ink, width: 1.4),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border, width: 1.4),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -928,8 +942,8 @@ class _RequestCard extends StatelessWidget {
                     '@${user.username}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF74747D),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
@@ -991,8 +1005,8 @@ class _Avatar extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: const Color(0xFFF7F7F7),
-            border: Border.all(color: AppColors.ink, width: 2),
+            color: AppColors.bgSecondary,
+            border: Border.all(color: AppColors.border, width: 2),
             borderRadius: BorderRadius.circular(8),
             image: user.photoUrl == null
                 ? null
@@ -1007,7 +1021,10 @@ class _Avatar extends StatelessWidget {
                     displayName.isEmpty
                         ? '🙂'
                         : displayName.characters.first.toUpperCase(),
-                    style: const TextStyle(fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 )
               : null,
@@ -1021,7 +1038,7 @@ class _Avatar extends StatelessWidget {
               height: 16,
               decoration: BoxDecoration(
                 color: const Color(0xFF59E85D),
-                border: Border.all(color: AppColors.ink, width: 1.2),
+                border: Border.all(color: AppColors.border, width: 1.2),
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -1039,9 +1056,10 @@ class _ListHeader extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 12),
     child: Text(
       text,
-      style: Theme.of(
-        context,
-      ).textTheme.displayMedium?.copyWith(color: AppColors.ink, fontSize: 20),
+      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+        color: AppColors.textPrimary,
+        fontSize: 20,
+      ),
     ),
   );
 }

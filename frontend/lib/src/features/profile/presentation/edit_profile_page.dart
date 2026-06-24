@@ -63,7 +63,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     if (area == null) return;
     final label = await reverseGeocodeLabel(area.lat, area.lng);
     if (mounted) {
-      setState(() => _areaLabel = label ?? '${area.lat.toStringAsFixed(3)}, ${area.lng.toStringAsFixed(3)}');
+      setState(
+        () => _areaLabel =
+            label ??
+            '${area.lat.toStringAsFixed(3)}, ${area.lng.toStringAsFixed(3)}',
+      );
     }
   }
 
@@ -84,7 +88,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     setState(() => _checkingUsername = true);
     _debounce = Timer(const Duration(milliseconds: 450), () async {
       try {
-        final result = await ref.read(usersRepositoryProvider).checkUsername(username);
+        final result = await ref
+            .read(usersRepositoryProvider)
+            .checkUsername(username);
         if (mounted) setState(() => _usernameAvailable = result.available);
       } catch (_) {
         if (mounted) setState(() => _usernameAvailable = null);
@@ -95,7 +101,11 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   Future<void> _pickPhoto() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 1024, imageQuality: 85);
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
     if (picked == null) return;
     final bytes = await picked.readAsBytes();
     if (mounted) {
@@ -111,14 +121,22 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     if (result == null) return;
     setState(() {
       _area = Area(lat: result.lat, lng: result.lng);
-      _areaLabel = result.label.split(',').take(2).map((s) => s.trim()).join(', ');
+      _areaLabel = result.label
+          .split(',')
+          .take(2)
+          .map((s) => s.trim())
+          .join(', ');
     });
   }
 
   bool get _canSave {
     final name = _displayName.text.trim();
     final username = _username.text.trim();
-    return !_saving && !_checkingUsername && name.isNotEmpty && username.length >= 3 && (_usernameAvailable ?? false);
+    return !_saving &&
+        !_checkingUsername &&
+        name.isNotEmpty &&
+        username.length >= 3 &&
+        (_usernameAvailable ?? false);
   }
 
   Future<void> _save() async {
@@ -129,21 +147,33 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (_pickedPhoto != null) {
         await repo.uploadProfilePhoto(_pickedPhoto!);
       }
-      await repo.setupProfile(ProfileSetupRequest(
-        displayName: _displayName.text.trim(),
-        username: _username.text.trim().toLowerCase(),
-        area: _area,
-      ));
+      await repo.setupProfile(
+        ProfileSetupRequest(
+          displayName: _displayName.text.trim(),
+          username: _username.text.trim().toLowerCase(),
+          area: _area,
+        ),
+      );
       ref.invalidate(currentProfileProvider);
       ref.invalidate(profileStatsProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile updated.')));
         Navigator.of(context).pop(true);
       }
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -169,40 +199,61 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         children: [
           Center(
-            child: GestureDetector(
-              onTap: _pickPhoto,
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 46,
-                    backgroundColor: AppColors.bgSecondary,
-                    backgroundImage: _pickedBytes != null
-                        ? MemoryImage(_pickedBytes!)
-                        : (currentPhoto != null ? NetworkImage(currentPhoto) as ImageProvider : null),
-                    child: (_pickedBytes == null && currentPhoto == null)
-                        ? const Icon(Icons.person, size: 42)
-                        : null,
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.accentPrimary,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.bgPrimary, width: 2),
-                      ),
-                      child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: _pickPhoto,
+                  child: SizedBox(
+                    width: 104,
+                    height: 104,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 46,
+                          backgroundColor: AppColors.bgSecondary,
+                          backgroundImage: _pickedBytes != null
+                              ? MemoryImage(_pickedBytes!)
+                              : (currentPhoto != null
+                                    ? NetworkImage(currentPhoto)
+                                          as ImageProvider
+                                    : null),
+                          child: (_pickedBytes == null && currentPhoto == null)
+                              ? const Icon(Icons.person, size: 42)
+                              : null,
+                        ),
+                        Positioned(
+                          right: 6,
+                          bottom: 6,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentPrimary,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.bgPrimary,
+                                width: 2,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _pickPhoto,
+                  child: const Text('Change photo'),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: TextButton(onPressed: _pickPhoto, child: const Text('Change photo')),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -218,21 +269,35 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               prefixText: '@',
               helperText: _usernameHelper(),
               helperStyle: TextStyle(
-                color: _usernameAvailable == false ? const Color(0xFFE5484D) : AppColors.textSecondary,
+                color: _usernameAvailable == false
+                    ? const Color(0xFFE5484D)
+                    : AppColors.textSecondary,
               ),
               suffixIcon: _checkingUsername
                   ? const Padding(
                       padding: EdgeInsets.all(12),
-                      child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     )
                   : (_usernameAvailable == true
-                      ? const Icon(Icons.check_circle, color: Color(0xFF38A849))
-                      : null),
+                        ? const Icon(
+                            Icons.check_circle,
+                            color: Color(0xFF38A849),
+                          )
+                        : null),
             ),
             onChanged: _onUsernameChanged,
           ),
           const SizedBox(height: 16),
-          Text('Area', style: theme.textTheme.labelLarge?.copyWith(color: AppColors.textSecondary)),
+          Text(
+            'Area',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 6),
           InkWell(
             onTap: _changeArea,
@@ -249,7 +314,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      _area == null ? 'Set your area' : (_areaLabel ?? 'Locating…'),
+                      _area == null
+                          ? 'Set your area'
+                          : (_areaLabel ?? 'Locating…'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

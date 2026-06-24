@@ -173,7 +173,7 @@ class NotificationService:
                     outbox.mark_skipped(db, dedupe_key_, "rate_limited")
                     return "skipped"
 
-            title = template.get("title") or "Fafu"
+            title = template.get("title") or "Fafo"
             body = template.get("body", "").format_map(_SafeDict(data.get("variables", {})))
 
             # Mirror into the user's in-app inbox before the push attempt, so the

@@ -18,7 +18,7 @@ export function Layout() {
     <div className="flex min-h-full">
       <aside className="flex w-60 flex-shrink-0 flex-col bg-brand-700 text-white">
         <div className="px-5 py-5 text-lg font-extrabold tracking-tight">
-          WhatsPopn Admin
+          Fafo Admin
         </div>
         <nav className="flex-1 space-y-1 px-3">
           {NAV.map((item) => (

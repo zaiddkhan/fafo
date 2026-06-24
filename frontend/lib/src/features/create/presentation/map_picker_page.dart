@@ -61,7 +61,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
   final _searchController = TextEditingController();
   final _searchService = MapboxSearchService();
 
-  MapController? _mapController;
   Geographic? _picked;
   String? _address;
 
@@ -74,7 +73,9 @@ class _MapPickerPageState extends State<MapPickerPage> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName ?? '');
-    _detailsController = TextEditingController(text: widget.initialDetails ?? '');
+    _detailsController = TextEditingController(
+      text: widget.initialDetails ?? '',
+    );
     _address = widget.initialAddress;
     if (widget.hasInitialPin) {
       _picked = Geographic(lon: widget.initialLng, lat: widget.initialLat);
@@ -99,12 +100,17 @@ class _MapPickerPageState extends State<MapPickerPage> {
       });
       return;
     }
-    _debounce = Timer(const Duration(milliseconds: 300), () => _runSearch(value));
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _runSearch(value),
+    );
   }
 
   Future<void> _runSearch(String query) async {
     if (!_searchService.isConfigured) {
-      setState(() => _searchError = 'Search unavailable — tap the map to place a pin.');
+      setState(
+        () => _searchError = 'Search unavailable — tap the map to place a pin.',
+      );
       return;
     }
     setState(() {
@@ -138,23 +144,22 @@ class _MapPickerPageState extends State<MapPickerPage> {
     try {
       final place = await _searchService.retrieve(suggestion);
       if (!mounted || place == null) {
-        if (mounted) setState(() => _searchError = 'Could not load that place.');
+        if (mounted) {
+          setState(() => _searchError = 'Could not load that place.');
+        }
         return;
       }
+      final picked = Geographic(lon: place.lng, lat: place.lat);
       setState(() {
-        _picked = Geographic(lon: place.lng, lat: place.lat);
+        _picked = picked;
         _address = place.address.isEmpty ? null : place.address;
-        if (_nameController.text.trim().isEmpty ||
-            _nameController.text.trim() == suggestion.name) {
-          _nameController.text = place.name;
-        }
+        _nameController.text = place.name;
         _searchError = null;
       });
-      await _mapController?.animateCamera(
-        center: Geographic(lon: place.lng, lat: place.lat),
-        zoom: 16,
-        nativeDuration: const Duration(milliseconds: 600),
-      );
+      // Selecting a search result is an explicit location confirmation in the
+      // create-event flow. Return immediately to the event form with the place.
+      _popWithResult(picked);
+      return;
     } catch (_) {
       if (mounted) setState(() => _searchError = 'Could not load that place.');
     } finally {
@@ -180,6 +185,10 @@ class _MapPickerPageState extends State<MapPickerPage> {
   void _confirm() {
     final picked = _picked;
     if (picked == null) return;
+    _popWithResult(picked);
+  }
+
+  void _popWithResult(Geographic picked) {
     final details = _detailsController.text.trim();
     Navigator.of(context).pop(
       MapPickResult(
@@ -214,7 +223,6 @@ class _MapPickerPageState extends State<MapPickerPage> {
                     ),
                     initZoom: widget.hasInitialPin ? 16 : 13,
                   ),
-                  onMapCreated: (controller) => _mapController = controller,
                   onEvent: _onMapEvent,
                   children: [
                     if (picked != null)
@@ -329,7 +337,11 @@ class _MapPickerPageState extends State<MapPickerPage> {
               return ListTile(
                 dense: true,
                 leading: const Icon(Icons.place_outlined),
-                title: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                title: Text(
+                  s.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: s.placeFormatted.isEmpty
                     ? null
                     : Text(
@@ -390,7 +402,11 @@ class _MapPickerPageState extends State<MapPickerPage> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.place, size: 14, color: AppColors.accentPrimary),
+                    const Icon(
+                      Icons.place,
+                      size: 14,
+                      color: AppColors.accentPrimary,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(

@@ -69,13 +69,38 @@ class _CreatorDashboardPageState extends ConsumerState<CreatorDashboardPage> {
   }
 
   Future<void> _toggleRegistration(EventResponse event) async {
-    await ref
-        .read(eventsRepositoryProvider)
-        .updateEvent(
-          event.id,
-          EventUpdateRequest(registrationOpen: !event.registrationOpen),
-        );
-    await _load();
+    final nextRegistrationOpen = !event.registrationOpen;
+    setState(() {
+      _events = [
+        for (final item in _events)
+          if (item.id == event.id)
+            item.copyWith(registrationOpen: nextRegistrationOpen)
+          else
+            item,
+      ];
+    });
+
+    try {
+      await ref
+          .read(eventsRepositoryProvider)
+          .updateEvent(
+            event.id,
+            EventUpdateRequest(registrationOpen: nextRegistrationOpen),
+          );
+      bumpEventsRevision(ref);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _events = [
+          for (final item in _events)
+            if (item.id == event.id)
+              item.copyWith(registrationOpen: event.registrationOpen)
+            else
+              item,
+        ];
+        _error = e.toString();
+      });
+    }
   }
 
   Future<void> _edit(EventResponse event) async {
@@ -454,7 +479,12 @@ class _CancelEventPageState extends ConsumerState<CancelEventPage> {
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
-            Text('Why are you cancelling?', style: theme.textTheme.titleMedium),
+            Text(
+              'Why are you cancelling?',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _reasonController,
@@ -467,7 +497,9 @@ class _CancelEventPageState extends ConsumerState<CancelEventPage> {
             const SizedBox(height: AppSpacing.md),
             Text(
               'Could anything have kept it running?',
-              style: theme.textTheme.titleMedium,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -481,7 +513,9 @@ class _CancelEventPageState extends ConsumerState<CancelEventPage> {
             const SizedBox(height: AppSpacing.md),
             Text(
               'Anything attendees should know?',
-              style: theme.textTheme.titleMedium,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(

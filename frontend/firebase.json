@@ -1,1 +1,37 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"fafu-869a8","appId":"1:149624228243:android:ddeecc4628d636e748c066","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"fafu-869a8","configurations":{"android":"1:149624228243:android:ddeecc4628d636e748c066","web":"1:149624228243:web:7d8888372c8bc6c448c066"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "fafu-869a8",
+          "appId": "1:149624228243:android:ddeecc4628d636e748c066",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fafu-869a8",
+          "configurations": {
+            "android": "1:149624228243:android:ddeecc4628d636e748c066",
+            "web": "1:149624228243:web:7d8888372c8bc6c448c066"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [
+      {
+        "source": "/.well-known/apple-app-site-association",
+        "headers": [{ "key": "Content-Type", "value": "application/json" }]
+      },
+      {
+        "source": "/.well-known/assetlinks.json",
+        "headers": [{ "key": "Content-Type", "value": "application/json" }]
+      }
+    ],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  }
+}

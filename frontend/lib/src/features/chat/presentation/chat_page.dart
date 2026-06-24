@@ -23,13 +23,11 @@ class _ChatMessage {
   const _ChatMessage({
     required this.text,
     required this.isUser,
-    this.isTyping = false,
     this.recommendedEvents = const [],
   });
 
   final String text;
   final bool isUser;
-  final bool isTyping;
   final List<MockEvent> recommendedEvents;
 }
 
@@ -48,7 +46,7 @@ class _ChatPageState extends State<ChatPage> {
   final List<_ChatMessage> _messages = [
     const _ChatMessage(
       text:
-          "Hey! I'm Popn, your group discovery buddy 🎉\nWhat kind of vibe are you looking for tonight?",
+          'Hey! I\'m Popn, your group discovery buddy 🎉\nWhat kind of vibe are you looking for tonight?',
       isUser: false,
     ),
   ];
@@ -96,7 +94,7 @@ class _ChatPageState extends State<ChatPage> {
       final event = _findEvent((event) => event.category == 'Live Music');
       return _ChatReply(
         text:
-            "🎸 There's a great ${event.title} happening at ${event.time} at ${event.venue}. It's got ${event.attendees} people going already, perfect for a chill live music night!",
+            '🎸 There\'s a great ${event.title} happening at ${event.time} at ${event.venue}. It\'s got ${event.attendees} people going already, perfect for a chill live music night!',
         recommendedEvents: _eventsForCategory('Live Music'),
       );
     }
@@ -104,7 +102,7 @@ class _ChatPageState extends State<ChatPage> {
       final event = _findEvent((event) => event.category == 'Food & Drinks');
       return _ChatReply(
         text:
-            "🍜 You should check out ${event.title} at ${event.venue}. It starts at ${event.time} and already has ${event.attendees} people interested.",
+            '🍜 You should check out ${event.title} at ${event.venue}. It starts at ${event.time} and already has ${event.attendees} people interested.',
         recommendedEvents: _eventsForCategory('Food & Drinks'),
       );
     }
@@ -112,7 +110,7 @@ class _ChatPageState extends State<ChatPage> {
       final event = _findEvent((event) => event.title == 'Warehouse Rave');
       return _ChatReply(
         text:
-            "🪩 ${event.title} at ${event.venue} starts at ${event.time}, and ${event.attendees} people are already going. Good pick if you want a louder late-night plan.",
+            '🪩 ${event.title} at ${event.venue} starts at ${event.time}, and ${event.attendees} people are already going. Good pick if you want a louder late-night plan.',
         recommendedEvents: _eventsForCategory('Nightlife'),
       );
     }
@@ -120,7 +118,7 @@ class _ChatPageState extends State<ChatPage> {
       final event = _findEvent((event) => event.title == 'Beach Yoga');
       return _ChatReply(
         text:
-            "🧘 ${event.title} at ${event.venue} is a calmer option at ${event.time}. Only ${event.attendees} people are going, so it stays peaceful.",
+            '🧘 ${event.title} at ${event.venue} is a calmer option at ${event.time}. Only ${event.attendees} people are going, so it stays peaceful.',
         recommendedEvents: [
           _findEvent((event) => event.title == 'Beach Yoga'),
           _findEvent((event) => event.title == 'Acoustic Night'),
@@ -131,7 +129,7 @@ class _ChatPageState extends State<ChatPage> {
       final event = _findEvent((event) => event.category == 'Art & Culture');
       return _ChatReply(
         text:
-            "🎨 ${event.title} at ${event.venue} starts at ${event.time}. It's a curated smaller group with ${event.attendees} attendees.",
+            '🎨 ${event.title} at ${event.venue} starts at ${event.time}. It\'s a curated smaller group with ${event.attendees} attendees.',
         recommendedEvents: _eventsForCategory('Art & Culture'),
       );
     }
@@ -139,7 +137,7 @@ class _ChatPageState extends State<ChatPage> {
       final event = _findEvent((event) => event.category == 'Comedy');
       return _ChatReply(
         text:
-            "🎤 ${event.title} at ${event.venue} starts at ${event.time}, with ${event.attendees} people already in. Good choice if you want something easy and social.",
+            '🎤 ${event.title} at ${event.venue} starts at ${event.time}, with ${event.attendees} people already in. Good choice if you want something easy and social.',
         recommendedEvents: _eventsForCategory('Comedy'),
       );
     }
@@ -699,7 +697,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
         ),
         child: AnimatedBuilder(
           animation: _controller,
-          builder: (_, __) {
+          builder: (context, animation) {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: List.generate(3, (i) {

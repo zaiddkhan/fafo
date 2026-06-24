@@ -7,8 +7,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:maplibre/maplibre.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:fafu/src/core/config/app_config.dart';
 import 'package:fafu/src/core/config/map_config.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/theme/app_chrome.dart';
@@ -16,8 +18,8 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
+import 'package:fafu/src/features/users/data/users_providers.dart';
 import 'package:fafu/src/shared/widgets/app_pressable.dart';
-import 'package:fafu/src/shared/widgets/negative_action_dialog.dart';
 
 class EventDetailPage extends ConsumerStatefulWidget {
   const EventDetailPage({super.key, required this.eventId, this.initialEvent});
@@ -127,8 +129,16 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       setState(() {
         _joined = true;
         _showCelebration = true;
+        final event = _backendEvent;
+        if (event != null) {
+          _backendEvent = event.copyWith(
+            isJoined: true,
+            joineeCount: event.joineeCount + 1,
+          );
+        }
       });
-      await _loadEvent();
+      bumpEventsRevision(ref);
+      ref.invalidate(profileStatsProvider);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -146,33 +156,50 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ListTile(title: Text('Why are you leaving this event?')),
-            for (final option in UnjoinReason.values)
-              ListTile(
-                title: Text(_unjoinReasonLabel(option)),
-                onTap: () => Navigator.of(context).pop(option),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Leave this event?',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                'Pick an optional reason. No typing required.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final option in UnjoinReason.values)
+                    ChoiceChip(
+                      label: Text(_unjoinReasonLabel(option)),
+                      selected: false,
+                      onSelected: (_) => Navigator.of(context).pop(option),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Keep event'),
+              ),
+            ],
+          ),
         ),
       ),
     );
     if (reason == null || !mounted) return;
-
-    // PRD: every negative action requires a 3-to-5 question questionnaire gate.
-    final answers = await showNegativeActionQuestionnaire(
-      context,
-      title: 'Leave this event?',
-      confirmLabel: 'Leave event',
-      questions: const [
-        'What changed since you joined?',
-        'Could anything have kept you in?',
-        'Anything the organizer should know?',
-      ],
-    );
-    if (answers == null || !mounted) return;
+    final answers = <String>[_unjoinReasonLabel(reason)];
 
     setState(() {
       _joining = true;
@@ -184,8 +211,18 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
           .read(eventsRepositoryProvider)
           .unjoinEvent(widget.eventId, reason: reason, answers: answers);
       if (!mounted) return;
-      setState(() => _joined = false);
-      await _loadEvent();
+      setState(() {
+        _joined = false;
+        final event = _backendEvent;
+        if (event != null) {
+          _backendEvent = event.copyWith(
+            isJoined: false,
+            joineeCount: event.joineeCount > 0 ? event.joineeCount - 1 : 0,
+          );
+        }
+      });
+      bumpEventsRevision(ref);
+      ref.invalidate(profileStatsProvider);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -307,6 +344,33 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     }
   }
 
+  Uri get _shareUri {
+    final base = Uri.parse(AppConfig.publicWebBaseUrl);
+    return base.replace(
+      path: '/event/${widget.eventId}',
+      queryParameters: null,
+    );
+  }
+
+  Future<void> _shareEvent() async {
+    final event = _displayEvent;
+    final title = event?.title ?? 'this event';
+    final venue = event?.venue;
+    final where = venue == null || venue.trim().isEmpty ? '' : ' at $venue';
+    final text = 'Check out $title$where on Fafo: $_shareUri';
+
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: text, subject: 'Fafo event'),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the share sheet.')),
+      );
+    }
+  }
+
   Future<LottieComposition?> _decodeDotLottie(List<int> bytes) {
     return LottieComposition.decodeZip(
       bytes,
@@ -400,6 +464,23 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                         ),
                       ),
                       const Spacer(),
+                      AppPressable(
+                        onTap: _shareEvent,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.bgSecondary,
+                            border: AppChrome.outlineBorder,
+                          ),
+                          child: Icon(
+                            Icons.ios_share_rounded,
+                            color: AppColors.textPrimary,
+                            size: 20,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -757,11 +838,15 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                 name: event.organizerName,
                                 color: AppColors.accentPrimary,
                               ),
-                              const SizedBox(height: AppSpacing.md),
-                              _HostTile(
-                                name: event.organizerInstagram,
-                                color: AppColors.accentWarm,
-                              ),
+                              if (event.organizerInstagram
+                                  .trim()
+                                  .isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.md),
+                                _HostTile(
+                                  name: event.organizerInstagram,
+                                  color: AppColors.accentWarm,
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1234,13 +1319,6 @@ class _HostTile extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(child: Text(name, style: theme.textTheme.titleLarge)),
-        Icon(
-          Icons.camera_alt_outlined,
-          color: AppColors.textTertiary,
-          size: 20,
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Icon(Icons.close, color: AppColors.textTertiary, size: 20),
       ],
     );
   }

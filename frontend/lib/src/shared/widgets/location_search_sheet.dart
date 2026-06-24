@@ -5,7 +5,11 @@ import 'package:fafu/src/core/constants/app_spacing.dart';
 
 /// A single geocoded place result.
 class LocationSearchResult {
-  const LocationSearchResult({required this.label, required this.lat, required this.lng});
+  const LocationSearchResult({
+    required this.label,
+    required this.lat,
+    required this.lng,
+  });
 
   final String label;
   final double lat;
@@ -26,11 +30,18 @@ class LocationSearchResult {
 /// (e.g. "Indiranagar, Bengaluru"). Returns null if it can't be resolved.
 Future<String?> reverseGeocodeLabel(double lat, double lng) async {
   try {
-    final response = await Dio().get<Map<String, dynamic>>(
-      'https://nominatim.openstreetmap.org/reverse',
-      queryParameters: {'format': 'jsonv2', 'lat': lat, 'lon': lng, 'zoom': 14},
-      options: Options(headers: {'User-Agent': 'WhatsPopn Flutter Web'}),
-    ).timeout(const Duration(seconds: 8));
+    final response = await Dio()
+        .get<Map<String, dynamic>>(
+          'https://nominatim.openstreetmap.org/reverse',
+          queryParameters: {
+            'format': 'jsonv2',
+            'lat': lat,
+            'lon': lng,
+            'zoom': 14,
+          },
+          options: Options(headers: {'User-Agent': 'Fafo Flutter Web'}),
+        )
+        .timeout(const Duration(seconds: 8));
     final name = response.data?['display_name'];
     if (name is String && name.isNotEmpty) {
       // Keep it short — first two comma-separated parts.
@@ -93,11 +104,13 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
   }
 
   Future<List<LocationSearchResult>> _searchLocations(String query) async {
-    final response = await Dio().get<List<dynamic>>(
-      'https://nominatim.openstreetmap.org/search',
-      queryParameters: {'format': 'jsonv2', 'q': query, 'limit': 6},
-      options: Options(headers: {'User-Agent': 'WhatsPopn Flutter Web'}),
-    ).timeout(const Duration(seconds: 10));
+    final response = await Dio()
+        .get<List<dynamic>>(
+          'https://nominatim.openstreetmap.org/search',
+          queryParameters: {'format': 'jsonv2', 'q': query, 'limit': 6},
+          options: Options(headers: {'User-Agent': 'Fafo Flutter Web'}),
+        )
+        .timeout(const Duration(seconds: 10));
 
     return (response.data ?? const [])
         .whereType<Map<String, dynamic>>()
@@ -131,14 +144,21 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
                 suffixIcon: IconButton(
                   onPressed: _searching ? null : _search,
                   icon: _searching
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.search),
                 ),
               ),
             ),
             if (_error != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text(_error!, style: theme.textTheme.labelMedium?.copyWith(color: Colors.red)),
+              Text(
+                _error!,
+                style: theme.textTheme.labelMedium?.copyWith(color: Colors.red),
+              ),
             ],
             const SizedBox(height: AppSpacing.md),
             ConstrainedBox(
@@ -151,8 +171,14 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
                   final result = _results[index];
                   return ListTile(
                     leading: const Icon(Icons.place_outlined),
-                    title: Text(result.label, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    subtitle: Text('${result.lat.toStringAsFixed(4)}, ${result.lng.toStringAsFixed(4)}'),
+                    title: Text(
+                      result.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${result.lat.toStringAsFixed(4)}, ${result.lng.toStringAsFixed(4)}',
+                    ),
                     onTap: () => Navigator.of(context).pop(result),
                   );
                 },

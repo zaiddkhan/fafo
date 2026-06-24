@@ -4,11 +4,14 @@ import 'package:fafu/src/app.dart';
 
 void main() {
   testWidgets('renders landing screen CTAs', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: FafuApp()));
+    await tester.pumpWidget(const ProviderScope(child: FafoApp()));
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Discover\nwhat\'s happening\naround you'), findsOneWidget);
+    expect(
+      find.text('Discover\nwhat\'s happening\naround you'),
+      findsOneWidget,
+    );
     expect(find.text('Get Started'), findsOneWidget);
     expect(find.text('I already have an account'), findsOneWidget);
   });

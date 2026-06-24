@@ -8,7 +8,8 @@
     <application
         android:label="Fafo"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -29,6 +30,19 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="getfafo.app"
+                    android:pathPrefix="/event" />
+                <data
+                    android:scheme="https"
+                    android:host="www.getfafo.app"
+                    android:pathPrefix="/event" />
             </intent-filter>
         </activity>
         <!-- Background/tray FCM notifications use this channel (matches the one

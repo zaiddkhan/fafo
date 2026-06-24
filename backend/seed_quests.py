@@ -1,4 +1,4 @@
-"""Seed a starter set of WhatsPopn Side Quests into Firestore.
+"""Seed a starter set of Fafo Side Quests into Firestore.
 
 Idempotent: each quest uses a deterministic document id (its slug), so running
 this multiple times updates the same docs rather than creating duplicates.

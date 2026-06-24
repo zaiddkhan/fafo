@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// WhatsPopn Firestore security rules.
+// Fafo Firestore security rules.
 //
 // The backend (FastAPI) uses the Firebase Admin SDK, which bypasses these rules
 // entirely — so ALL writes and almost all reads happen server-side and stay

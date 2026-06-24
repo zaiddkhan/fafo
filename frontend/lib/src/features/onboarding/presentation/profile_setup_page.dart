@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/router/app_router.dart';
+import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
@@ -55,18 +56,21 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
 
   Future<String> _reverseGeocodeArea(Area area) async {
     try {
-      final response = await Dio().get<Map<String, dynamic>>(
-        'https://nominatim.openstreetmap.org/reverse',
-        queryParameters: {
-          'format': 'jsonv2',
-          'lat': area.lat,
-          'lon': area.lng,
-        },
-        options: Options(headers: {'User-Agent': 'WhatsPopn Flutter Web'}),
-      ).timeout(const Duration(seconds: 8));
+      final response = await Dio()
+          .get<Map<String, dynamic>>(
+            'https://nominatim.openstreetmap.org/reverse',
+            queryParameters: {
+              'format': 'jsonv2',
+              'lat': area.lat,
+              'lon': area.lng,
+            },
+            options: Options(headers: {'User-Agent': 'Fafo Flutter Web'}),
+          )
+          .timeout(const Duration(seconds: 8));
       final data = response.data;
       final address = data?['address'] as Map<String, dynamic>?;
-      final neighborhood = address?['neighbourhood'] ??
+      final neighborhood =
+          address?['neighbourhood'] ??
           address?['suburb'] ??
           address?['city'] ??
           address?['town'] ??
@@ -237,14 +241,20 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
           usersRepo
               .uploadProfilePhoto(_selectedAvatar!)
               .timeout(const Duration(seconds: 12))
-              .catchError((_) => PhotoUploadResponse(uploadPath: '', photoUrl: '')),
+              .catchError(
+                (_) => PhotoUploadResponse(uploadPath: '', photoUrl: ''),
+              ),
         );
       }
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(onboardingCompleteKey, true);
 
-      if (mounted) context.go(MainShell.routePath);
+      if (mounted) {
+        final pendingPath = await consumePendingDeepLinkPath();
+        if (!mounted) return;
+        context.go(pendingPath ?? MainShell.routePath);
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -448,7 +458,9 @@ class _AreaSetupCard extends StatelessWidget {
             children: [
               Icon(
                 Icons.location_on_outlined,
-                color: hasArea ? AppColors.accentPrimary : AppColors.textTertiary,
+                color: hasArea
+                    ? AppColors.accentPrimary
+                    : AppColors.textTertiary,
                 size: 20,
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -544,15 +556,13 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
   }
 
   Future<List<_LocationSearchResult>> _searchLocations(String query) async {
-    final response = await Dio().get<List<dynamic>>(
-      'https://nominatim.openstreetmap.org/search',
-      queryParameters: {
-        'format': 'jsonv2',
-        'q': query,
-        'limit': 6,
-      },
-      options: Options(headers: {'User-Agent': 'WhatsPopn Flutter Web'}),
-    ).timeout(const Duration(seconds: 10));
+    final response = await Dio()
+        .get<List<dynamic>>(
+          'https://nominatim.openstreetmap.org/search',
+          queryParameters: {'format': 'jsonv2', 'q': query, 'limit': 6},
+          options: Options(headers: {'User-Agent': 'Fafo Flutter Web'}),
+        )
+        .timeout(const Duration(seconds: 10));
 
     return (response.data ?? const [])
         .whereType<Map<String, dynamic>>()
@@ -574,10 +584,7 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Search location',
-              style: theme.textTheme.headlineSmall,
-            ),
+            Text('Search location', style: theme.textTheme.headlineSmall),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _controller,

@@ -1,6 +1,6 @@
-# WhatsPopn Admin Panel
+# Fafo Admin Panel
 
-Standalone React admin panel for the WhatsPopn (Fafu) team. Reuses the existing
+Standalone React admin panel for the Fafo team. Reuses the existing
 FastAPI + Firestore backend (`../backend`). The Flutter app is untouched.
 
 ## Modules

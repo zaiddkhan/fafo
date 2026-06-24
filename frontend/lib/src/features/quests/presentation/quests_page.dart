@@ -48,6 +48,8 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
     };
     final activeCount = byId.values.where((a) => a.isActive).length;
     final atLimit = activeCount >= kMaxActiveQuests;
+    final isDark = theme.brightness == Brightness.dark;
+    final headingColor = isDark ? AppColors.textPrimary : AppColors.ink;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -101,7 +103,7 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                           Text(
                             'Normal',
                             style: theme.textTheme.displayMedium?.copyWith(
-                              color: AppColors.ink,
+                              color: headingColor,
                               fontSize: 18,
                             ),
                           ),
@@ -134,12 +136,6 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                                   .read(questsRepositoryProvider)
                                   .activateQuest(quest.id),
                             ),
-                            onComplete: () => _run(
-                              quest.id,
-                              () => ref
-                                  .read(questsRepositoryProvider)
-                                  .completeQuest(quest.id),
-                            ),
                             onDrop: () => _run(
                               quest.id,
                               () => ref
@@ -168,7 +164,6 @@ class _QuestCard extends StatelessWidget {
     required this.atLimit,
     required this.busy,
     required this.onStart,
-    required this.onComplete,
     required this.onDrop,
   });
   final QuestResponse quest;
@@ -176,150 +171,75 @@ class _QuestCard extends StatelessWidget {
   final bool atLimit;
   final bool busy;
   final VoidCallback onStart;
-  final VoidCallback onComplete;
   final VoidCallback onDrop;
 
   @override
   Widget build(BuildContext context) {
     final color = switch (quest.difficulty) {
-      QuestDifficulty.easy => const Color(0xFF35B45A),
+      QuestDifficulty.easy => const Color(0xFF5A7F2B),
       QuestDifficulty.medium => const Color(0xFFE6B23A),
       QuestDifficulty.hard => const Color(0xFFE5484D),
     };
     final isActive = activation?.isActive ?? false;
-    final isCompleted = activation?.isCompleted ?? false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark ? AppColors.darkSurface : Colors.white;
+    final titleColor = isDark ? AppColors.darkTextPrimary : AppColors.ink;
+    final subtitleColor = isDark
+        ? AppColors.darkTextSecondary
+        : const Color(0xFF8D8D8D);
+    final borderColor = isDark ? AppColors.darkBorder : const Color(0xFFD9D6CF);
     final description =
         (quest.description != null && quest.description!.isNotEmpty)
         ? quest.description!
-        : 'Once you start, you will have 24 hrs to complete this quest';
+        : quest.city ?? 'Anywhere in your area';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.ink, width: 1.6),
+        color: surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderColor, width: 1.4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  quest.title,
-                  style: const TextStyle(
-                    color: AppColors.ink,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                    height: 1.2,
-                  ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: isDark ? 0.24 : 0.14),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '${quest.difficulty.badgeLabel.toUpperCase()} • ${quest.difficulty.timeEstimate.replaceAll('<', 'Under')}',
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
                 ),
               ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      quest.difficulty.badgeLabel,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    quest.difficulty.timeEstimate,
-                    style: const TextStyle(
-                      color: Color(0xFF6D6D78),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 10),
-          if (isCompleted) ...[
-            Row(
-              children: const [
-                Icon(Icons.check_circle, color: Color(0xFF35B45A), size: 18),
-                SizedBox(width: 6),
-                Text(
-                  'Completed',
-                  style: TextStyle(
-                    color: Color(0xFF35B45A),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 14),
+          Text(
+            quest.title,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: titleColor,
+              fontWeight: FontWeight.w800,
+              height: 1.25,
             ),
-          ] else if (isActive) ...[
-            RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                  color: Color(0xFF3A3A40),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  height: 1.3,
-                ),
-                children: const [
-                  TextSpan(text: 'You have '),
-                  TextSpan(
-                    text: '24 hrs',
-                    style: TextStyle(
-                      decoration: TextDecoration.underline,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  TextSpan(text: ' to complete this quest'),
-                ],
-              ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isActive ? 'Active in your quest list' : description,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: subtitleColor,
+              fontWeight: FontWeight.w600,
+              height: 1.3,
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _QuestButton(
-                    label: 'Complete',
-                    filled: true,
-                    onTap: busy ? null : onComplete,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _QuestButton(
-                    label: 'Drop',
-                    filled: false,
-                    onTap: busy ? null : onDrop,
-                  ),
-                ),
-              ],
-            ),
-          ] else ...[
-            Text(
-              description,
-              style: const TextStyle(
-                color: Color(0xFF6D6D78),
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-                height: 1.35,
-              ),
-            ),
+          ),
+          if (!isActive) ...[
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
@@ -330,6 +250,13 @@ class _QuestCard extends StatelessWidget {
                 filled: true,
                 onTap: (busy || atLimit) ? null : onStart,
               ),
+            ),
+          ] else ...[
+            const SizedBox(height: 14),
+            _QuestButton(
+              label: 'Drop quest',
+              filled: false,
+              onTap: busy ? null : onDrop,
             ),
           ],
         ],
@@ -351,6 +278,8 @@ class _QuestButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final disabled = onTap == null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final outlineColor = isDark ? AppColors.darkTextPrimary : AppColors.ink;
     return GestureDetector(
       onTap: onTap,
       child: Opacity(
@@ -359,17 +288,17 @@ class _QuestButton extends StatelessWidget {
           height: 42,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: filled ? AppColors.accentPrimary : Colors.white,
+            color: filled
+                ? AppColors.accentPrimary
+                : (isDark ? AppColors.darkSurface : Colors.white),
             borderRadius: BorderRadius.circular(8),
-            border: filled
-                ? null
-                : Border.all(color: AppColors.ink, width: 1.4),
+            border: filled ? null : Border.all(color: outlineColor, width: 1.4),
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: filled ? Colors.white : AppColors.ink,
+              color: filled ? Colors.white : outlineColor,
               fontWeight: FontWeight.w800,
               fontSize: 14,
             ),

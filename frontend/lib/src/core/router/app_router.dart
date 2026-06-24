@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/services/shared_preferences_provider.dart';
+import 'package:fafu/src/features/auth/data/auth_repository.dart';
 import 'package:fafu/src/features/auth/presentation/login_page.dart';
 import 'package:fafu/src/features/auth/presentation/otp_page.dart';
 import 'package:fafu/src/features/auth/presentation/signup_page.dart';
@@ -40,7 +42,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // A non-user following a shared event link must sign in first to see the
       // details ("sign in first to know more"). Gate any deep link behind the
       // splash/sign-in screen until onboarding is complete.
-      if (!isOnboarded && path.startsWith('/event/')) {
+      if (!isOnboarded && isEventDeepLinkPath(path)) {
+        if (prefs != null) savePendingDeepLinkPathSync(prefs, state.uri.path);
         return SplashPage.routePath;
       }
 
@@ -71,6 +74,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             phoneNumber: extra['phoneNumber'] as String? ?? '',
             verificationId: extra['verificationId'] as String? ?? '',
             resendToken: extra['resendToken'] as int?,
+            pendingVerification:
+                extra['pendingVerification']
+                    as Future<PhoneVerificationResult>?,
           );
         },
       ),

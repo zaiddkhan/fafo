@@ -233,6 +233,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
     final lat = _lat;
     final lng = _lng;
     final locationName = _locationName;
+    final description = _descriptionController.text.trim();
 
     final organizerName = _organizerNameController.text.trim();
     final organizerContact = _organizerContactController.text.trim();
@@ -244,6 +245,8 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       validation = 'Pick a category.';
     } else if (lat == null || lng == null || locationName == null) {
       validation = 'Set a location on the map.';
+    } else if (description.length > 1000) {
+      validation = 'Keep the event description under 1000 characters.';
     } else if (organizerName.isEmpty) {
       validation =
           'Add the organizer\'s full name so attendees know who is hosting.';
@@ -275,7 +278,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
 
     final request = EventCreateRequest(
       title: title,
-      description: optional(_descriptionController),
+      description: description.isEmpty ? null : description,
       categoryId: categoryId!,
       eventType: _eventType,
       customEmoji: optional(_customEmojiController),

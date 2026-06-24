@@ -53,12 +53,22 @@ class _CreatorApplicationPageState
     final purpose = _purposeController.text.trim();
     final phone = _phoneController.text.trim();
 
-    if (purpose.length < 10) {
-      setState(() => _error = 'Tell us a bit more about your purpose (min 10 characters).');
+    final purposeLetters = RegExp(r'[A-Za-z]').allMatches(purpose).length;
+    final phoneDigits = phone.replaceAll(RegExp(r'\D'), '');
+
+    if (purpose.length < 10 || purposeLetters < 10) {
+      setState(
+        () => _error =
+            'Tell us a bit more about your purpose using words (min 10 letters).',
+      );
       return;
     }
-    if (phone.length < 10) {
-      setState(() => _error = 'Enter a valid phone number.');
+    if (RegExp(r'^\d+$').hasMatch(purpose)) {
+      setState(() => _error = 'Purpose cannot be only numbers.');
+      return;
+    }
+    if (phoneDigits.length != 10) {
+      setState(() => _error = 'Enter a valid 10-digit phone number.');
       return;
     }
 
@@ -69,7 +79,7 @@ class _CreatorApplicationPageState
 
     final request = CreatorApplicationRequest(
       purpose: purpose,
-      phone: phone,
+      phone: phoneDigits,
       socialLinks: _splitLinks(_socialLinksController.text),
       relevantLinks: _splitLinks(_relevantLinksController.text),
     );
@@ -110,10 +120,7 @@ class _CreatorApplicationPageState
             AppSpacing.xxl,
           ),
           children: [
-            Text(
-              'Apply to host events',
-              style: theme.textTheme.displayLarge,
-            ),
+            Text('Apply to host events', style: theme.textTheme.displayLarge),
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Creator verification is a one-time check so attendees can trust who is hosting. We review every application personally and reach out over email.',
