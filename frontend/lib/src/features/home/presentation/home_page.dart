@@ -787,36 +787,6 @@ class HomePageState extends ConsumerState<HomePage> {
               child: CircularProgressIndicator(color: AppColors.accentPrimary),
             ),
 
-          Positioned(
-            right: 14,
-            bottom: 174,
-            child: SafeArea(
-              top: false,
-              child: Material(
-                color: statusSurface,
-                elevation: 4,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: _centerOnUserLocation,
-                  child: SizedBox(
-                    width: 46,
-                    height: 46,
-                    child: _locatingUser
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Icon(
-                            Icons.my_location_rounded,
-                            color: AppColors.accentPrimary,
-                          ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
           // Top overlay: search + profile
           SafeArea(
             child: Padding(
@@ -1017,6 +987,36 @@ class HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
+
+          Positioned(
+            right: 14,
+            bottom: _selectedEvent == null ? 174 : 226,
+            child: SafeArea(
+              top: false,
+              child: Material(
+                color: statusSurface,
+                elevation: 8,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: _centerOnUserLocation,
+                  child: SizedBox(
+                    width: 46,
+                    height: 46,
+                    child: _locatingUser
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            Icons.my_location_rounded,
+                            color: AppColors.accentPrimary,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
           if (_selectedEvent == null && _filteredEvents.isNotEmpty)
             Positioned(
               left: 0,

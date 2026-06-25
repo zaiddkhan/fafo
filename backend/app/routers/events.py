@@ -378,18 +378,20 @@ def list_joined_events(
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(minutes=VISIBILITY_WINDOW_MINUTES)
 
-    # Avoid collection-group uid index dependency while Firestore single-field
-    # indexes are still building. This is less efficient but reliable for dev/MVP.
     results = []
-    for doc in db.collection("events").limit(MAX_PAGE_LIMIT * 5).stream():
-        joinee_doc = doc.reference.collection("joinees").document(uid).get()
-        if not joinee_doc.exists:
+    joined_refs = db.collection_group("joinees").where("uid", "==", uid).stream()
+    for joined_doc in joined_refs:
+        event_ref = joined_doc.reference.parent.parent
+        if event_ref is None:
             continue
-        data = doc.to_dict()
+        event_doc = event_ref.get()
+        if not event_doc.exists:
+            continue
+        data = event_doc.to_dict()
         event_time = _optional_utc(data.get("date_time"))
         if data.get("cancelled") or event_time is None or event_time < cutoff:
             continue
-        results.append(_event_to_response(doc.id, data, uid))
+        results.append(_event_to_response(event_doc.id, data, uid))
 
     results.sort(key=lambda e: e.date_time)
     return results[:limit]
