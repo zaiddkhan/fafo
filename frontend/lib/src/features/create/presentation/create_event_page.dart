@@ -39,9 +39,6 @@ class CreateEventPage extends ConsumerStatefulWidget {
 class _CreateEventPageState extends ConsumerState<CreateEventPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _organizerNameController = TextEditingController();
-  final _organizerContactController = TextEditingController();
-  final _organizerInstagramController = TextEditingController();
   final _capacityController = TextEditingController();
   final _customEmojiController = TextEditingController();
   final _imagePicker = ImagePicker();
@@ -75,9 +72,6 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
     if (event != null) {
       _titleController.text = event.title;
       _descriptionController.text = event.description ?? '';
-      _organizerNameController.text = event.organizerName ?? '';
-      _organizerContactController.text = event.organizerContact ?? '';
-      _organizerInstagramController.text = event.organizerInstagram ?? '';
       _capacityController.text = event.capacity?.toString() ?? '';
       _customEmojiController.text = event.customEmoji ?? '';
       _selectedCategoryId = event.categoryId;
@@ -235,8 +229,6 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
     final locationName = _locationName;
     final description = _descriptionController.text.trim();
 
-    final organizerName = _organizerNameController.text.trim();
-    final organizerContact = _organizerContactController.text.trim();
 
     String? validation;
     if (title.isEmpty) {
@@ -247,11 +239,6 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       validation = 'Set a location on the map.';
     } else if (description.length > 1000) {
       validation = 'Keep the event description under 1000 characters.';
-    } else if (organizerName.isEmpty) {
-      validation =
-          'Add the organizer\'s full name so attendees know who is hosting.';
-    } else if (organizerContact.isEmpty) {
-      validation = 'Add a public organizer contact (email or phone).';
     }
     if (validation != null) {
       setState(() => _submitError = validation);
@@ -289,9 +276,6 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       locationDetails: _locationDetails,
       dateTime: _selectedDateTime.toUtc(),
       capacity: capacity,
-      organizerName: optional(_organizerNameController),
-      organizerContact: optional(_organizerContactController),
-      organizerInstagram: optional(_organizerInstagramController),
     );
 
     try {
@@ -318,9 +302,6 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
             locationDetails: request.locationDetails,
             dateTime: request.dateTime,
             capacity: request.capacity,
-            organizerName: request.organizerName,
-            organizerContact: request.organizerContact,
-            organizerInstagram: request.organizerInstagram,
           ),
         );
         if (_selectedCoverImage != null) {
@@ -354,9 +335,6 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
       _published = false;
       _titleController.clear();
       _descriptionController.clear();
-      _organizerNameController.clear();
-      _organizerContactController.clear();
-      _organizerInstagramController.clear();
       _capacityController.clear();
       _customEmojiController.clear();
       _selectedCoverImage = null;
@@ -379,9 +357,6 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _organizerNameController.dispose();
-    _organizerContactController.dispose();
-    _organizerInstagramController.dispose();
     _capacityController.dispose();
     _customEmojiController.dispose();
     super.dispose();
@@ -684,111 +659,7 @@ class _CreateEventPageState extends ConsumerState<CreateEventPage> {
                 ).copyWith(counterText: ''),
               ),
             ),
-            const SizedBox(height: 22),
-            _FieldLabel(label: 'Organizer Verification', textColor: fieldText),
-            const SizedBox(height: 8),
-            _RaisedSurface(
-              radius: 8,
-              minHeight: 96,
-              shadowColor: shadowColor,
-              outlineColor: outlineColor,
-              child: Container(
-                width: double.infinity,
-                color: fieldBackground,
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.verified_user_outlined,
-                          color: AppColors.accentPrimary,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Trust check for attendees',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: fieldText,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Add your public organizer details, including Instagram, so the event page shows who is hosting it.',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: hintColor,
-                        fontWeight: FontWeight.w600,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            _FieldLabel(label: 'Organizer Full Name', textColor: fieldText),
-            const SizedBox(height: 8),
-            _OutlinedFieldShell(
-              backgroundColor: fieldBackground,
-              outlineColor: outlineColor,
-              shadowColor: shadowColor,
-              child: TextField(
-                controller: _organizerNameController,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: fieldText,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: _fieldDecoration(
-                  theme,
-                  hintColor,
-                  'Who is organizing this event?',
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            _FieldLabel(label: 'Organizer Contact', textColor: fieldText),
-            const SizedBox(height: 8),
-            _OutlinedFieldShell(
-              backgroundColor: fieldBackground,
-              outlineColor: outlineColor,
-              shadowColor: shadowColor,
-              child: TextField(
-                controller: _organizerContactController,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: fieldText,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: _fieldDecoration(
-                  theme,
-                  hintColor,
-                  'Public email or phone',
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            _FieldLabel(label: 'Public Instagram Handle', textColor: fieldText),
-            const SizedBox(height: 8),
-            _OutlinedFieldShell(
-              backgroundColor: fieldBackground,
-              outlineColor: outlineColor,
-              shadowColor: shadowColor,
-              child: TextField(
-                controller: _organizerInstagramController,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: fieldText,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: _fieldDecoration(
-                  theme,
-                  hintColor,
-                  '@yourpublichandle',
-                ),
-              ),
-            ),
+
             if (_submitError != null) ...[
               const SizedBox(height: 16),
               Text(
@@ -1094,7 +965,6 @@ class _RaisedSurface extends StatelessWidget {
     required this.radius,
     required this.shadowColor,
     required this.outlineColor,
-    this.minHeight,
     this.height,
   });
 
@@ -1102,7 +972,6 @@ class _RaisedSurface extends StatelessWidget {
   final double radius;
   final Color shadowColor;
   final Color outlineColor;
-  final double? minHeight;
   final double? height;
 
   @override
@@ -1117,9 +986,6 @@ class _RaisedSurface extends StatelessWidget {
           Transform.translate(
             offset: Offset(offset, offset),
             child: Container(
-              constraints: minHeight != null
-                  ? BoxConstraints(minHeight: minHeight!)
-                  : null,
               height: height,
               decoration: BoxDecoration(
                 color: shadowColor,
@@ -1128,9 +994,6 @@ class _RaisedSurface extends StatelessWidget {
             ),
           ),
           Container(
-            constraints: minHeight != null
-                ? BoxConstraints(minHeight: minHeight!)
-                : null,
             height: height,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(radius),

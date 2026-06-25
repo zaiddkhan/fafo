@@ -208,6 +208,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final themeMode = ref.watch(themeModeControllerProvider);
     final isDarkMode = themeMode == ThemeMode.dark;
     final selectedArea = ref.watch(selectedAreaProvider);
+    final isCreator = ref.watch(currentProfileProvider).value?.isCreator ?? false;
     final areaLabel = selectedArea == null
         ? 'Auto (GPS)'
         : selectedArea.label.split(',').first;
@@ -301,12 +302,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     onTap: _changeArea,
                   ),
-                  _SettingsTile(
-                    icon: Icons.verified_outlined,
-                    title: 'Become a Creator',
-                    onTap: () =>
-                        context.pushNamed(CreatorApplicationPage.routeName),
-                  ),
+                  if (!isCreator)
+                    _SettingsTile(
+                      icon: Icons.verified_outlined,
+                      title: 'Become a Creator',
+                      onTap: () =>
+                          context.pushNamed(CreatorApplicationPage.routeName),
+                    ),
                   const SizedBox(height: AppSpacing.xl),
 
                   // Notifications section

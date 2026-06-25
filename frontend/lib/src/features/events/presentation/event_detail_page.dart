@@ -18,6 +18,8 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
+import 'package:fafu/src/features/home/presentation/home_page.dart';
+import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/users/data/users_providers.dart';
 import 'package:fafu/src/shared/widgets/app_pressable.dart';
 
@@ -263,9 +265,9 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       friendsOnly: false,
       rating: initial?.rating ?? 4.7,
       timing: initial?.timing ?? MockEventTiming.today,
-      organizerName: initial?.organizerName ?? 'Fafo Creator',
-      organizerContact: initial?.organizerContact ?? '',
-      organizerInstagram: initial?.organizerInstagram ?? '',
+      organizerName: backend.organizerName ?? initial?.organizerName ?? 'Fafo Creator',
+      organizerContact: backend.organizerContact ?? initial?.organizerContact ?? '',
+      organizerInstagram: backend.organizerInstagram ?? initial?.organizerInstagram ?? '',
       organizerVerified: true,
       imageUrl:
           backend.bannerUrl ??
@@ -317,31 +319,18 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     return 'Join';
   }
 
-  Future<void> _viewOnMap() async {
+  void _viewOnMap() {
     final event = _displayEvent;
     if (event == null) return;
-    final lat = event.lat;
-    final lng = event.lng;
-    final label = Uri.encodeComponent(event.venue);
-    // Open the location in the device's maps app. Try a geo: URI first (Android),
-    // then fall back to a Google Maps web URL that works everywhere.
-    final geoUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng($label)');
-    final webUri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-    );
-    try {
-      if (await canLaunchUrl(geoUri)) {
-        await launchUrl(geoUri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(webUri, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open the map.')),
+    ref.read(homeMapFocusProvider.notifier).setFocus(
+          HomeMapFocusTarget(
+            eventId: event.id,
+            lat: event.lat,
+            lng: event.lng,
+          ),
         );
-      }
-    }
+    ref.read(mainShellTabProvider.notifier).setTab(0);
+    context.goNamed(MainShell.routeName);
   }
 
   Uri get _shareUri {

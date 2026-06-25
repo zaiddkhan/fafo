@@ -22,6 +22,30 @@ import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/core/services/shared_preferences_provider.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
 
+class HomeMapFocusTarget {
+  const HomeMapFocusTarget({
+    required this.eventId,
+    required this.lat,
+    required this.lng,
+  });
+
+  final String eventId;
+  final double lat;
+  final double lng;
+}
+
+final homeMapFocusProvider =
+    NotifierProvider<HomeMapFocusNotifier, HomeMapFocusTarget?>(HomeMapFocusNotifier.new);
+
+class HomeMapFocusNotifier extends Notifier<HomeMapFocusTarget?> {
+  @override
+  HomeMapFocusTarget? build() => null;
+
+  void setFocus(HomeMapFocusTarget target) => state = target;
+
+  void clear() => state = null;
+}
+
 enum _DateTimeFilter {
   any('Any time'),
   today('Today'),
@@ -531,6 +555,10 @@ class HomePageState extends ConsumerState<HomePage> {
 
   Future<void> _onMapCreated(MapController controller) async {
     _mapController = controller;
+    final pendingFocus = ref.read(homeMapFocusProvider);
+    if (pendingFocus != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyMapFocus(pendingFocus));
+    }
 
     // MapLibre's Android location component can throw a native
     // SecurityException if enabled without a granted runtime permission. The
@@ -638,6 +666,37 @@ class HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  Future<void> _applyMapFocus(HomeMapFocusTarget target) async {
+    if (!mounted || _mapController == null) return;
+    ref.read(homeMapFocusProvider.notifier).clear();
+    MockEvent? matchingEvent;
+    for (final event in _events) {
+      if (event.id == target.eventId) {
+        matchingEvent = event;
+        break;
+      }
+    }
+    setState(() {
+      _lat = target.lat;
+      _lng = target.lng;
+      _eventsVisibleOnMap = true;
+      if (matchingEvent != null) {
+        _selectedEvent = matchingEvent;
+        _pagedEvents = _orderedEventsAround(matchingEvent);
+      } else {
+        _selectedEvent = null;
+        _pagedEvents = const [];
+      }
+    });
+    await _mapController!.animateCamera(
+      center: Geographic(lon: target.lng, lat: target.lat),
+      zoom: 14.5,
+      pitch: 45,
+      nativeDuration: const Duration(milliseconds: 700),
+    );
+    _rebuildVisibleEvents();
+  }
+
   /// Re-centres the map when the user picks a new area in Settings.
   void _applySelectedArea(SelectedArea area) {
     if (!mounted) return;
@@ -684,6 +743,9 @@ class HomePageState extends ConsumerState<HomePage> {
       if (next != null && (next.lat != _lat || next.lng != _lng)) {
         _applySelectedArea(next);
       }
+    });
+    ref.listen<HomeMapFocusTarget?>(homeMapFocusProvider, (_, target) {
+      if (target != null) _applyMapFocus(target);
     });
 
     final theme = Theme.of(context);

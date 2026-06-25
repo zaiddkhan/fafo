@@ -919,68 +919,16 @@ class _BlogCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFEF8),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0xFF161616)),
-                    ),
-                    child: Text(
-                      '${blog.city} • ${blog.readTime ?? '3 min read'}',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: const Color(0xFF161616),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
                   const Spacer(),
                   Text(
                     blog.title,
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontSize: 22,
                       height: 0.95,
                     ),
-                  ),
-                  const SizedBox(height: 7),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          blog.subtitle ?? blog.body,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.86),
-                            fontWeight: FontWeight.w700,
-                            height: 1.12,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 30,
-                        height: 30,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: AppColors.accentPrimary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),

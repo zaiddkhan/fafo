@@ -120,7 +120,26 @@ def _event_to_response(doc_id: str, data: dict, current_uid: str | None = None) 
     )
 
 
-def build_event_data(body: EventCreateRequest, creator_uid: str, *, seeded: bool = False) -> dict:
+def _creator_public_details(db, creator_uid: str) -> dict:
+    user_doc = db.collection("users").document(creator_uid).get()
+    user = user_doc.to_dict() if user_doc.exists else {}
+    app_doc = db.collection("creator_applications").document(creator_uid).get()
+    application = app_doc.to_dict() if app_doc.exists else {}
+    social_links = application.get("social_links", []) or []
+    instagram = next((link for link in social_links if "instagram.com" in link.lower() or link.strip().startswith("@")), None)
+    if instagram:
+        instagram = instagram.strip()
+        if "instagram.com/" in instagram.lower():
+            instagram = instagram.rstrip("/").split("/")[-1]
+        instagram = instagram.lstrip("@")
+    return {
+        "organizer_name": user.get("display_name") or user.get("username") or "Fafo Creator",
+        "organizer_contact": application.get("phone") or user.get("phone") or "",
+        "organizer_instagram": instagram,
+    }
+
+
+def build_event_data(body: EventCreateRequest, creator_uid: str, *, seeded: bool = False, db=None) -> dict:
     """Build the Firestore document for a new event.
 
     Shared by creator-facing creation and admin Event Seeding. `seeded` marks
@@ -128,6 +147,7 @@ def build_event_data(body: EventCreateRequest, creator_uid: str, *, seeded: bool
     surfaces (not part of EventResponse).
     """
     now = datetime.now(timezone.utc)
+    creator_details = _creator_public_details(db, creator_uid) if db is not None else {}
     return {
         "creator_uid": creator_uid,
         "title": body.title,
@@ -147,9 +167,9 @@ def build_event_data(body: EventCreateRequest, creator_uid: str, *, seeded: bool
         "cancelled": False,
         "cancel_reason": None,
         "banner_url": None,
-        "organizer_name": body.organizer_name,
-        "organizer_contact": body.organizer_contact,
-        "organizer_instagram": body.organizer_instagram,
+        "organizer_name": body.organizer_name or creator_details.get("organizer_name"),
+        "organizer_contact": body.organizer_contact or creator_details.get("organizer_contact"),
+        "organizer_instagram": body.organizer_instagram or creator_details.get("organizer_instagram"),
         "seeded": seeded,
         "created_at": now,
         "updated_at": now,
@@ -201,7 +221,7 @@ def create_event(
             detail="Invalid category_id",
         )
 
-    event_data = build_event_data(body, uid)
+    event_data = build_event_data(body, uid, db=db)
     event_id = str(uuid4())
     db.collection("events").document(event_id).set(event_data)
 

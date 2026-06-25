@@ -82,7 +82,7 @@ class _CreateNudgePageState extends ConsumerState<CreateNudgePage> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: AppColors.ink),
+                    icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   Text(
@@ -115,7 +115,7 @@ class _CreateNudgePageState extends ConsumerState<CreateNudgePage> {
                         animation: _title,
                         builder: (context, _) => Text(
                           '(${_title.text.length}/100 Characters)',
-                          style: const TextStyle(color: Color(0xFF6D6D78), fontWeight: FontWeight.w600, fontSize: 12),
+                          style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600, fontSize: 12),
                         ),
                       ),
                     ),
@@ -172,7 +172,7 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w900, fontSize: 18),
+      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w900, fontSize: 18),
     );
   }
 }
@@ -199,8 +199,8 @@ class _NudgeField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.ink, width: 1.6),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border, width: 1.6),
         borderRadius: BorderRadius.circular(10),
       ),
       child: TextField(
@@ -208,8 +208,8 @@ class _NudgeField extends StatelessWidget {
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         maxLength: maxLength,
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink),
-        decoration: const InputDecoration(
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+        decoration: InputDecoration(
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
@@ -217,8 +217,9 @@ class _NudgeField extends StatelessWidget {
           isDense: true,
           counterText: '',
           contentPadding: EdgeInsets.zero,
-          hintStyle: TextStyle(color: Color(0xFF9A9AA2), fontWeight: FontWeight.w600, fontSize: 15),
-        ).copyWith(hintText: hintText),
+          hintStyle: TextStyle(color: AppColors.textTertiary, fontWeight: FontWeight.w600, fontSize: 15),
+          hintText: hintText,
+        ),
       ),
     );
   }

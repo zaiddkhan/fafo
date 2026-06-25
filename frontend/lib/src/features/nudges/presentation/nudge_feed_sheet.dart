@@ -78,7 +78,7 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
     final palette = _activePalette();
 
     return Material(
-      color: Colors.white,
+      color: AppColors.bgPrimary,
       child: SafeArea(
         child: Column(
           children: [
@@ -88,15 +88,15 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
               online: widget.online,
               accent: palette.primary,
             ),
-            const Divider(height: 1, color: Color(0xFF111111)),
+            Divider(height: 1, color: AppColors.border),
             Expanded(
               child: feed.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)),
-                error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(e.toString()))),
+                error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(e.toString(), style: TextStyle(color: AppColors.textPrimary)))),
                 data: (items) {
                   final ordered = [...items]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
                   if (ordered.isEmpty) {
-                    return const Center(child: Text('No nudges yet. Tap + Nudge to start.'));
+                    return Center(child: Text('No nudges yet. Tap + Nudge to start.', style: TextStyle(color: AppColors.textPrimary)));
                   }
                   return ListView.builder(
                     padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
@@ -119,7 +119,7 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
                   height: 46,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.ink,
+                      backgroundColor: AppColors.accentPrimary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -152,7 +152,7 @@ class _NudgeHeader extends StatelessWidget {
       height: 74,
       child: Row(
         children: [
-          IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).pop()),
+          IconButton(icon: Icon(Icons.arrow_back, color: AppColors.textPrimary), onPressed: () => Navigator.of(context).pop()),
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -160,12 +160,12 @@ class _NudgeHeader extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.ink),
+                  border: Border.all(color: AppColors.border),
                   borderRadius: BorderRadius.circular(6),
                   image: photoUrl == null ? null : DecorationImage(image: NetworkImage(photoUrl!), fit: BoxFit.cover),
-                  color: const Color(0xFFF5F5F5),
+                  color: AppColors.surface,
                 ),
-                child: photoUrl == null ? const Center(child: Text('☕', style: TextStyle(fontSize: 18))) : null,
+                child: photoUrl == null ? Center(child: Text('☕', style: TextStyle(fontSize: 18, color: AppColors.textPrimary))) : null,
               ),
               if (online)
                 Positioned(
@@ -176,7 +176,7 @@ class _NudgeHeader extends StatelessWidget {
                     height: 10,
                     decoration: BoxDecoration(
                       color: const Color(0xFF4ED164),
-                      border: Border.all(color: Colors.white, width: 1.5),
+                      border: Border.all(color: AppColors.bgPrimary, width: 1.5),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -251,8 +251,8 @@ class _NudgeBubble extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: AppColors.ink, width: 1.2),
+                      color: AppColors.surface,
+                      border: Border.all(color: AppColors.border, width: 1.2),
                       borderRadius: BorderRadius.circular(7),
                     ),
                     child: Column(
@@ -280,15 +280,15 @@ class _NudgeBubble extends ConsumerWidget {
                                     nudge.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppColors.ink),
+                                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppColors.textPrimary),
                                   ),
                                   const SizedBox(height: 5),
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: Text(createdDate, style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
+                                        child: Text(createdDate, style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                       ),
-                                      Text(createdTime, style: const TextStyle(fontSize: 10, color: Color(0xFF666666))),
+                                      Text(createdTime, style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                     ],
                                   ),
                                 ],
@@ -300,7 +300,7 @@ class _NudgeBubble extends ConsumerWidget {
                         if (canVote)
                           Row(
                             children: [
-                              const Text('Attending?', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                              Text('Attending?', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: _VoteToggle(
@@ -355,7 +355,7 @@ class _NudgeBubble extends ConsumerWidget {
                           ),
                         if (nudge.expectedVoterCount > 1) ...[
                           const SizedBox(height: 7),
-                          Text('${nudge.yesCount}/${nudge.expectedVoterCount} in', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+                          Text('${nudge.yesCount}/${nudge.expectedVoterCount} in', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
                         ],
                       ],
                     ),
@@ -390,7 +390,7 @@ class _NudgeBubble extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bgPrimary,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -412,7 +412,7 @@ class _NudgeBubble extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: palette.soft,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.ink, width: 1.2),
+                        border: Border.all(color: AppColors.border, width: 1.2),
                       ),
                       child: const Center(child: Text('👉', style: TextStyle(fontSize: 22))),
                     ),
@@ -423,12 +423,12 @@ class _NudgeBubble extends ConsumerWidget {
                         children: [
                           Text(
                             nudge.title,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.ink),
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
                           ),
                           const SizedBox(height: 3),
                           Text(
                             isMine ? 'Sent by you' : 'From $friendName',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF6D6D78)),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
                           ),
                         ],
                       ),
@@ -497,9 +497,9 @@ class _NudgeDetailRow extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F7FB),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE1E3EA)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,12 +512,12 @@ class _NudgeDetailRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF6D6D78)),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   value,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.ink),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                 ),
               ],
             ),
@@ -561,7 +561,7 @@ class _VoteToggle extends StatelessWidget {
             child: InkWell(
               onTap: onNo,
               child: Container(
-                color: Colors.white,
+                color: AppColors.surface,
                 alignment: Alignment.center,
                 child: Text('NO', style: TextStyle(color: noColor, fontSize: 9, fontWeight: FontWeight.w900)),
               ),
@@ -585,7 +585,7 @@ class _StateBar extends StatelessWidget {
       height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-      child: Text(label, style: const TextStyle(color: AppColors.ink, fontSize: 10, fontWeight: FontWeight.w900)),
+      child: Text(label, style: TextStyle(color: AppColors.textPrimary, fontSize: 10, fontWeight: FontWeight.w900)),
     );
   }
 }

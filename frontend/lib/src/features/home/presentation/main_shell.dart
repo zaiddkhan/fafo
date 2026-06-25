@@ -14,6 +14,16 @@ import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/quests/presentation/quests_page.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 
+final mainShellTabProvider =
+    NotifierProvider<MainShellTabNotifier, int>(MainShellTabNotifier.new);
+
+class MainShellTabNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void setTab(int index) => state = index;
+}
+
 class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
@@ -135,6 +145,13 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     ref.watch(themeModeControllerProvider);
+    ref.listen<int>(mainShellTabProvider, (_, index) {
+      if (!mounted || index == _navIndex) return;
+      setState(() {
+        _navIndex = index;
+        _stackIndex = index;
+      });
+    });
     // Watch the profile so this rebuilds (and re-evaluates the tooltip gate)
     // once the first-launch flag loads.
     ref.watch(currentProfileProvider);
@@ -164,6 +181,7 @@ class _MainShellState extends ConsumerState<MainShell> {
               questsKey: _questsKey,
               friendsKey: _friendsKey,
               onTap: (index) {
+                ref.read(mainShellTabProvider.notifier).setTab(index);
                 setState(() {
                   _navIndex = index;
                   _stackIndex = index;
