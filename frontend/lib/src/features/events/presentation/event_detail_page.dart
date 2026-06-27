@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:fafu/src/core/config/app_config.dart';
 import 'package:fafu/src/core/config/map_config.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
+import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_chrome.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
@@ -46,6 +47,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
   bool _joining = false;
   bool _joined = false;
   String? _error;
+  ApiErrorType? _loadErrorType;
   EventResponse? _backendEvent;
   Timer? _celebrationTimer;
 
@@ -65,6 +67,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     setState(() {
       _loading = true;
       _error = null;
+      _loadErrorType = null;
     });
 
     try {
@@ -78,7 +81,12 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loadErrorType = e is ApiException ? e.type : ApiErrorType.unknown;
+        });
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -380,6 +388,164 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     );
   }
 
+  void _leaveDetail() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(MainShell.routePath);
+    }
+  }
+
+  Widget _buildErrorState(ThemeData theme) {
+    final type = _loadErrorType ?? ApiErrorType.unknown;
+
+    final IconData icon;
+    final String title;
+    final String message;
+    switch (type) {
+      case ApiErrorType.notFound:
+        icon = Icons.event_busy_rounded;
+        title = 'Event not found';
+        message =
+            "This event may have ended or been removed, so it's no longer "
+            'available.';
+      case ApiErrorType.network:
+        icon = Icons.wifi_off_rounded;
+        title = "You're offline";
+        message = 'Check your internet connection and try again.';
+      case ApiErrorType.unauthorized:
+      case ApiErrorType.forbidden:
+        icon = Icons.lock_outline_rounded;
+        title = 'Sign in to view this';
+        message = 'You need to be signed in to see this event.';
+      default:
+        icon = Icons.error_outline_rounded;
+        title = 'Something went wrong';
+        message = "We couldn't load this event. Please try again in a moment.";
+    }
+
+    // Retrying a genuinely missing event is pointless; offer it only when a
+    // retry could actually succeed (network/server/unknown blips).
+    final showRetry = type != ApiErrorType.notFound;
+
+    return Column(
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: AppPressable(
+              onTap: _leaveDetail,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.bgSecondary,
+                  border: AppChrome.outlineBorder,
+                ),
+                child: Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 104,
+                    height: 104,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentLightest,
+                      shape: BoxShape.circle,
+                      border: AppChrome.outlineBorder,
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 48,
+                      color: AppColors.accentPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  if (showRetry)
+                    _errorButton(
+                      label: 'Try again',
+                      onTap: _loadEvent,
+                      filled: true,
+                    ),
+                  if (showRetry) const SizedBox(height: AppSpacing.sm),
+                  _errorButton(
+                    label: 'Back to home',
+                    onTap: () => context.go(MainShell.routePath),
+                    filled: false,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _errorButton({
+    required String label,
+    required VoidCallback onTap,
+    required bool filled,
+  }) {
+    return AppPressable(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        decoration: BoxDecoration(
+          color: filled ? AppColors.accentPrimary : AppColors.bgSecondary,
+          borderRadius: BorderRadius.circular(AppChrome.controlRadius),
+          border: AppChrome.outlineBorder,
+          boxShadow: AppChrome.cardShadow,
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: filled ? Colors.white : AppColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -389,20 +555,13 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       return Scaffold(
         backgroundColor: AppColors.bgPrimary,
         body: SafeArea(
-          child: Center(
-            child: _loading
-                ? const CircularProgressIndicator(
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(
                     color: AppColors.accentPrimary,
-                  )
-                : Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Text(
-                      _error ?? 'Event not found',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyLarge,
-                    ),
                   ),
-          ),
+                )
+              : _buildErrorState(theme),
         ),
       );
     }
