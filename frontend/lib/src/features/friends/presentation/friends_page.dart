@@ -86,7 +86,9 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
   }
 
   void _showSnack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 
   void _openNudgeFeed(PublicUserResponse user) {

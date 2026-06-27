@@ -81,7 +81,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
       if (!mounted) return;
       setState(() {
         _waitingForCode = false;
-        _error = e.toString();
+        _error = friendlyAuthError(e);
       });
     }
   }
@@ -150,11 +150,17 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         _waitingForCode = false;
       });
       _startTimer();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Code sent'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
           _waitingForCode = false;
-          _error = e.toString();
+          _error = friendlyAuthError(e);
         });
       }
     }
@@ -193,7 +199,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         context.go(ProfileSetupPage.routePath);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = friendlyAuthError(e));
     } finally {
       if (mounted) setState(() => _verifying = false);
     }

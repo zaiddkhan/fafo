@@ -13,6 +13,13 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(ref.watch(dioProvider), FirebaseAuth.instance);
 });
 
+/// Converts any error thrown by the auth flow into a clean, user-facing string.
+/// Never exposes raw exception details (e.g. `ApiException(...)`) to the UI.
+String friendlyAuthError(Object error) {
+  if (error is ApiException) return error.friendlyMessage;
+  return 'Something went wrong. Please try again.';
+}
+
 class PhoneVerificationResult {
   const PhoneVerificationResult({
     required this.verificationId,
@@ -61,6 +68,7 @@ class AuthRepository {
               ApiException(
                 type: ApiErrorType.unknown,
                 message: exception.message ?? 'Phone verification failed',
+                code: exception.code,
               ),
             );
           }
@@ -82,6 +90,7 @@ class AuthRepository {
       throw ApiException(
         type: ApiErrorType.unknown,
         message: e.message ?? 'Phone verification failed',
+        code: e.code,
       );
     }
   }
@@ -101,6 +110,7 @@ class AuthRepository {
       throw ApiException(
         type: ApiErrorType.unknown,
         message: e.message ?? 'Phone verification failed',
+        code: e.code,
       );
     }
   }
@@ -135,6 +145,7 @@ class AuthRepository {
       throw ApiException(
         type: ApiErrorType.unknown,
         message: e.message ?? 'Invalid OTP',
+        code: e.code,
       );
     }
   }

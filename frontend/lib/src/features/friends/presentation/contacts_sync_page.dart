@@ -185,7 +185,12 @@ class _ContactsSyncPageState extends ConsumerState<ContactsSyncPage> {
   }
 
   void _showSnack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    // Replace any queued/visible snackbar so rapid-fire actions (e.g. sending
+    // several friend requests in a row) surface a single toast instead of a
+    // long backlog that plays one after another until exhausted.
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 
   @override

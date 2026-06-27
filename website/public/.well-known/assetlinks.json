@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.getfafo.app",
+      "sha256_cert_fingerprints": [
+        "36:FD:DB:E4:BD:01:AD:2C:5F:ED:24:61:A0:27:D3:4B:25:26:B5:B1:74:85:98:20:E4:25:8D:34:B4:D7:73:25"
+      ]
+    }
+  }
+]

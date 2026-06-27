@@ -13,21 +13,53 @@ class QuestsPage extends ConsumerStatefulWidget {
   ConsumerState<QuestsPage> createState() => _QuestsPageState();
 }
 
+/// How many quests to show before the user taps "View All".
+const int _kQuestPreviewCount = 3;
+
 class _QuestsPageState extends ConsumerState<QuestsPage> {
   final Set<String> _busyQuestIds = <String>{};
 
-  Future<void> _run(String questId, Future<void> Function() action) async {
+  /// Optimistic active-state overrides keyed by quest id. Lets the card flip
+  /// instantly while the activate/abandon request is in flight, instead of
+  /// waiting for the activations list to refetch. Cleared once the refetched
+  /// server state is in sync (or reverted on error).
+  final Map<String, bool> _optimisticActive = <String, bool>{};
+
+  /// Whether the full quest list is revealed (vs. the short preview).
+  bool _showAllQuests = false;
+
+  Future<void> _run(
+    String questId, {
+    required bool activate,
+    required Future<void> Function() action,
+  }) async {
     if (_busyQuestIds.contains(questId)) return;
-    setState(() => _busyQuestIds.add(questId));
+    setState(() {
+      _busyQuestIds.add(questId);
+      _optimisticActive[questId] = activate;
+    });
     final messenger = ScaffoldMessenger.of(context);
     try {
       await action();
       ref.invalidate(questActivationsProvider);
+      // Wait for the refetch so the optimistic override is only dropped once
+      // the real server state agrees — avoids a flicker back to the old state.
+      await ref.read(questActivationsProvider.future);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(_friendlyError(e))));
     } finally {
-      if (mounted) setState(() => _busyQuestIds.remove(questId));
+      if (mounted) {
+        setState(() {
+          _busyQuestIds.remove(questId);
+          _optimisticActive.remove(questId);
+        });
+      }
     }
+  }
+
+  /// Effective active state for a quest, applying any optimistic override.
+  bool _isActive(String questId, Map<String, QuestActivation> byId) {
+    return _optimisticActive[questId] ?? (byId[questId]?.isActive ?? false);
   }
 
   String _friendlyError(Object e) {
@@ -46,7 +78,19 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
       for (final a in activations.asData?.value ?? const <QuestActivation>[])
         a.quest.id: a,
     };
-    final activeCount = byId.values.where((a) => a.isActive).length;
+    // Count active quests using effective state so the header + limit reflect
+    // optimistic start/drop transitions immediately.
+    final activeIds = <String>{
+      for (final a in byId.values.where((a) => a.isActive)) a.quest.id,
+    };
+    _optimisticActive.forEach((id, active) {
+      if (active) {
+        activeIds.add(id);
+      } else {
+        activeIds.remove(id);
+      }
+    });
+    final activeCount = activeIds.length;
     final atLimit = activeCount >= kMaxActiveQuests;
     final isDark = theme.brightness == Brightness.dark;
     final headingColor = isDark ? AppColors.textPrimary : AppColors.ink;
@@ -94,6 +138,10 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                   if (items.isEmpty) {
                     return const Text('No side quests published yet.');
                   }
+                  final canExpand = items.length > _kQuestPreviewCount;
+                  final visible = (_showAllQuests || !canExpand)
+                      ? items
+                      : items.take(_kQuestPreviewCount).toList();
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -107,38 +155,42 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                               fontSize: 18,
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {},
-                            child: Text(
-                              'View All',
-                              style: TextStyle(
-                                color: AppColors.accentPrimary,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
+                          if (canExpand)
+                            GestureDetector(
+                              onTap: () => setState(
+                                () => _showAllQuests = !_showAllQuests,
+                              ),
+                              child: Text(
+                                _showAllQuests ? 'Show less' : 'View All',
+                                style: TextStyle(
+                                  color: AppColors.accentPrimary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 14),
-                      ...items.map((quest) {
-                        final activation = byId[quest.id];
+                      ...visible.map((quest) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: _QuestCard(
                             quest: quest,
-                            activation: activation,
+                            isActive: _isActive(quest.id, byId),
                             atLimit: atLimit,
                             busy: _busyQuestIds.contains(quest.id),
                             onStart: () => _run(
                               quest.id,
-                              () => ref
+                              activate: true,
+                              action: () => ref
                                   .read(questsRepositoryProvider)
                                   .activateQuest(quest.id),
                             ),
                             onDrop: () => _run(
                               quest.id,
-                              () => ref
+                              activate: false,
+                              action: () => ref
                                   .read(questsRepositoryProvider)
                                   .abandonQuest(quest.id),
                             ),
@@ -160,14 +212,14 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
 class _QuestCard extends StatelessWidget {
   const _QuestCard({
     required this.quest,
-    required this.activation,
+    required this.isActive,
     required this.atLimit,
     required this.busy,
     required this.onStart,
     required this.onDrop,
   });
   final QuestResponse quest;
-  final QuestActivation? activation;
+  final bool isActive;
   final bool atLimit;
   final bool busy;
   final VoidCallback onStart;
@@ -180,7 +232,6 @@ class _QuestCard extends StatelessWidget {
       QuestDifficulty.medium => const Color(0xFFE6B23A),
       QuestDifficulty.hard => const Color(0xFFE5484D),
     };
-    final isActive = activation?.isActive ?? false;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surface = isDark ? AppColors.darkSurface : Colors.white;
     final titleColor = isDark ? AppColors.darkTextPrimary : AppColors.ink;
@@ -248,6 +299,7 @@ class _QuestCard extends StatelessWidget {
                     ? 'Limit reached ($kMaxActiveQuests active)'
                     : 'Start',
                 filled: true,
+                loading: busy,
                 onTap: (busy || atLimit) ? null : onStart,
               ),
             ),
@@ -256,6 +308,7 @@ class _QuestCard extends StatelessWidget {
             _QuestButton(
               label: 'Drop quest',
               filled: false,
+              loading: busy,
               onTap: busy ? null : onDrop,
             ),
           ],
@@ -270,9 +323,11 @@ class _QuestButton extends StatelessWidget {
     required this.label,
     required this.filled,
     required this.onTap,
+    this.loading = false,
   });
   final String label;
   final bool filled;
+  final bool loading;
   final VoidCallback? onTap;
 
   @override
@@ -280,6 +335,7 @@ class _QuestButton extends StatelessWidget {
     final disabled = onTap == null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final outlineColor = isDark ? AppColors.darkTextPrimary : AppColors.ink;
+    final foreground = filled ? Colors.white : outlineColor;
     return GestureDetector(
       onTap: onTap,
       child: Opacity(
@@ -294,15 +350,24 @@ class _QuestButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: filled ? null : Border.all(color: outlineColor, width: 1.4),
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: filled ? Colors.white : outlineColor,
-              fontWeight: FontWeight.w800,
-              fontSize: 14,
-            ),
-          ),
+          child: loading
+              ? SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(foreground),
+                  ),
+                )
+              : Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
         ),
       ),
     );

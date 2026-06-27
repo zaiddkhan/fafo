@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,6 +23,7 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final _searchController = TextEditingController();
   String? _selectedCategory;
+  Timer? _debounce;
 
   static const _categories = [
     'All',
@@ -56,8 +59,18 @@ class _SearchPageState extends State<SearchPage> {
     return results;
   }
 
+  // Debounce keystrokes so the results list isn't rebuilt on every character,
+  // which caused the scroll to stutter while typing.
+  void _onSearchChanged(String _) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) setState(() {});
+    });
+  }
+
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -86,7 +99,7 @@ class _SearchPageState extends State<SearchPage> {
                       controller: _searchController,
                       autofocus: true,
                       style: theme.textTheme.bodyLarge,
-                      onChanged: (_) => setState(() {}),
+                      onChanged: _onSearchChanged,
                       decoration: const InputDecoration(
                         hintText: 'Search events, places...',
                         prefixIcon: Icon(Icons.search, size: 20),
@@ -163,6 +176,10 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                     )
                   : ListView.separated(
+                      // Dragging the list dismisses the keyboard smoothly so it
+                      // no longer interferes with scrolling.
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.md,
                       ),

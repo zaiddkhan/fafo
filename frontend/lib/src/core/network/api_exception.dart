@@ -17,6 +17,7 @@ class ApiException implements Exception {
     required this.message,
     this.statusCode,
     this.errors,
+    this.code,
   });
 
   factory ApiException.fromDioError(DioException error) {
@@ -112,6 +113,51 @@ class ApiException implements Exception {
   final String message;
   final int? statusCode;
   final Map<String, String>? errors;
+
+  /// Underlying provider error code (e.g. a Firebase Auth code such as
+  /// `invalid-verification-code`). Used to derive a clean [friendlyMessage].
+  final String? code;
+
+  /// A clean, user-facing version of the error suitable for display in the UI.
+  ///
+  /// Maps known Firebase Auth error codes (and common raw error text) to
+  /// friendly strings so the raw exception details are never shown to the user.
+  /// Falls back to [message] for already-clean backend messages.
+  String get friendlyMessage {
+    switch (code?.toLowerCase()) {
+      case 'invalid-verification-code':
+      case 'invalid-code':
+        return 'Incorrect code. Please check and try again.';
+      case 'session-expired':
+      case 'code-expired':
+      case 'expired-action-code':
+        return 'This code has expired. Please request a new one.';
+      case 'too-many-requests':
+      case 'quota-exceeded':
+        return 'Too many attempts. Please try again later.';
+      case 'invalid-phone-number':
+      case 'missing-phone-number':
+        return 'Please enter a valid phone number.';
+      case 'network-request-failed':
+        return 'Network error. Please check your connection and try again.';
+    }
+
+    // Some paths (e.g. web sign-in) carry no code, so match on the raw text.
+    final lower = message.toLowerCase();
+    if (lower.contains('verification code') || lower.contains('invalid otp')) {
+      return 'Incorrect code. Please check and try again.';
+    }
+    if (lower.contains('blocked all requests') ||
+        lower.contains('unusual activity') ||
+        lower.contains('too many')) {
+      return 'Too many attempts. Please try again later.';
+    }
+    if (lower.contains('expired')) {
+      return 'This code has expired. Please request a new one.';
+    }
+
+    return message;
+  }
 
   @override
   String toString() => 'ApiException($type): $message';

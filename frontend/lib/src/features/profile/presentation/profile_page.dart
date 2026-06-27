@@ -44,6 +44,24 @@ class ProfilePage extends ConsumerWidget {
       tag: 'Food & Drinks',
       detail: 'Last month',
     ),
+    _PastExperience(
+      title: 'Rooftop Cinema',
+      summary: 'Caught a midnight screening and met the host crew.',
+      tag: 'Nightlife',
+      detail: 'Last month',
+    ),
+    _PastExperience(
+      title: 'Sunrise Hike',
+      summary: 'Joined a 5am trek and shared the view with 12 people.',
+      tag: 'Outdoors',
+      detail: '2 months ago',
+    ),
+    _PastExperience(
+      title: 'Vinyl Swap Meet',
+      summary: 'Traded records and added 3 spots to your map.',
+      tag: 'Art & Culture',
+      detail: '3 months ago',
+    ),
   ];
 
   @override
@@ -269,14 +287,21 @@ class ProfilePage extends ConsumerWidget {
             _SectionHeader(
               title: 'Past Experiences',
               actionLabel: 'See History',
-            ),
-            const SizedBox(height: 12),
-            ..._pastExperiences.map(
-              (experience) => Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _PastExperienceCard(experience: experience),
+              onAction: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const _PastExperiencesPage(),
+                ),
               ),
             ),
+            const SizedBox(height: 12),
+            ..._pastExperiences
+                .take(3)
+                .map(
+                  (experience) => Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: _PastExperienceCard(experience: experience),
+                  ),
+                ),
           ],
         ),
       ),
@@ -1202,4 +1227,29 @@ class _PastExperience {
   final String summary;
   final String tag;
   final String detail;
+}
+
+/// Full "Past Experiences" history — shows every past experience, not just the
+/// preview rendered on the profile. Opened from the "See History" link.
+class _PastExperiencesPage extends StatelessWidget {
+  const _PastExperiencesPage();
+
+  @override
+  Widget build(BuildContext context) {
+    const experiences = ProfilePage._pastExperiences;
+
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(title: const Text('Past Experiences')),
+      body: experiences.isEmpty
+          ? const Center(child: Text('No past experiences yet.'))
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              itemCount: experiences.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 14),
+              itemBuilder: (_, index) =>
+                  _PastExperienceCard(experience: experiences[index]),
+            ),
+    );
+  }
 }

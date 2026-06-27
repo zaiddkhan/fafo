@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.whatspoppn</string>
+	<string>com.getfafo.app</string>
 	<key>PROJECT_ID</key>
 	<string>fafu-869a8</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:149624228243:ios:a7c7a13aaa36328c48c066</string>
+	<string>1:149624228243:ios:ea4f666dede593f548c066</string>
 </dict>
 </plist>

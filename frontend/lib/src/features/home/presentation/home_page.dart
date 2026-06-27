@@ -72,9 +72,12 @@ class HomePageState extends ConsumerState<HomePage> {
   static const double _minEventVisibilityZoom = 13.5;
   static const double _defaultLat = 12.9716;
   static const double _defaultLng = 77.5946;
-  static const double _radiusMinKm = 0;
+  // Radius starts at 1 km so the slider can never read an invalid "0-0 km"
+  // range (which would match no activities).
+  static const double _radiusMinKm = 1;
   static const double _radiusMaxKm = 20;
-  static const RangeValues _defaultRadiusRange = RangeValues(0, 10);
+  static const int _radiusDivisions = 19;
+  static const RangeValues _defaultRadiusRange = RangeValues(1, 20);
   static const _participantOptions = [0, 25, 50, 100];
 
   MapController? _mapController;
@@ -97,6 +100,11 @@ class HomePageState extends ConsumerState<HomePage> {
 
   double _lat = _defaultLat;
   double _lng = _defaultLng;
+  // The user's real device position (when available). Drives the "you are
+  // here" marker on the map, which is independent of the map centre (the centre
+  // may be a chosen area, profile area or cached fix).
+  double? _userLat;
+  double? _userLng;
   bool _locationReady = false;
   bool _loadingEvents = true;
   bool _locatingUser = false;
@@ -157,6 +165,18 @@ class HomePageState extends ConsumerState<HomePage> {
     if (chosen != null) {
       _lat = chosen.lat;
       _lng = chosen.lng;
+      return;
+    }
+
+    // If the user has already granted location permission, the live GPS fix is
+    // the most accurate centre available. Use it directly (this does not show a
+    // new prompt) so the map isn't stuck on a stale cached / profile area that
+    // can be a couple of kilometres away from where the user actually is.
+    final permission = await Geolocator.checkPermission();
+    final alreadyGranted =
+        permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+    if (alreadyGranted && await _tryUseDeviceLocation(moveCamera: false)) {
       return;
     }
 
@@ -227,6 +247,8 @@ class HomePageState extends ConsumerState<HomePage> {
       );
       _lat = position.latitude;
       _lng = position.longitude;
+      _userLat = position.latitude;
+      _userLng = position.longitude;
       _locationNotice = null;
       await prefs?.setDouble(_cachedLatKey, _lat);
       await prefs?.setDouble(_cachedLngKey, _lng);
@@ -510,7 +532,7 @@ class HomePageState extends ConsumerState<HomePage> {
                             values: _selectedRadiusRange,
                             min: _radiusMinKm,
                             max: _radiusMaxKm,
-                            divisions: 20,
+                            divisions: _radiusDivisions,
                             onChanged: (value) => applyAndRefresh(
                               () => _selectedRadiusRange = value,
                             ),
@@ -574,6 +596,27 @@ class HomePageState extends ConsumerState<HomePage> {
       await controller.enableLocation();
     } catch (_) {
       // Location permissions or platform support may be unavailable.
+    }
+
+    // Make sure the "you are here" marker has a real fix to render, even when
+    // the map centre came from a saved area or cached coordinate.
+    if (_userLat == null || _userLng == null) {
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
+        if (mounted) {
+          setState(() {
+            _userLat = position.latitude;
+            _userLng = position.longitude;
+          });
+        }
+      } catch (_) {
+        // No fresh fix available; the marker simply stays hidden.
+      }
     }
   }
 
@@ -712,20 +755,52 @@ class HomePageState extends ConsumerState<HomePage> {
     _rebuildVisibleEvents();
   }
 
+  /// The id of the event closest to the user, so its marker can be drawn a
+  /// little larger to highlight it.
+  String? get _nearestEventId {
+    String? nearestId;
+    var nearestDistance = double.infinity;
+    for (final event in _filteredEvents) {
+      final distance = _distanceFromUserInKm(event);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestId = event.id;
+      }
+    }
+    return nearestId;
+  }
+
   List<Marker> get _visibleMarkers {
+    final nearestId = _nearestEventId;
     return _filteredEvents
-        .map(
-          (event) => Marker(
+        .map((event) {
+          final isNearest = event.id == nearestId;
+          // The nearest event is rendered slightly larger to draw the eye.
+          final size = isNearest ? const Size(60, 78) : const Size(48, 62);
+          return Marker(
             point: Geographic(lon: event.lng, lat: event.lat),
-            size: const Size(48, 62),
+            size: size,
             alignment: Alignment.bottomCenter,
             child: GestureDetector(
               onTap: () => _openEventPager(event),
-              child: _EventMapMarker(event: event),
+              child: _EventMapMarker(event: event, isNearest: isNearest),
             ),
-          ),
-        )
+          );
+        })
         .toList(growable: false);
+  }
+
+  /// A marker showing the user's real device position, when known.
+  Marker? get _userLocationMarker {
+    final lat = _userLat;
+    final lng = _userLng;
+    if (lat == null || lng == null) return null;
+    return Marker(
+      point: Geographic(lon: lng, lat: lat),
+      size: const Size(26, 26),
+      alignment: Alignment.center,
+      child: const _UserLocationMarker(),
+    );
   }
 
   @override
@@ -769,6 +844,12 @@ class HomePageState extends ConsumerState<HomePage> {
           // Full-bleed map
           if (_locationReady)
             MapLibreMap(
+              // Stable key so the element and its native platform view are
+              // reused across rebuilds. Toggling dark mode rebuilds the whole
+              // tree, and main_shell keeps this map alive in an IndexedStack;
+              // recreating the platform view mid-rebuild trips the
+              // 'renderObject.child == child' assertion.
+              key: const ValueKey('home-maplibre-map'),
               options: MapOptions(
                 initStyle: MapConfig.vintageStyleUrl,
                 initCenter: Geographic(lon: _lng, lat: _lat),
@@ -778,8 +859,22 @@ class HomePageState extends ConsumerState<HomePage> {
               onMapCreated: _onMapCreated,
               onEvent: _onMapEvent,
               children: [
-                if (_visibleMarkers.isNotEmpty)
-                  WidgetLayer(markers: _visibleMarkers, allowInteraction: true),
+                // Always return a WidgetLayer (with an empty marker list when
+                // there are none) so the map's child slot keeps a stable widget
+                // type across rebuilds. Swapping between SizedBox and
+                // WidgetLayer changes the slot child's type and trips the
+                // 'renderObject.child == child' assertion on theme rebuilds.
+                Builder(
+                  builder: (context) {
+                    return WidgetLayer(
+                      markers: <Marker>[
+                        ..._visibleMarkers,
+                        ?_userLocationMarker,
+                      ],
+                      allowInteraction: true,
+                    );
+                  },
+                ),
               ],
             )
           else
@@ -988,9 +1083,14 @@ class HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
+          // Raise the locate button above the event carousel whenever it is
+          // visible — that includes the unselected state where the carousel
+          // still shows because there are matching events.
           Positioned(
             right: 14,
-            bottom: _selectedEvent == null ? 174 : 226,
+            bottom: (_selectedEvent != null || _filteredEvents.isNotEmpty)
+                ? 226
+                : 174,
             child: SafeArea(
               top: false,
               child: Material(
@@ -1209,9 +1309,12 @@ class _MockEventIconTile extends StatelessWidget {
 }
 
 class _EventMapMarker extends StatelessWidget {
-  const _EventMapMarker({required this.event});
+  const _EventMapMarker({required this.event, this.isNearest = false});
 
   final MockEvent event;
+
+  /// The marker for the event nearest the user is drawn slightly larger.
+  final bool isNearest;
 
   @override
   Widget build(BuildContext context) {
@@ -1224,34 +1327,71 @@ class _EventMapMarker extends StatelessWidget {
             _ => '🎉',
           };
 
+    final scale = isNearest ? 1.25 : 1.0;
+
     return SizedBox(
-      width: 48,
-      height: 62,
+      width: 48 * scale,
+      height: 62 * scale,
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
           Positioned(
             top: 0,
             child: CustomPaint(
-              size: const Size(46, 58),
+              size: Size(46 * scale, 58 * scale),
               painter: _EmojiPinPainter(color: pinColor),
             ),
           ),
           Positioned(
-            top: 7,
+            top: 7 * scale,
             child: Container(
-              width: 32,
-              height: 32,
+              width: 32 * scale,
+              height: 32 * scale,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: const Color(0xFFFFFEF8),
                 shape: BoxShape.circle,
                 border: Border.all(color: const Color(0xFF4A3829), width: 1.4),
               ),
-              child: Text(emoji, style: const TextStyle(fontSize: 18)),
+              child: Text(emoji, style: TextStyle(fontSize: 18 * scale)),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A "you are here" indicator for the user's real device position: a blue dot
+/// with a white ring and a soft halo, in the style of common map apps.
+class _UserLocationMarker extends StatelessWidget {
+  const _UserLocationMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.accentPrimary.withValues(alpha: 0.18),
+      ),
+      child: Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.accentPrimary,
+          border: Border.all(color: Colors.white, width: 2.5),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x55000000),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
       ),
     );
   }

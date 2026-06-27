@@ -23,6 +23,19 @@ service cloud.firestore {
       }
     }
 
+    // Public marketing-site waitlist. The getfafo.app landing page writes here
+    // directly with the Firebase web SDK from unauthenticated visitors, so this
+    // is create-only and never readable from the client. Emails are read back
+    // server-side (Admin SDK) only.
+    match /waitlist/{entryId} {
+      allow create: if request.resource.data.keys().hasOnly(['email', 'source', 'createdAt'])
+                    && request.resource.data.email is string
+                    && request.resource.data.email.size() > 3
+                    && request.resource.data.email.size() < 320
+                    && request.resource.data.source is string;
+      allow read, update, delete: if false;
+    }
+
     // Everything else is server-only. The client reaches these through the
     // authenticated REST API, never directly.
     match /{document=**} {

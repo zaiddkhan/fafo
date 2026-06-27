@@ -33,7 +33,9 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
   }
 
   void _showSnack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -41,6 +43,9 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
     setState(() => _busy = true);
     try {
       await action();
+      // The action may take a while; bail out if the page was disposed in the
+      // meantime so we never touch a torn-down ref/provider.
+      if (!mounted) return;
       _refresh();
     } on ApiException catch (e) {
       if (mounted) _showSnack(e.message);
@@ -51,63 +56,18 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
     }
   }
 
-  Future<List<String>?> _negativeAnswers(String title) async {
-    final controllers = List.generate(3, (_) => TextEditingController());
-    final result = await showDialog<List<String>>(
+  Future<List<String>?> _negativeAnswers(String title) {
+    return showDialog<List<String>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Answer these quick questions to confirm.'),
-            const SizedBox(height: 12),
-            TextField(controller: controllers[0], decoration: const InputDecoration(labelText: 'Why are you doing this?')),
-            TextField(controller: controllers[1], decoration: const InputDecoration(labelText: 'Was this accidental?')),
-            TextField(controller: controllers[2], decoration: const InputDecoration(labelText: 'Anything we should know?')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              final answers = controllers.map((c) => c.text.trim()).where((text) => text.isNotEmpty).toList();
-              if (answers.length < 3) return;
-              Navigator.of(context).pop(answers);
-            },
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
+      builder: (context) => _NegativeAnswersDialog(title: title),
     );
-    for (final controller in controllers) {
-      controller.dispose();
-    }
-    return result;
   }
 
-  Future<String?> _textDialog(String title, String label, {String initial = ''}) async {
-    final controller = TextEditingController(text: initial);
-    final result = await showDialog<String>(
+  Future<String?> _textDialog(String title, String label, {String initial = ''}) {
+    return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(controller: controller, autofocus: true, decoration: InputDecoration(labelText: label)),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              final value = controller.text.trim();
-              if (value.isEmpty) return;
-              Navigator.of(context).pop(value);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (context) => _TextInputDialog(title: title, label: label, initial: initial),
     );
-    controller.dispose();
-    return result;
   }
 
   Future<void> _createGroup() async {
@@ -311,6 +271,102 @@ class _GroupCard extends StatelessWidget {
           );
         }).toList(),
       ),
+    );
+  }
+}
+
+/// Owns its [TextEditingController] so it is disposed on unmount — i.e. after
+/// the dialog route finishes its exit transition. Disposing the controller
+/// synchronously after `showDialog` returns (while the route is still animating
+/// out and the [TextField] still depends on inherited widgets) triggers the
+/// `InheritedElement.debugDeactivated` `_dependents.isEmpty` assertion crash.
+class _TextInputDialog extends StatefulWidget {
+  const _TextInputDialog({required this.title, required this.label, required this.initial});
+
+  final String title;
+  final String label;
+  final String initial;
+
+  @override
+  State<_TextInputDialog> createState() => _TextInputDialogState();
+}
+
+class _TextInputDialogState extends State<_TextInputDialog> {
+  late final TextEditingController _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(controller: _controller, autofocus: true, decoration: InputDecoration(labelText: widget.label)),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            final value = _controller.text.trim();
+            if (value.isEmpty) return;
+            Navigator.of(context).pop(value);
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+/// See [_TextInputDialog] — controllers are owned by the dialog's State so they
+/// outlive the route's exit transition and are torn down safely on unmount.
+class _NegativeAnswersDialog extends StatefulWidget {
+  const _NegativeAnswersDialog({required this.title});
+
+  final String title;
+
+  @override
+  State<_NegativeAnswersDialog> createState() => _NegativeAnswersDialogState();
+}
+
+class _NegativeAnswersDialogState extends State<_NegativeAnswersDialog> {
+  final List<TextEditingController> _controllers = List.generate(3, (_) => TextEditingController());
+
+  @override
+  void dispose() {
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Answer these quick questions to confirm.'),
+          const SizedBox(height: 12),
+          TextField(controller: _controllers[0], decoration: const InputDecoration(labelText: 'Why are you doing this?')),
+          TextField(controller: _controllers[1], decoration: const InputDecoration(labelText: 'Was this accidental?')),
+          TextField(controller: _controllers[2], decoration: const InputDecoration(labelText: 'Anything we should know?')),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            final answers = _controllers.map((c) => c.text.trim()).where((text) => text.isNotEmpty).toList();
+            if (answers.length < 3) return;
+            Navigator.of(context).pop(answers);
+          },
+          child: const Text('Confirm'),
+        ),
+      ],
     );
   }
 }

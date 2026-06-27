@@ -21,6 +21,7 @@ import 'package:fafu/src/features/profile/presentation/public_profile_page.dart'
 import 'package:fafu/src/features/friends/domain/friend.dart';
 import 'package:fafu/src/features/search/presentation/search_page.dart';
 import 'package:fafu/src/features/settings/presentation/settings_page.dart';
+import 'package:fafu/src/features/splash/presentation/brand_splash_page.dart';
 import 'package:fafu/src/features/splash/presentation/splash_page.dart';
 
 const onboardingCompleteKey = 'onboarding_complete';
@@ -29,7 +30,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final prefs = ref.read(sharedPreferencesProvider).value;
 
   return GoRouter(
-    initialLocation: SplashPage.routePath,
+    initialLocation: BrandSplashPage.routePath,
     redirect: (context, state) {
       final isOnboarded = prefs?.getBool(onboardingCompleteKey) ?? false;
       final path = state.matchedLocation;
@@ -50,6 +51,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: <RouteBase>[
+      GoRoute(
+        path: BrandSplashPage.routePath,
+        name: BrandSplashPage.routeName,
+        builder: (context, state) => const BrandSplashPage(),
+      ),
       GoRoute(
         path: SplashPage.routePath,
         name: SplashPage.routeName,

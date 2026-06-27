@@ -727,6 +727,16 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                     children: [
                                       IgnorePointer(
                                         child: MapLibreMap(
+                                          // initCenter is only applied when the
+                                          // platform map is first created. Keying
+                                          // by the resolved coordinates forces the
+                                          // map to re-create (and therefore
+                                          // re-centre) once the real event lat/lng
+                                          // load, instead of staying locked on a
+                                          // stale initial value.
+                                          key: ValueKey(
+                                            'event-map-${event.lat}-${event.lng}',
+                                          ),
                                           options: MapOptions(
                                             initStyle:
                                                 MapConfig.vintageStyleUrl,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,11 +35,19 @@ class SettingsPage extends ConsumerStatefulWidget {
 /// SharedPreferences key for the per-device push opt-out.
 const _pushEnabledKey = 'push_notifications_enabled';
 
+// TODO(ops): replace with the real hosted legal documents before launch.
+const _privacyPolicyUrl = 'https://fafo.app/privacy';
+const _termsOfServiceUrl = 'https://fafo.app/terms';
+
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _pushNotifications = true;
   bool _emailNotifications = false;
   bool _locationSharing = true;
   bool _busy = false;
+
+  /// Tracks the in-flight push registration so we can show a brief spinner
+  /// without fully locking the toggle (see [_setPushNotifications]).
+  bool _pushBusy = false;
 
   @override
   void initState() {
@@ -52,29 +62,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   /// token (the backend stops sending here); turning it on re-registers. The
   /// choice is persisted so it survives restarts.
   Future<void> _setPushNotifications(bool enabled) async {
-    if (_busy) return;
+    // Optimistic: reflect the choice immediately and persist it. The toggle
+    // stays interactive (we only show a small spinner) so it can never feel
+    // "locked" while the slower permission/registration work runs.
     setState(() {
-      _busy = true;
       _pushNotifications = enabled;
+      _pushBusy = true;
     });
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_pushEnabledKey, enabled);
       final push = ref.read(pushServiceProvider);
-      if (enabled) {
-        await push.initialize();
-      } else {
-        await push.unregister();
-      }
+      final work = enabled ? push.initialize() : push.unregister();
+      // A pending OS permission dialog or a slow network call must never keep
+      // the spinner up forever — bound it so the UI always settles.
+      await work.timeout(const Duration(seconds: 8));
+    } on TimeoutException {
+      // The preference is saved and the work continues in the background; just
+      // stop the spinner and keep the user's optimistic choice.
     } catch (e) {
       if (mounted) {
-        setState(() => _pushNotifications = !enabled);
+        // Only roll back if the user hasn't flipped it again in the meantime.
+        if (_pushNotifications == enabled) {
+          setState(() => _pushNotifications = !enabled);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not update push setting: $e')),
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() => _pushBusy = false);
     }
   }
 
@@ -152,6 +169,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Opens an external document (privacy policy, terms) in the device browser.
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.parse(url);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open $url')),
+      );
     }
   }
 
@@ -323,7 +351,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     icon: Icons.notifications_outlined,
                     title: 'Push Notifications',
                     value: _pushNotifications,
-                    onChanged: _busy ? null : _setPushNotifications,
+                    loading: _pushBusy,
+                    onChanged: _setPushNotifications,
                   ),
                   _SettingsToggle(
                     icon: Icons.email_outlined,
@@ -350,12 +379,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   _SettingsTile(
                     icon: Icons.shield_outlined,
                     title: 'Privacy Policy',
-                    onTap: () {},
+                    onTap: () => _openExternalUrl(_privacyPolicyUrl),
                   ),
                   _SettingsTile(
                     icon: Icons.description_outlined,
                     title: 'Terms of Service',
-                    onTap: () {},
+                    onTap: () => _openExternalUrl(_termsOfServiceUrl),
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
@@ -452,12 +481,14 @@ class _SettingsToggle extends StatelessWidget {
     required this.title,
     required this.value,
     required this.onChanged,
+    this.loading = false,
   });
 
   final IconData icon;
   final String title;
   final bool value;
   final ValueChanged<bool>? onChanged;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -470,6 +501,14 @@ class _SettingsToggle extends StatelessWidget {
           Icon(icon, color: AppColors.textSecondary, size: 22),
           const SizedBox(width: AppSpacing.md),
           Expanded(child: Text(title, style: theme.textTheme.bodyLarge)),
+          if (loading) ...[
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: AppSpacing.md),
+          ],
           Switch.adaptive(
             value: value,
             onChanged: onChanged,

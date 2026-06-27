@@ -23,10 +23,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -61,11 +58,22 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyD-1my_OECpsWsCX5n7FFZpC3BpCLNv_nE',
-    // Must match the applicationId (com.example.fafo) — the prior value pointed
-    // at the com.example.whatspoppn Firebase app, breaking FCM token registration.
-    appId: '1:149624228243:android:2624fb847f2bb6ef48c066',
+    // Must match the applicationId (com.getfafo.app) — the "Fafo Android"
+    // Firebase app registered for the production package name.
+    appId: '1:149624228243:android:f9f6a273264a615248c066',
     messagingSenderId: '149624228243',
     projectId: 'fafu-869a8',
     storageBucket: 'fafu-869a8.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyDwD4RFWe_MGs6gja0C-aX_skpF7CEkFLc',
+    // Must match the iOS bundle id (com.getfafo.app) — the "Fafo iOS"
+    // Firebase app registered for the production bundle id.
+    appId: '1:149624228243:ios:ea4f666dede593f548c066',
+    messagingSenderId: '149624228243',
+    projectId: 'fafu-869a8',
+    storageBucket: 'fafu-869a8.firebasestorage.app',
+    iosBundleId: 'com.getfafo.app',
   );
 }
