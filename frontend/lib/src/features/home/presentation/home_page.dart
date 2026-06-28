@@ -87,7 +87,6 @@ class HomePageState extends ConsumerState<HomePage> {
   Map<String, String> _categoryNames = const {};
   Map<String, String> _categoryEmojis = const {};
   List<MockEvent> _events = [];
-  List<MockEvent> _pagedEvents = const [];
   PageController? _eventPagerController;
   double _currentZoom = _initialMapZoom;
   bool _eventsVisibleOnMap = _initialMapZoom >= _minEventVisibilityZoom;
@@ -370,9 +369,6 @@ class HomePageState extends ConsumerState<HomePage> {
       final ids = _filteredEvents.map((e) => e.id).toSet();
       if (_selectedEvent != null && !ids.contains(_selectedEvent!.id)) {
         _selectedEvent = null;
-        _pagedEvents = const [];
-      } else if (_selectedEvent != null) {
-        _pagedEvents = _orderedEventsAround(_selectedEvent!);
       }
     });
   }
@@ -484,11 +480,6 @@ class HomePageState extends ConsumerState<HomePage> {
 
       if (_selectedEvent != null && !filteredIds.contains(_selectedEvent!.id)) {
         _selectedEvent = null;
-        _pagedEvents = const [];
-      } else if (_selectedEvent != null) {
-        _pagedEvents = _orderedEventsAround(_selectedEvent!);
-      } else {
-        _pagedEvents = const [];
       }
     });
   }
@@ -656,56 +647,60 @@ class HomePageState extends ConsumerState<HomePage> {
       _eventsVisibleOnMap = shouldShowEvents;
       if (!shouldShowEvents) {
         _selectedEvent = null;
-        _pagedEvents = const [];
       }
     });
   }
 
+  /// Tapping a marker selects its event and slides the carousel to the
+  /// matching card. The carousel keeps a single, stable order (the same list
+  /// the markers are built from), so the centred card always maps back to the
+  /// correct event — no list reordering, no controller churn.
   void _openEventPager(MockEvent anchorEvent) {
-    final orderedEvents = _orderedEventsAround(anchorEvent);
+    final events = _filteredEvents;
+    final index = events.indexWhere((e) => e.id == anchorEvent.id);
+    if (index < 0) return;
 
-    _eventPagerController?.dispose();
-    _eventPagerController = PageController(
-      initialPage: 0,
-      viewportFraction: 0.9,
-    );
+    final alreadySelected = _selectedEvent?.id == anchorEvent.id;
+    if (!alreadySelected) {
+      setState(() => _selectedEvent = anchorEvent);
+    }
 
-    setState(() {
-      _selectedEvent = anchorEvent;
-      _pagedEvents = orderedEvents;
+    // Centre the tapped event's card once this frame's layout is in place.
+    _animateCarouselToPage(index);
+
+    // A marker tap is an explicit "take me here" — adjust zoom and pitch.
+    _focusEvent(anchorEvent, adjustZoom: true);
+  }
+
+  /// Slides the carousel to [index] after the current frame, guarding against
+  /// the controller not being attached yet (e.g. first build).
+  void _animateCarouselToPage(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final controller = _eventPagerController;
+      if (controller == null || !controller.hasClients) return;
+      controller.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
     });
-
-    _focusEvent(anchorEvent);
   }
 
-  List<MockEvent> _orderedEventsAround(MockEvent anchorEvent) {
-    final orderedEvents = [..._filteredEvents]
-      ..sort((a, b) {
-        if (a.id == anchorEvent.id) return -1;
-        if (b.id == anchorEvent.id) return 1;
-
-        final aDistance = _distanceBetween(anchorEvent, a);
-        final bDistance = _distanceBetween(anchorEvent, b);
-        return aDistance.compareTo(bDistance);
-      });
-
-    return orderedEvents;
-  }
-
-  double _distanceBetween(MockEvent from, MockEvent to) {
-    final latDiff = from.lat - to.lat;
-    final lngDiff = from.lng - to.lng;
-    return (latDiff * latDiff) + (lngDiff * lngDiff);
-  }
-
-  Future<void> _focusEvent(MockEvent event) async {
+  /// Moves the camera to [event].
+  ///
+  /// [adjustZoom] is true for explicit jumps (marker tap, deeplink) where we
+  /// want to settle at the standard event zoom/pitch. While the user is simply
+  /// swiping between cards we keep the current zoom and pitch and only pan,
+  /// which is far smoother and less disorienting.
+  Future<void> _focusEvent(MockEvent event, {bool adjustZoom = false}) async {
     if (_mapController == null) return;
 
     await _mapController!.animateCamera(
       center: Geographic(lon: event.lng, lat: event.lat),
-      zoom: 14.5,
-      pitch: 45,
-      nativeDuration: const Duration(milliseconds: 700),
+      zoom: adjustZoom ? 14.5 : null,
+      pitch: adjustZoom ? 45 : null,
+      nativeDuration: Duration(milliseconds: adjustZoom ? 600 : 350),
     );
   }
 
@@ -723,14 +718,14 @@ class HomePageState extends ConsumerState<HomePage> {
       _lat = target.lat;
       _lng = target.lng;
       _eventsVisibleOnMap = true;
-      if (matchingEvent != null) {
-        _selectedEvent = matchingEvent;
-        _pagedEvents = _orderedEventsAround(matchingEvent);
-      } else {
-        _selectedEvent = null;
-        _pagedEvents = const [];
-      }
+      _selectedEvent = matchingEvent;
     });
+    if (matchingEvent != null) {
+      final index = _filteredEvents.indexWhere(
+        (e) => e.id == matchingEvent!.id,
+      );
+      if (index >= 0) _animateCarouselToPage(index);
+    }
     await _mapController!.animateCamera(
       center: Geographic(lon: target.lng, lat: target.lat),
       zoom: 14.5,
@@ -746,7 +741,6 @@ class HomePageState extends ConsumerState<HomePage> {
     _lat = area.lat;
     _lng = area.lng;
     _selectedEvent = null;
-    _pagedEvents = const [];
     _mapController?.animateCamera(
       center: Geographic(lon: _lng, lat: _lat),
       zoom: _initialMapZoom,
@@ -757,10 +751,10 @@ class HomePageState extends ConsumerState<HomePage> {
 
   /// The id of the event closest to the user, so its marker can be drawn a
   /// little larger to highlight it.
-  String? get _nearestEventId {
+  String? _nearestEventId(List<MockEvent> events) {
     String? nearestId;
     var nearestDistance = double.infinity;
-    for (final event in _filteredEvents) {
+    for (final event in events) {
       final distance = _distanceFromUserInKm(event);
       if (distance < nearestDistance) {
         nearestDistance = distance;
@@ -770,9 +764,9 @@ class HomePageState extends ConsumerState<HomePage> {
     return nearestId;
   }
 
-  List<Marker> get _visibleMarkers {
-    final nearestId = _nearestEventId;
-    return _filteredEvents
+  List<Marker> _visibleMarkers(List<MockEvent> events) {
+    final nearestId = _nearestEventId(events);
+    return events
         .map((event) {
           final isNearest = event.id == nearestId;
           // The nearest event is rendered slightly larger to draw the eye.
@@ -823,6 +817,13 @@ class HomePageState extends ConsumerState<HomePage> {
       if (target != null) _applyMapFocus(target);
     });
 
+    // Compute the filtered event list exactly once per build. It used to be a
+    // getter that recomputed a sqrt/cos distance for every event and was read
+    // 6-8 times per build (markers, nearest-event highlight, status text,
+    // locate button, carousel) — the redundant work was a major source of the
+    // hitch when tapping a marker triggered a rebuild.
+    final filtered = _filteredEvents;
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final searchSurface = isDark
@@ -868,7 +869,7 @@ class HomePageState extends ConsumerState<HomePage> {
                   builder: (context) {
                     return WidgetLayer(
                       markers: <Marker>[
-                        ..._visibleMarkers,
+                        ..._visibleMarkers(filtered),
                         ?_userLocationMarker,
                       ],
                       allowInteraction: true,
@@ -1040,9 +1041,9 @@ class HomePageState extends ConsumerState<HomePage> {
                                   ? 'Loading live events around you...'
                                   : _eventsError != null
                                   ? 'Could not load events. Pulling from backend failed.'
-                                  : _filteredEvents.isEmpty
+                                  : filtered.isEmpty
                                   ? 'No activities match the selected filters'
-                                  : '${_filteredEvents.length} activities match in your area',
+                                  : '${filtered.length} activities match in your area',
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 color: statusText,
                                 fontSize: 13,
@@ -1059,38 +1060,12 @@ class HomePageState extends ConsumerState<HomePage> {
             ),
           ),
 
-          // Bottom: event pager (above nav bar)
-          if (_selectedEvent != null)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 86,
-              child: SafeArea(
-                top: false,
-                child: _EventPager(
-                  events: _pagedEvents.isEmpty ? _filteredEvents : _pagedEvents,
-                  controller: _eventPagerController!,
-                  onPageChanged: (index) {
-                    final source = _pagedEvents.isEmpty
-                        ? _filteredEvents
-                        : _pagedEvents;
-                    final event = source[index];
-                    setState(() => _selectedEvent = event);
-                    _focusEvent(event);
-                  },
-                  onClose: () => setState(() => _selectedEvent = null),
-                ),
-              ),
-            ),
-
           // Raise the locate button above the event carousel whenever it is
           // visible — that includes the unselected state where the carousel
           // still shows because there are matching events.
           Positioned(
             right: 14,
-            bottom: (_selectedEvent != null || _filteredEvents.isNotEmpty)
-                ? 226
-                : 174,
+            bottom: filtered.isNotEmpty ? 226 : 174,
             child: SafeArea(
               top: false,
               child: Material(
@@ -1117,7 +1092,11 @@ class HomePageState extends ConsumerState<HomePage> {
               ),
             ),
           ),
-          if (_selectedEvent == null && _filteredEvents.isNotEmpty)
+          // Bottom: a single event carousel (above the nav bar). One stable
+          // list + one persistent controller; the selected event simply tracks
+          // whichever card is centred, so swiping always lands on the right
+          // event and tapping a marker animates the carousel to its card.
+          if (filtered.isNotEmpty)
             Positioned(
               left: 0,
               right: 0,
@@ -1125,16 +1104,18 @@ class HomePageState extends ConsumerState<HomePage> {
               child: SafeArea(
                 top: false,
                 child: _EventPager(
-                  events: _filteredEvents,
+                  events: filtered,
                   controller: _eventPagerController ??= PageController(
-                    viewportFraction: 0.88,
+                    viewportFraction: 0.86,
                   ),
                   onPageChanged: (index) {
-                    final event = _filteredEvents[index];
+                    if (index < 0 || index >= filtered.length) return;
+                    final event = filtered[index];
+                    if (event.id == _selectedEvent?.id) return;
                     setState(() => _selectedEvent = event);
+                    // Just a swipe — pan only, keep the current zoom/pitch.
                     _focusEvent(event);
                   },
-                  onClose: () {},
                 ),
               ),
             ),
@@ -1439,41 +1420,32 @@ class _EventPager extends StatelessWidget {
     required this.events,
     required this.controller,
     required this.onPageChanged,
-    required this.onClose,
   });
 
   final List<MockEvent> events;
   final PageController controller;
   final ValueChanged<int> onPageChanged;
-  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Close button
-        Align(alignment: Alignment.centerRight, child: const SizedBox.shrink()),
-        // Pager
-        SizedBox(
-          height: 126,
-          child: PageView.builder(
-            controller: controller,
-            itemCount: events.length,
-            onPageChanged: onPageChanged,
-            padEnds: false,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: index == 0 ? AppSpacing.md : AppSpacing.sm,
-                  right: index == events.length - 1 ? AppSpacing.md : 0,
-                ),
-                child: _EventCard(event: events[index]),
-              );
-            },
-          ),
-        ),
-      ],
+    return SizedBox(
+      height: 126,
+      child: PageView.builder(
+        controller: controller,
+        itemCount: events.length,
+        onPageChanged: onPageChanged,
+        padEnds: false,
+        // Symmetric horizontal padding keeps every card's visual centre
+        // aligned with the PageView's snap points. The old asymmetric
+        // first/last padding shifted the cards off their snap centres, which
+        // made paging feel like it wouldn't settle on the right card.
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: _EventCard(event: events[index]),
+          );
+        },
+      ),
     );
   }
 }
