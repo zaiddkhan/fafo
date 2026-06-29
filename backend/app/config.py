@@ -21,11 +21,6 @@ CORS_ORIGINS = [
     for origin in os.getenv("CORS_ORIGINS", "").split(",")
     if origin.strip()
 ]
-# Admin web console (email + password protected, server-rendered).
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
-ADMIN_SESSION_SECRET = os.getenv("ADMIN_SESSION_SECRET", "")
-ADMIN_COOKIE_SECURE = os.getenv("ADMIN_COOKIE_SECURE", "false").lower() == "true"
 
 RATE_LIMIT_DEFAULT = os.getenv("RATE_LIMIT_DEFAULT", "60/minute")
 RATE_LIMIT_AUTH = os.getenv("RATE_LIMIT_AUTH", "10/minute")

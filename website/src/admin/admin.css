@@ -1,0 +1,47 @@
+/*
+ * Admin panel styles. We import Tailwind's theme + utilities but deliberately
+ * SKIP preflight — the public site (src/index.css) already ships its own global
+ * reset, and loading Tailwind's reset would alter the landing page. The admin
+ * bundle is lazy-loaded, so these styles only reach the browser on /admin.
+ *
+ * IMPORTANT: utilities are imported UNLAYERED (no `layer(...)`). The site's
+ * global reset in src/index.css uses an unlayered `* { margin:0; padding:0 }`,
+ * and in the CSS cascade unlayered rules always beat layered ones regardless of
+ * specificity. If Tailwind utilities lived in `@layer utilities` that reset
+ * would wipe out every padding/margin/spacing utility on the admin pages. Kept
+ * unlayered, the utility classes win over `*` on specificity, as intended.
+ */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css";
+
+@theme {
+  /* Match the website's neo-brutalist tokens (see src/index.css). */
+  --color-brand-50: #eaf3fe;
+  --color-brand-100: #d3e7fc;
+  --color-brand-500: #1c7cf0;
+  --color-brand-600: #1566cf;
+  --color-brand-700: #114f9f;
+
+  --color-ink: #16171b;
+  --color-cream: #f0ede3;
+  --color-paper: #edf2f8;
+
+  --font-sans: "Tomorrow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Admin shell scope — keeps the operator tool on the site's paper background
+   and the Tomorrow typeface. The .admin-root wrapper bounds every admin view. */
+.admin-root {
+  min-height: 100vh;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Without preflight, form controls don't inherit the page font by default. */
+.admin-root input,
+.admin-root textarea,
+.admin-root select,
+.admin-root button {
+  font-family: inherit;
+}

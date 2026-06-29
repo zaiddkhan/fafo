@@ -15,5 +15,7 @@ const firebaseConfig = {
   measurementId: 'G-HGMT9DWMS0',
 }
 
-const app = initializeApp(firebaseConfig)
+// Exported so the /admin panel can attach Firebase Auth to the same app
+// instance (see src/admin/lib/firebase.ts) without initializing Firebase twice.
+export const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
