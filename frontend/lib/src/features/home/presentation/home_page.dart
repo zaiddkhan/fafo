@@ -584,7 +584,7 @@ class HomePageState extends ConsumerState<HomePage> {
     _mapController = controller;
     final pendingFocus = ref.read(homeMapFocusProvider);
     if (pendingFocus != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _applyMapFocus(pendingFocus));
+      _scheduleMapFocus(pendingFocus);
     }
 
     // MapLibre's Android location component can throw a native
@@ -718,6 +718,28 @@ class HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  /// Applies a "View on map" focus once the map is actually on screen.
+  ///
+  /// The map is created once and kept alive in MainShell's IndexedStack, so
+  /// [_onMapCreated] does not fire again when the user returns from an event
+  /// detail page. The focus listener can also fire while the detail route is
+  /// still on top (map offstage). Deferring to a post-frame callback runs the
+  /// camera move after `go('/main')` has revealed the map, and a short retry
+  /// covers the case where the controller hasn't attached yet.
+  void _scheduleMapFocus(HomeMapFocusTarget target, {int attempt = 0}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_mapController == null) {
+        // Give the platform view a few frames to attach before giving up, so a
+        // cold deep link (map still building) still lands on the event.
+        if (attempt >= 20) return;
+        _scheduleMapFocus(target, attempt: attempt + 1);
+        return;
+      }
+      _applyMapFocus(target);
+    });
+  }
+
   Future<void> _applyMapFocus(HomeMapFocusTarget target) async {
     if (!mounted || _mapController == null) return;
     ref.read(homeMapFocusProvider.notifier).clear();
@@ -833,7 +855,7 @@ class HomePageState extends ConsumerState<HomePage> {
       }
     });
     ref.listen<HomeMapFocusTarget?>(homeMapFocusProvider, (_, target) {
-      if (target != null) _applyMapFocus(target);
+      if (target != null) _scheduleMapFocus(target);
     });
 
     // Compute the filtered event list exactly once per build. It used to be a
