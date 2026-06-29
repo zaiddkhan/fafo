@@ -96,6 +96,11 @@ class HomePageState extends ConsumerState<HomePage> {
   List<CategoryResponse> _categories = const [];
   String? _selectedCategoryId;
   EventType? _selectedEventType;
+  // When the user taps "View on map" from an event detail page, this holds the
+  // focused event's id so its pin is always shown, bypassing the active
+  // category/type/radius/participants/date filters. Cleared when the user
+  // changes a filter or re-centres the map.
+  String? _focusedEventId;
 
   double _lat = _defaultLat;
   double _lng = _defaultLng;
@@ -339,6 +344,9 @@ class HomePageState extends ConsumerState<HomePage> {
     final cutoff = DateTime.now().toUtc().subtract(const Duration(minutes: 10));
     final visible = _rawEvents
         .where((event) {
+          // A focused event (tapped via "View on map") always stays visible so
+          // its pin can be shown regardless of the active filters.
+          if (event.id == _focusedEventId) return true;
           // An event stays visible until 10 minutes after its start time.
           if (event.dateTime.toUtc().isBefore(cutoff)) return false;
           if (_selectedCategoryId != null &&
@@ -433,6 +441,9 @@ class HomePageState extends ConsumerState<HomePage> {
 
   List<MockEvent> get _filteredEvents {
     return _events.where((event) {
+      // A focused event (tapped via "View on map") bypasses the display filters
+      // so its pin is always rendered on the map.
+      if (event.id == _focusedEventId) return true;
       if (_selectedDateTime != _DateTimeFilter.any) {
         final matchesDateTime = switch (_selectedDateTime) {
           _DateTimeFilter.any => true,
@@ -475,6 +486,9 @@ class HomePageState extends ConsumerState<HomePage> {
 
   void _updateFilters(VoidCallback updates) {
     setState(() {
+      // The user is now actively filtering, so drop any "View on map" focus
+      // that was bypassing the filters.
+      _focusedEventId = null;
       updates();
       final filteredIds = _filteredEvents.map((event) => event.id).toSet();
 
@@ -707,6 +721,10 @@ class HomePageState extends ConsumerState<HomePage> {
   Future<void> _applyMapFocus(HomeMapFocusTarget target) async {
     if (!mounted || _mapController == null) return;
     ref.read(homeMapFocusProvider.notifier).clear();
+    // Mark the event as focused and rebuild so it bypasses the active filters
+    // and is guaranteed to be present in the visible/marker lists.
+    _focusedEventId = target.eventId;
+    _rebuildVisibleEvents();
     MockEvent? matchingEvent;
     for (final event in _events) {
       if (event.id == target.eventId) {
@@ -741,6 +759,7 @@ class HomePageState extends ConsumerState<HomePage> {
     _lat = area.lat;
     _lng = area.lng;
     _selectedEvent = null;
+    _focusedEventId = null;
     _mapController?.animateCamera(
       center: Geographic(lon: _lng, lat: _lat),
       zoom: _initialMapZoom,
@@ -974,7 +993,10 @@ class HomePageState extends ConsumerState<HomePage> {
                                     .firstWhere((c) => c.id == value)
                                     .name,
                           onSelected: (value) {
-                            setState(() => _selectedCategoryId = value);
+                            setState(() {
+                              _focusedEventId = null;
+                              _selectedCategoryId = value;
+                            });
                             _rebuildVisibleEvents();
                           },
                         ),
@@ -996,7 +1018,10 @@ class HomePageState extends ConsumerState<HomePage> {
                               ? 'All types'
                               : _eventTypeLabel(value),
                           onSelected: (value) {
-                            setState(() => _selectedEventType = value);
+                            setState(() {
+                              _focusedEventId = null;
+                              _selectedEventType = value;
+                            });
                             _rebuildVisibleEvents();
                           },
                         ),
