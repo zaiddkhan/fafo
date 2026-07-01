@@ -33,6 +33,8 @@ class NudgeFeedSheet extends ConsumerStatefulWidget {
 }
 
 class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
   Timer? _timer;
 
   @override
@@ -53,9 +55,11 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
 
   Future<void> _createNudge(List<NudgeResponse> nudges) async {
     if (nudges.any((n) => !n.isResolved)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Resolve the active nudge first.')),
-      );
+      _messengerKey.currentState
+        ?..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(content: Text('Resolve the active nudge first.')),
+        );
       return;
     }
 
@@ -77,7 +81,11 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
     final feed = ref.watch(nudgeFeedProvider(_key));
     final palette = _activePalette();
 
-    return Material(
+    return ScaffoldMessenger(
+      key: _messengerKey,
+      child: Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        body: Material(
       color: AppColors.bgPrimary,
       child: SafeArea(
         child: Column(
@@ -132,6 +140,8 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
               ),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );
