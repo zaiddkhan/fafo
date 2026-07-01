@@ -92,8 +92,6 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
     });
     final activeCount = activeIds.length;
     final atLimit = activeCount >= kMaxActiveQuests;
-    final isDark = theme.brightness == Brightness.dark;
-    final headingColor = isDark ? AppColors.textPrimary : AppColors.ink;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -145,33 +143,25 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Normal',
-                            style: theme.textTheme.displayMedium?.copyWith(
-                              color: headingColor,
-                              fontSize: 18,
+                      if (canExpand) ...[
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: () => setState(
+                              () => _showAllQuests = !_showAllQuests,
+                            ),
+                            child: Text(
+                              _showAllQuests ? 'Show less' : 'View All',
+                              style: TextStyle(
+                                color: AppColors.accentPrimary,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
-                          if (canExpand)
-                            GestureDetector(
-                              onTap: () => setState(
-                                () => _showAllQuests = !_showAllQuests,
-                              ),
-                              child: Text(
-                                _showAllQuests ? 'Show less' : 'View All',
-                                style: TextStyle(
-                                  color: AppColors.accentPrimary,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
                       ...visible.map((quest) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),

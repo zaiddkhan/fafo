@@ -17,6 +17,7 @@ import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_chrome.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
+import 'package:fafu/src/features/events/data/saved_events_controller.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/features/home/presentation/home_page.dart';
@@ -41,7 +42,6 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     with SingleTickerProviderStateMixin {
   static const _celebrationLottieAsset = 'assets/gifs/Confetti.lottie';
 
-  bool _saved = false;
   bool _showCelebration = false;
   bool _loading = true;
   bool _joining = false;
@@ -243,6 +243,20 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     } finally {
       if (mounted) setState(() => _joining = false);
     }
+  }
+
+  Future<void> _handleSaveTap() async {
+    final nowSaved = await ref
+        .read(savedEventIdsProvider.notifier)
+        .toggle(widget.eventId);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          nowSaved ? 'Saved to your profile.' : 'Removed from saved.',
+        ),
+      ),
+    );
   }
 
   String _unjoinReasonLabel(UnjoinReason reason) {
@@ -550,6 +564,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final event = _displayEvent;
+    final saved = ref.watch(savedEventIdsProvider).contains(widget.eventId);
 
     if (event == null) {
       return Scaffold(
@@ -725,8 +740,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                     right: AppSpacing.md,
                                     top: AppSpacing.md,
                                     child: GestureDetector(
-                                      onTap: () =>
-                                          setState(() => _saved = !_saved),
+                                      onTap: _handleSaveTap,
                                       child: Container(
                                         width: 36,
                                         height: 36,
@@ -737,10 +751,10 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                           ),
                                         ),
                                         child: Icon(
-                                          _saved
+                                          saved
                                               ? Icons.bookmark
                                               : Icons.bookmark_border,
-                                          color: _saved
+                                          color: saved
                                               ? AppColors.accentWarm
                                               : Colors.white,
                                           size: 20,

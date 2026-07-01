@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
+import 'package:fafu/src/features/events/data/saved_events_controller.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/features/notifications/data/notifications_repository.dart';
@@ -67,6 +68,7 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final joinedEvents = ref.watch(_joinedEventsProvider);
+    final savedBackendEvents = ref.watch(savedEventsProvider);
     final stats = ref.watch(profileStatsProvider);
     final profile = ref.watch(currentProfileProvider);
     final quests = ref.watch(questsListProvider);
@@ -224,6 +226,45 @@ class ProfilePage extends ConsumerWidget {
                         (event) => Padding(
                           padding: const EdgeInsets.only(bottom: 18),
                           child: _RsvpCard(event: event),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _SectionHeader(title: 'Saved events'),
+            const SizedBox(height: 12),
+            savedBackendEvents.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.only(bottom: 18),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.accentPrimary,
+                  ),
+                ),
+              ),
+              error: (error, _) => Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: Text(
+                  error.toString(),
+                  style: const TextStyle(color: Color(0xFFE5484D)),
+                ),
+              ),
+              data: (events) {
+                if (events.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.only(bottom: 18),
+                    child: Text('Tap the bookmark on an event to save it here.'),
+                  );
+                }
+                return Column(
+                  children: events
+                      .take(3)
+                      .map(
+                        (event) => Padding(
+                          padding: const EdgeInsets.only(bottom: 18),
+                          child: _JoinedEventCard(event: event),
                         ),
                       )
                       .toList(),
