@@ -104,11 +104,6 @@ class HomePageState extends ConsumerState<HomePage> {
 
   double _lat = _defaultLat;
   double _lng = _defaultLng;
-  // The user's real device position (when available). Drives the "you are
-  // here" marker on the map, which is independent of the map centre (the centre
-  // may be a chosen area, profile area or cached fix).
-  double? _userLat;
-  double? _userLng;
   bool _locationReady = false;
   bool _loadingEvents = true;
   bool _locatingUser = false;
@@ -251,8 +246,6 @@ class HomePageState extends ConsumerState<HomePage> {
       );
       _lat = position.latitude;
       _lng = position.longitude;
-      _userLat = position.latitude;
-      _userLng = position.longitude;
       _locationNotice = null;
       await prefs?.setDouble(_cachedLatKey, _lat);
       await prefs?.setDouble(_cachedLngKey, _lng);
@@ -598,30 +591,11 @@ class HomePageState extends ConsumerState<HomePage> {
     if (!hasLocationPermission) return;
 
     try {
+      // The native location component renders the "you are here" puck (with
+      // heading) and keeps it live-synced with the map camera.
       await controller.enableLocation();
     } catch (_) {
       // Location permissions or platform support may be unavailable.
-    }
-
-    // Make sure the "you are here" marker has a real fix to render, even when
-    // the map centre came from a saved area or cached coordinate.
-    if (_userLat == null || _userLng == null) {
-      try {
-        final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 10),
-          ),
-        );
-        if (mounted) {
-          setState(() {
-            _userLat = position.latitude;
-            _userLng = position.longitude;
-          });
-        }
-      } catch (_) {
-        // No fresh fix available; the marker simply stays hidden.
-      }
     }
   }
 
@@ -825,19 +799,6 @@ class HomePageState extends ConsumerState<HomePage> {
         .toList(growable: false);
   }
 
-  /// A marker showing the user's real device position, when known.
-  Marker? get _userLocationMarker {
-    final lat = _userLat;
-    final lng = _userLng;
-    if (lat == null || lng == null) return null;
-    return Marker(
-      point: Geographic(lon: lng, lat: lat),
-      size: const Size(26, 26),
-      alignment: Alignment.center,
-      child: const _UserLocationMarker(),
-    );
-  }
-
   @override
   void dispose() {
     _eventsSub?.cancel();
@@ -909,10 +870,13 @@ class HomePageState extends ConsumerState<HomePage> {
                 Builder(
                   builder: (context) {
                     return WidgetLayer(
-                      markers: <Marker>[
-                        ..._visibleMarkers(filtered),
-                        ?_userLocationMarker,
-                      ],
+                      // The user's own position is drawn by MapLibre's native
+                      // location puck (see enableLocation() in _onMapCreated),
+                      // which shows heading and stays live-synced with the map.
+                      // We deliberately do NOT add a second Flutter marker for
+                      // it — a custom dot fed by one-shot GPS snapshots drifts
+                      // out of alignment with the live native puck.
+                      markers: <Marker>[..._visibleMarkers(filtered)],
                       allowInteraction: true,
                     );
                   },
@@ -1385,41 +1349,6 @@ class _EventMapMarker extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A "you are here" indicator for the user's real device position: a blue dot
-/// with a white ring and a soft halo, in the style of common map apps.
-class _UserLocationMarker extends StatelessWidget {
-  const _UserLocationMarker();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 26,
-      height: 26,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.accentPrimary.withValues(alpha: 0.18),
-      ),
-      child: Container(
-        width: 16,
-        height: 16,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: AppColors.accentPrimary,
-          border: Border.all(color: Colors.white, width: 2.5),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x55000000),
-              blurRadius: 4,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
       ),
     );
   }
