@@ -143,7 +143,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
         joineeCount: 42,
         registrationOpen: true,
         cancelled: false,
-        organizerName: 'Fafo Picks',
+        organizerName: 'FaFo Picks',
         createdAt: now,
         updatedAt: now,
       ),
@@ -163,7 +163,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
         joineeCount: 18,
         registrationOpen: true,
         cancelled: false,
-        organizerName: 'Fafo Community',
+        organizerName: 'FaFo Community',
         createdAt: now,
         updatedAt: now,
       ),
@@ -183,7 +183,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
         joineeCount: 11,
         registrationOpen: true,
         cancelled: false,
-        organizerName: 'Fafo Foodies',
+        organizerName: 'FaFo Foodies',
         createdAt: now,
         updatedAt: now,
       ),
@@ -207,7 +207,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
       BlogResponse(
         id: 'demo-blog-first-hang',
         city: 'Bengaluru',
-        title: 'How to pick your first Fafo hang',
+        title: 'How to pick your first FaFo hang',
         subtitle:
             'Start with small groups, public venues, and shared interests.',
         body: 'Tips for new users choosing their first event.',
@@ -295,7 +295,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
               else if (_error != null)
                 _ErrorState(message: _error!, onRetry: _loadEventsIndex)
               else ...[
-                _SectionTitle('Fafo Today', color: headingColor),
+                _SectionTitle('FaFo Today', color: headingColor),
                 const SizedBox(height: 12),
                 if (_spotlightEvents.isEmpty)
                   _EmptyInline(

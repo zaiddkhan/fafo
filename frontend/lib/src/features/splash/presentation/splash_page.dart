@@ -30,7 +30,7 @@ class SplashPage extends StatelessWidget {
                   colors: [AppColors.accentPrimary, AppColors.accentWarm],
                 ).createShader(bounds),
                 child: Text(
-                  'fafo',
+                  'FaFo',
                   style: theme.textTheme.displayMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: Colors.white,

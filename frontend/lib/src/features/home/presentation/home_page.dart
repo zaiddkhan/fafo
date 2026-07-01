@@ -428,7 +428,7 @@ class HomePageState extends ConsumerState<HomePage> {
       friendsOnly: false,
       rating: 4.7,
       timing: timing,
-      organizerName: 'Fafo Creator',
+      organizerName: 'FaFo Creator',
       organizerContact: '',
       organizerInstagram: '',
       organizerVerified: true,

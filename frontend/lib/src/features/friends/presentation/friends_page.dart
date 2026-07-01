@@ -169,7 +169,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
       final invite = await ref.read(friendsRepositoryProvider).createInvite();
       await Clipboard.setData(ClipboardData(text: invite.inviteUrl));
       final message = Uri.encodeComponent(
-        'Join me on Fafo: ${invite.inviteUrl}',
+        'Join me on FaFo: ${invite.inviteUrl}',
       );
       final whatsappUri = Uri.parse('whatsapp://send?text=$message');
       final canOpen = await canLaunchUrl(whatsappUri);

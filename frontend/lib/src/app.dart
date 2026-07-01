@@ -17,7 +17,7 @@ class FafoApp extends ConsumerWidget {
     AppColors.setThemeMode(themeMode);
 
     return MaterialApp.router(
-      title: 'Fafo',
+      title: 'FaFo',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

@@ -81,7 +81,7 @@ class _BrandSplashPageState extends ConsumerState<BrandSplashPage>
               // the hard offset shadow gives the extruded 3D look of the
               // original artwork.
               Text(
-                'FAFO',
+                'FaFo',
                 style: GoogleFonts.tomorrow(
                   fontSize: 72,
                   fontWeight: FontWeight.w900,

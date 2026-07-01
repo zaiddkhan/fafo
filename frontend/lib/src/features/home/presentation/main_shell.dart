@@ -394,7 +394,7 @@ class _FirstLaunchTooltipOverlay extends StatelessWidget {
       ),
       _FirstLaunchTooltipStep.sideQuests => (
         'Take on Side Quests',
-        'Tap Quests for Fafo challenges around your city — quick solo missions to fill your free time.',
+        'Tap Quests for FaFo challenges around your city — quick solo missions to fill your free time.',
       ),
       _FirstLaunchTooltipStep.nudgeFeed => (
         'Nudge your friends',

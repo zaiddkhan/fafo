@@ -1,6 +1,6 @@
 {
-    "name": "Fafo",
-    "short_name": "Fafo",
+    "name": "FaFo",
+    "short_name": "FaFo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#1A87DA",

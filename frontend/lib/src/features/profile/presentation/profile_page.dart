@@ -850,7 +850,7 @@ class _JoinedEventCard extends StatelessWidget {
       friendsOnly: false,
       rating: 0,
       timing: MockEventTiming.today,
-      organizerName: event.organizerName ?? 'Fafo Creator',
+      organizerName: event.organizerName ?? 'FaFo Creator',
       organizerContact: event.organizerContact ?? '',
       organizerInstagram: event.organizerInstagram ?? '',
       organizerVerified: true,

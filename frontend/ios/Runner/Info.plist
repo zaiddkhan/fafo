@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Fafo</string>
+	<string>FaFo</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -50,11 +50,11 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSContactsUsageDescription</key>
-	<string>Fafo uses phone numbers from your contacts to find friends already on Fafo.</string>
+	<string>FaFo uses phone numbers from your contacts to find friends already on FaFo.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Fafo uses your location to show events near you.</string>
+	<string>FaFo uses your location to show events near you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Fafo needs photo library access so you can choose profile and event images.</string>
+	<string>FaFo needs photo library access so you can choose profile and event images.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

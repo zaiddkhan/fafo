@@ -273,7 +273,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       friendsOnly: false,
       rating: initial?.rating ?? 4.7,
       timing: initial?.timing ?? MockEventTiming.today,
-      organizerName: backend.organizerName ?? initial?.organizerName ?? 'Fafo Creator',
+      organizerName: backend.organizerName ?? initial?.organizerName ?? 'FaFo Creator',
       organizerContact: backend.organizerContact ?? initial?.organizerContact ?? '',
       organizerInstagram: backend.organizerInstagram ?? initial?.organizerInstagram ?? '',
       organizerVerified: true,
@@ -354,11 +354,11 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     final title = event?.title ?? 'this event';
     final venue = event?.venue;
     final where = venue == null || venue.trim().isEmpty ? '' : ' at $venue';
-    final text = 'Check out $title$where on Fafo: $_shareUri';
+    final text = 'Check out $title$where on FaFo: $_shareUri';
 
     try {
       await SharePlus.instance.share(
-        ShareParams(text: text, subject: 'Fafo event'),
+        ShareParams(text: text, subject: 'FaFo event'),
       );
     } catch (_) {
       if (!mounted) return;
@@ -768,7 +768,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                               const SizedBox(width: AppSpacing.xs),
                               Text(
                                 event.eventType == 'spotlight'
-                                    ? 'Fafo Today'
+                                    ? 'FaFo Today'
                                     : 'Featured nearby',
                                 style: theme.textTheme.labelLarge?.copyWith(
                                   color: AppColors.textSecondary,

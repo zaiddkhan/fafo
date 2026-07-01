@@ -350,9 +350,11 @@ class _NegativeAnswersDialogState extends State<_NegativeAnswersDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text('Answer these quick questions to confirm.'),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           TextField(controller: _controllers[0], decoration: const InputDecoration(labelText: 'Why are you doing this?')),
+          const SizedBox(height: 16),
           TextField(controller: _controllers[1], decoration: const InputDecoration(labelText: 'Was this accidental?')),
+          const SizedBox(height: 16),
           TextField(controller: _controllers[2], decoration: const InputDecoration(labelText: 'Anything we should know?')),
         ],
       ),

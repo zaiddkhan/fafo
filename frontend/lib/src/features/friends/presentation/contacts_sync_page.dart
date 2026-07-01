@@ -130,7 +130,7 @@ class _ContactsSyncPageState extends ConsumerState<ContactsSyncPage> {
     setState(() => _busyContactKeys.add(key));
     try {
       final invite = await ref.read(friendsRepositoryProvider).createInvite();
-      final text = 'Join me on Fafo: ${invite.inviteUrl}';
+      final text = 'Join me on FaFo: ${invite.inviteUrl}';
       await Clipboard.setData(ClipboardData(text: invite.inviteUrl));
 
       final opened = await _openSmsComposer(item.primaryPhone, text);
@@ -229,7 +229,7 @@ class _ContactsSyncPageState extends ConsumerState<ContactsSyncPage> {
               const SizedBox(height: 18),
               if (!_loading && _error == null)
                 Text(
-                  '$usersOnApp on Fafo • ${_items.length - usersOnApp} inviteable',
+                  '$usersOnApp on FaFo • ${_items.length - usersOnApp} inviteable',
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               const SizedBox(height: 18),
