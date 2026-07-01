@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fafu/src/core/network/api_exception.dart';
@@ -16,7 +16,14 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 /// Converts any error thrown by the auth flow into a clean, user-facing string.
 /// Never exposes raw exception details (e.g. `ApiException(...)`) to the UI.
 String friendlyAuthError(Object error) {
-  if (error is ApiException) return error.friendlyMessage;
+  if (error is ApiException) {
+    // In debug builds, append the raw Firebase error code so resend/verify
+    // failures can be diagnosed on-device. Release builds stay clean.
+    if (kDebugMode && error.code != null) {
+      return '${error.friendlyMessage} [${error.code}]';
+    }
+    return error.friendlyMessage;
+  }
   return 'Something went wrong. Please try again.';
 }
 
@@ -24,10 +31,16 @@ class PhoneVerificationResult {
   const PhoneVerificationResult({
     required this.verificationId,
     this.resendToken,
+    this.autoCredential,
   });
 
   final String verificationId;
   final int? resendToken;
+
+  /// Set only when Firebase auto-verified the device (instant verification).
+  /// When present, the caller should sign in directly with this credential
+  /// instead of waiting for the user to type an SMS code.
+  final PhoneAuthCredential? autoCredential;
 }
 
 class AuthRepository {
@@ -61,8 +74,25 @@ class AuthRepository {
       await _firebaseAuth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         forceResendingToken: forceResendingToken,
-        verificationCompleted: (_) {},
+        verificationCompleted: (credential) {
+          // Instant / auto verification: Firebase validated the device without
+          // an SMS round-trip. Surface the credential so the caller can sign in
+          // directly instead of hanging forever waiting for `codeSent`.
+          debugPrint('[auth] verifyPhoneNumber: auto-verification completed');
+          if (!completer.isCompleted) {
+            completer.complete(
+              PhoneVerificationResult(
+                verificationId: credential.verificationId ?? '',
+                autoCredential: credential,
+              ),
+            );
+          }
+        },
         verificationFailed: (exception) {
+          debugPrint(
+            '[auth] verifyPhoneNumber failed: '
+            'code=${exception.code} message=${exception.message}',
+          );
           if (!completer.isCompleted) {
             completer.completeError(
               ApiException(
@@ -74,6 +104,7 @@ class AuthRepository {
           }
         },
         codeSent: (verificationId, resendToken) {
+          debugPrint('[auth] verifyPhoneNumber: codeSent');
           if (!completer.isCompleted) {
             completer.complete(
               PhoneVerificationResult(
@@ -83,10 +114,24 @@ class AuthRepository {
             );
           }
         },
-        codeAutoRetrievalTimeout: (_) {},
+        codeAutoRetrievalTimeout: (verificationId) {
+          debugPrint('[auth] verifyPhoneNumber: codeAutoRetrievalTimeout');
+        },
       );
-      return completer.future;
+      // Guard against callbacks that never fire (e.g. instant verification that
+      // silently drops, or a stalled native request) so the UI can't hang.
+      return completer.future.timeout(
+        const Duration(seconds: 90),
+        onTimeout: () => throw ApiException(
+          type: ApiErrorType.unknown,
+          message: 'Verification timed out. Please try again.',
+          code: 'timeout',
+        ),
+      );
     } on FirebaseAuthException catch (e) {
+      debugPrint(
+        '[auth] verifyPhoneNumber threw: code=${e.code} message=${e.message}',
+      );
       throw ApiException(
         type: ApiErrorType.unknown,
         message: e.message ?? 'Phone verification failed',
@@ -107,6 +152,9 @@ class AuthRepository {
         verificationId: confirmationResult.verificationId,
       );
     } on FirebaseAuthException catch (e) {
+      debugPrint(
+        '[auth] _verifyPhoneNumberWeb failed: code=${e.code} message=${e.message}',
+      );
       throw ApiException(
         type: ApiErrorType.unknown,
         message: e.message ?? 'Phone verification failed',
@@ -142,9 +190,37 @@ class AuthRepository {
       }
       return token;
     } on FirebaseAuthException catch (e) {
+      debugPrint('[auth] signInWithOtp failed: code=${e.code} message=${e.message}');
       throw ApiException(
         type: ApiErrorType.unknown,
         message: e.message ?? 'Invalid OTP',
+        code: e.code,
+      );
+    }
+  }
+
+  /// Signs in with a credential produced by Firebase auto-verification
+  /// (instant verification) and returns the Firebase ID token.
+  Future<String> signInWithCredential(PhoneAuthCredential credential) async {
+    try {
+      final userCredential = await _firebaseAuth.signInWithCredential(
+        credential,
+      );
+      final token = await userCredential.user?.getIdToken();
+      if (token == null) {
+        throw ApiException(
+          type: ApiErrorType.unknown,
+          message: 'Could not create session',
+        );
+      }
+      return token;
+    } on FirebaseAuthException catch (e) {
+      debugPrint(
+        '[auth] signInWithCredential failed: code=${e.code} message=${e.message}',
+      );
+      throw ApiException(
+        type: ApiErrorType.unknown,
+        message: e.message ?? 'Sign-in failed',
         code: e.code,
       );
     }

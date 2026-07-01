@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart' show PhoneAuthCredential;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,11 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     try {
       final result = await pending;
       if (!mounted) return;
+      // Firebase auto-verified the device — sign in directly, no SMS needed.
+      if (result.autoCredential != null) {
+        await _completeWithCredential(result.autoCredential!);
+        return;
+      }
       setState(() {
         _verificationId = result.verificationId;
         _resendToken = result.resendToken;
@@ -83,6 +89,12 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         _waitingForCode = false;
         _error = friendlyAuthError(e);
       });
+    }
+  }
+
+  void _clearOtpFields() {
+    for (final c in _controllers) {
+      c.clear();
     }
   }
 
@@ -144,6 +156,14 @@ class _OtpPageState extends ConsumerState<OtpPage> {
             forceResendingToken: _resendToken,
           );
       if (!mounted) return;
+      // Auto-verified during resend — sign in directly.
+      if (result.autoCredential != null) {
+        await _completeWithCredential(result.autoCredential!);
+        return;
+      }
+      // A new code was sent — the old one is now invalid, so drop any digits
+      // the user already typed to avoid verifying a stale code.
+      _clearOtpFields();
       setState(() {
         _verificationId = result.verificationId;
         _resendToken = result.resendToken;
@@ -179,29 +199,53 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     });
 
     try {
-      final repo = ref.read(authRepositoryProvider);
-      final idToken = await repo.signInWithOtp(
-        verificationId: _verificationId,
-        smsCode: _otp,
-      );
-      ref.read(authTokenProvider.notifier).setToken(idToken);
-      final session = await repo.createSession(idToken: idToken);
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(onboardingCompleteKey, session.onboardingComplete);
-
-      if (!mounted) return;
-      if (session.onboardingComplete) {
-        final pendingPath = await consumePendingDeepLinkPath();
-        if (!mounted) return;
-        context.go(pendingPath ?? MainShell.routePath);
-      } else {
-        context.go(ProfileSetupPage.routePath);
-      }
+      final idToken = await ref
+          .read(authRepositoryProvider)
+          .signInWithOtp(verificationId: _verificationId, smsCode: _otp);
+      await _completeSession(idToken);
     } catch (e) {
       if (mounted) setState(() => _error = friendlyAuthError(e));
     } finally {
       if (mounted) setState(() => _verifying = false);
+    }
+  }
+
+  /// Handles Firebase instant/auto verification: signs in with the returned
+  /// credential and completes the session without an SMS code.
+  Future<void> _completeWithCredential(PhoneAuthCredential credential) async {
+    setState(() {
+      _waitingForCode = false;
+      _verifying = true;
+      _error = null;
+    });
+    try {
+      final idToken = await ref
+          .read(authRepositoryProvider)
+          .signInWithCredential(credential);
+      await _completeSession(idToken);
+    } catch (e) {
+      if (mounted) setState(() => _error = friendlyAuthError(e));
+    } finally {
+      if (mounted) setState(() => _verifying = false);
+    }
+  }
+
+  /// Exchanges a Firebase ID token for a backend session and navigates onward.
+  Future<void> _completeSession(String idToken) async {
+    final repo = ref.read(authRepositoryProvider);
+    ref.read(authTokenProvider.notifier).setToken(idToken);
+    final session = await repo.createSession(idToken: idToken);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(onboardingCompleteKey, session.onboardingComplete);
+
+    if (!mounted) return;
+    if (session.onboardingComplete) {
+      final pendingPath = await consumePendingDeepLinkPath();
+      if (!mounted) return;
+      context.go(pendingPath ?? MainShell.routePath);
+    } else {
+      context.go(ProfileSetupPage.routePath);
     }
   }
 
