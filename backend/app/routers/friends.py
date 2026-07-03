@@ -18,6 +18,7 @@ from app.schemas import (
     ContactSyncResponse,
     FriendInviteCreateResponse,
     FriendInviteResolveResponse,
+    FriendNudgeSummary,
     FriendRequestCreateRequest,
     FriendRequestResponse,
     FriendRequestStatus,
@@ -360,6 +361,40 @@ def friend_stats(current_user: dict = Depends(get_current_user)):
     )
 
 
+def _latest_friend_nudge(db, uid: str, friend_uid: str) -> FriendNudgeSummary | None:
+    """Most recent nudge exchanged between two friends, or None.
+
+    Fetches only the newest nudge via an indexed (feed_id ==, created_at DESC)
+    query, so the result is correct no matter how many nudges the thread holds
+    and each friend costs a single-document read instead of scanning up to
+    MAX_LIMIT docs. Requires the `nudges` composite index in
+    firestore.indexes.json (deploy with `firebase deploy --only
+    firestore:indexes` before this ships)."""
+    first, second = sorted([uid, friend_uid])
+    feed_id = f"friend_{first}_{second}"
+    docs = list(
+        db.collection("nudges")
+        .where("feed_id", "==", feed_id)
+        .order_by("created_at", direction=firestore.Query.DESCENDING)
+        .limit(1)
+        .stream()
+    )
+    if not docs:
+        return None
+    doc = docs[0]
+    data = doc.to_dict()
+    created = data.get("created_at")
+    if created is None:
+        return None
+    return FriendNudgeSummary(
+        id=doc.id,
+        title=data.get("title", ""),
+        direction="sent" if data.get("sender_uid") == uid else "received",
+        status=data.get("status", "active"),
+        created_at=created,
+    )
+
+
 @router.get("", response_model=list[FriendResponse])
 def list_friends(
     limit: int = Query(default=DEFAULT_LIMIT, le=MAX_LIMIT),
@@ -377,6 +412,7 @@ def list_friends(
             FriendResponse(
                 user=public_user_from_doc(user_doc.id, user_doc.to_dict(), uid),
                 friends_since=friend_doc.to_dict()["friends_since"],
+                last_nudge=_latest_friend_nudge(db, uid, friend_doc.id),
             )
         )
     return responses

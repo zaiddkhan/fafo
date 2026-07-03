@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime, timedelta, timezone
 from math import radians, cos, sin, asin, sqrt
 from uuid import uuid4
@@ -27,6 +28,7 @@ from app.schemas import (
     EventCreateRequest,
     EventUpdateRequest,
     EventResponse,
+    EventListPage,
     EventBannerUploadResponse,
     EventCancelRequest,
     EventJoinResponse,
@@ -283,7 +285,7 @@ async def upload_event_banner(
     return EventBannerUploadResponse(event_id=event_id, banner_url=banner_url)
 
 
-@router.get("", response_model=list[EventResponse])
+@router.get("", response_model=EventListPage)
 def list_events(
     lat: float = Query(...),
     lng: float = Query(...),
@@ -294,6 +296,16 @@ def list_events(
     cursor: str | None = Query(default=None),
     current_user: dict = Depends(get_current_user),
 ):
+    """Cursor-paginated list of live events near a point. Pages are ordered by a
+    stable (date_time, id) key and the next-page cursor is server-generated and
+    opaque, so lazy scroll never skips or repeats an event. `has_more` is
+    authoritative — the client should stop paging when it is false.
+
+    Note: a radius query is served from geohash candidate ranges and filtered by
+    distance/visibility in app code, so Firestore cannot apply limit/start_after
+    at the database for a date-ordered feed. The cursor is therefore a stable
+    content cursor over the sorted candidate set, which is the correct pattern
+    for a geo feed."""
     db = get_firestore()
     uid = current_user["uid"]
     now = datetime.now(timezone.utc)
@@ -302,6 +314,7 @@ def list_events(
     geohash_ranges = geohash_bounds_for_radius(lat, lng, radius_km)
 
     results = []
+    seen_ids: set[str] = set()
     for gh_start, gh_end in geohash_ranges:
         query = db.collection("events").where("cancelled", "==", False)
         if category_id:
@@ -311,6 +324,9 @@ def list_events(
         query = query.where("geohash", ">=", gh_start).where("geohash", "<=", gh_end)
 
         for doc in query.stream():
+            if doc.id in seen_ids:
+                continue
+
             data = doc.to_dict()
 
             event_time = _optional_utc(data.get("date_time"))
@@ -323,18 +339,114 @@ def list_events(
             loc: GeoPoint = data["location"]
             distance = _haversine_km(lat, lng, loc.latitude, loc.longitude)
             if distance <= radius_km:
+                seen_ids.add(doc.id)
                 results.append(_event_to_response(doc.id, data, uid))
 
-    results.sort(key=lambda e: e.date_time)
+    # Stable ordering so the (date_time, id) cursor is unambiguous.
+    results.sort(key=lambda e: (_ensure_utc(e.date_time), e.id))
 
     if cursor:
-        cursor_idx = next(
-            (i for i, e in enumerate(results) if e.id == cursor), -1
-        )
-        if cursor_idx >= 0:
-            results = results[cursor_idx + 1:]
+        decoded = _decode_event_cursor(cursor)
+        if decoded is not None:
+            c_time, c_id = decoded
+            results = [
+                e
+                for e in results
+                if (_ensure_utc(e.date_time), e.id) > (c_time, c_id)
+            ]
 
-    return results[:limit]
+    page = results[:limit]
+    has_more = len(results) > limit
+    next_cursor = _encode_event_cursor(page[-1]) if page and has_more else None
+    return EventListPage(items=page, next_cursor=next_cursor, has_more=has_more)
+
+
+def _encode_event_cursor(event: EventResponse) -> str:
+    raw = f"{event.date_time.isoformat()}|{event.id}"
+    return base64.urlsafe_b64encode(raw.encode()).decode()
+
+
+def _decode_event_cursor(cursor: str) -> tuple[datetime, str] | None:
+    try:
+        raw = base64.urlsafe_b64decode(cursor.encode()).decode()
+        iso, event_id = raw.rsplit("|", 1)
+        return _ensure_utc(datetime.fromisoformat(iso)), event_id
+    except (ValueError, TypeError):
+        return None
+
+
+@router.get("/search", response_model=EventListPage)
+def search_events(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius_km: float = Query(default=25.0),
+    category_id: str | None = Query(default=None),
+    q: str | None = Query(default=None),
+    limit: int = Query(default=20, le=MAX_PAGE_LIMIT),
+    cursor: str | None = Query(default=None),
+    current_user: dict = Depends(get_current_user),
+):
+    """Cursor-paginated, text-searchable list of live events for the search
+    screen. Filters by radius, optional category, and optional free-text query
+    (matched against title / venue / description), then pages the sorted result
+    with a stable (date_time, id) cursor so lazy scroll never skips or repeats."""
+    db = get_firestore()
+    uid = current_user["uid"]
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(minutes=VISIBILITY_WINDOW_MINUTES)
+
+    geohash_ranges = geohash_bounds_for_radius(lat, lng, radius_km)
+
+    results = []
+    seen_ids: set[str] = set()
+    for gh_start, gh_end in geohash_ranges:
+        query = db.collection("events").where("cancelled", "==", False)
+        if category_id:
+            query = query.where("category_id", "==", category_id)
+        query = query.where("geohash", ">=", gh_start).where("geohash", "<=", gh_end)
+
+        for doc in query.stream():
+            if doc.id in seen_ids:
+                continue
+
+            data = doc.to_dict()
+            event_time = _optional_utc(data.get("date_time"))
+            if event_time is None or event_time < cutoff:
+                continue
+            loc: GeoPoint = data["location"]
+            distance = _haversine_km(lat, lng, loc.latitude, loc.longitude)
+            if distance <= radius_km:
+                seen_ids.add(doc.id)
+                results.append(_event_to_response(doc.id, data, uid))
+
+    if q:
+        needle = q.strip().lower()
+        if needle:
+            results = [
+                e
+                for e in results
+                if needle in e.title.lower()
+                or needle in e.location_name.lower()
+                or (e.description or "").lower().find(needle) >= 0
+            ]
+
+    # Stable ordering so the (date_time, id) cursor is unambiguous.
+    results.sort(key=lambda e: (_ensure_utc(e.date_time), e.id))
+
+    if cursor:
+        decoded = _decode_event_cursor(cursor)
+        if decoded is not None:
+            c_time, c_id = decoded
+            results = [
+                e
+                for e in results
+                if (_ensure_utc(e.date_time), e.id) > (c_time, c_id)
+            ]
+
+    page = results[:limit]
+    has_more = len(results) > limit
+    next_cursor = _encode_event_cursor(page[-1]) if page and has_more else None
+    return EventListPage(items=page, next_cursor=next_cursor, has_more=has_more)
 
 
 @router.get("/mine", response_model=list[EventResponse])

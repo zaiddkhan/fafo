@@ -140,15 +140,7 @@ class HomePageState extends ConsumerState<HomePage> {
         if (_locationNotice != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted || _locationNotice == null) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_locationNotice!),
-                action: SnackBarAction(
-                  label: 'Settings',
-                  onPressed: Geolocator.openLocationSettings,
-                ),
-              ),
-            );
+            _showLocationNotice(_locationNotice!);
           });
         }
       }
@@ -277,17 +269,29 @@ class HomePageState extends ConsumerState<HomePage> {
 
     setState(() => _locatingUser = false);
     if (!resolved && _locationNotice != null) {
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(_locationNotice!),
-          action: SnackBarAction(
-            label: 'Settings',
-            onPressed: Geolocator.openLocationSettings,
-          ),
-        ),
-      );
+      _showLocationNotice(_locationNotice!);
     }
+  }
+
+  /// Shows the location-permission notice as a floating snackbar lifted clear
+  /// of the bottom nav and the event card's RSVP/MORE buttons, so it never
+  /// covers the controls the user is trying to tap.
+  void _showLocationNotice(String message) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 240),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Settings',
+          onPressed: Geolocator.openLocationSettings,
+        ),
+      ),
+    );
   }
 
   Future<void> _loadCategories() async {
@@ -900,8 +904,10 @@ class HomePageState extends ConsumerState<HomePage> {
                   // Search bar
                   Expanded(
                     child: GestureDetector(
-                      onTap: () =>
-                          context.push(SearchPage.routePath, extra: _events),
+                      onTap: () => context.push(
+                        SearchPage.routePath,
+                        extra: (lat: _lat, lng: _lng),
+                      ),
                       child: Container(
                         height: 44,
                         padding: const EdgeInsets.symmetric(

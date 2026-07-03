@@ -583,11 +583,6 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
 
     final goingCount = event.attendees;
     final visibleAvatarCount = goingCount.clamp(0, 4);
-    final goingCopy = goingCount <= 0
-        ? 'Be the first to join.'
-        : goingCount <= 3
-        ? '$goingCount going'
-        : 'Arjun, Priya, Karan, and ${goingCount - 3} more';
     final aboutText = _backendEvent?.description?.trim().isNotEmpty == true
         ? _backendEvent!.description!
         : 'Join us for ${event.title.toLowerCase()} at ${event.venue}. '
@@ -1067,13 +1062,6 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(
-                                goingCopy,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -1398,12 +1386,12 @@ class _ActionButton extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: const Color(0xFF181818), size: 22),
+          Icon(icon, color: Colors.white, size: 22),
           const SizedBox(width: AppSpacing.sm),
           Text(
             label,
             style: theme.textTheme.labelLarge?.copyWith(
-              color: const Color(0xFF181818),
+              color: Colors.white,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
             ),

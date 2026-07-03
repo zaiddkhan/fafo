@@ -122,20 +122,31 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 8, 22, 18),
               child: feed.maybeWhen(
-                data: (items) => SizedBox(
-                  width: double.infinity,
-                  height: 46,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.accentPrimary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                data: (items) {
+                  // A nudge thread can only hold one live nudge at a time — you
+                  // can't fire a new one (or nudge back) while the current one
+                  // is still unresolved, so disable the button until it clears.
+                  final hasActive = items.any((n) => !n.isResolved);
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.accentPrimary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFFCFCFCF),
+                        disabledForegroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: hasActive ? null : () => _createNudge(items),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(
+                        hasActive ? 'Nudge in progress' : 'Nudge',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
                     ),
-                    onPressed: () => _createNudge(items),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Nudge', style: TextStyle(fontWeight: FontWeight.w800)),
-                  ),
-                ),
+                  );
+                },
                 orElse: () => const SizedBox(height: 46),
               ),
             ),
@@ -246,7 +257,7 @@ class _NudgeBubble extends ConsumerWidget {
           Opacity(
             opacity: isExpired ? 0.55 : 1,
             child: GestureDetector(
-              onTap: () => _showDetails(context, timerLabel),
+              onTap: () => _showDetails(context),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -387,15 +398,7 @@ class _NudgeBubble extends ConsumerWidget {
     return timerLabel;
   }
 
-  void _showDetails(BuildContext context, String timerLabel) {
-    final myUid = FirebaseAuth.instance.currentUser?.uid;
-    final isMine = nudge.senderUid == myUid;
-    final isAccepted = nudge.status == NudgeStatus.acceptedTimer ||
-        (nudge.isResolved && nudge.yesCount > 0);
-    final location = nudge.location?.trim() ?? '';
-    final hasLocation = location.isNotEmpty;
-    final isLink = location.startsWith('http://') || location.startsWith('https://');
-
+  void _showDetails(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -404,90 +407,158 @@ class _NudgeBubble extends ConsumerWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
-        final bottom = MediaQuery.viewInsetsOf(context).bottom;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(18, 4, 18, 18 + bottom),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (context) => _NudgeDetailsSheet(
+        nudge: nudge,
+        friendName: friendName,
+        palette: palette,
+      ),
+    );
+  }
+}
+
+/// Detail popup for a nudge. Runs its own 1-second ticker so the "Time left"
+/// countdown stays live while the sheet is open — the parent sheet's timer
+/// doesn't reach into this separately-routed overlay.
+class _NudgeDetailsSheet extends StatefulWidget {
+  const _NudgeDetailsSheet({
+    required this.nudge,
+    required this.friendName,
+    required this.palette,
+  });
+
+  final NudgeResponse nudge;
+  final String friendName;
+  final _NudgePalette palette;
+
+  @override
+  State<_NudgeDetailsSheet> createState() => _NudgeDetailsSheetState();
+}
+
+class _NudgeDetailsSheetState extends State<_NudgeDetailsSheet> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final nudge = widget.nudge;
+    final palette = widget.palette;
+    final myUid = FirebaseAuth.instance.currentUser?.uid;
+    final isMine = nudge.senderUid == myUid;
+    final isAccepted = nudge.status == NudgeStatus.acceptedTimer ||
+        (nudge.isResolved && nudge.yesCount > 0);
+    final location = nudge.location?.trim() ?? '';
+    final hasLocation = location.isNotEmpty;
+    final isLink =
+        location.startsWith('http://') || location.startsWith('https://');
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(18, 4, 18, 18 + bottom),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: palette.soft,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border, width: 1.2),
-                      ),
-                      child: const Center(child: Text('👉', style: TextStyle(fontSize: 22))),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            nudge.title,
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            isMine ? 'Sent by you' : 'From $friendName',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: palette.soft,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border, width: 1.2),
+                  ),
+                  child: const Center(child: Text('👉', style: TextStyle(fontSize: 22))),
                 ),
-                const SizedBox(height: 18),
-                _NudgeDetailRow(icon: Icons.timer_outlined, label: 'Time left', value: _stateLabel(timerLabel, isAccepted)),
-                if (nudge.expectedVoterCount > 1) ...[
-                  const SizedBox(height: 10),
-                  _NudgeDetailRow(icon: Icons.groups_outlined, label: 'Tally', value: '${nudge.yesCount}/${nudge.expectedVoterCount} in'),
-                ],
-                if (hasLocation) ...[
-                  const SizedBox(height: 10),
-                  _NudgeDetailRow(
-                    icon: Icons.place_outlined,
-                    label: 'Location',
-                    value: isLink ? 'Map location shared' : location,
-                  ),
-                ],
-                const SizedBox(height: 18),
-                if (hasLocation && isLink)
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      icon: const Icon(Icons.map_outlined, size: 18),
-                      label: const Text('Open location'),
-                      onPressed: () async {
-                        final uri = Uri.tryParse(location);
-                        if (uri != null) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                    ),
-                  ),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Close'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nudge.title,
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        isMine ? 'Sent by you' : 'From ${widget.friendName}',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 18),
+            _NudgeDetailRow(icon: Icons.timer_outlined, label: 'Time left', value: _nudgeStateLabel(nudge, isAccepted)),
+            if (nudge.expectedVoterCount > 1) ...[
+              const SizedBox(height: 10),
+              _NudgeDetailRow(icon: Icons.groups_outlined, label: 'Tally', value: '${nudge.yesCount}/${nudge.expectedVoterCount} in'),
+            ],
+            if (hasLocation) ...[
+              const SizedBox(height: 10),
+              _NudgeDetailRow(
+                icon: Icons.place_outlined,
+                label: 'Location',
+                value: isLink ? 'Map location shared' : location,
+              ),
+            ],
+            const SizedBox(height: 18),
+            if (hasLocation && isLink)
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.map_outlined, size: 18),
+                  label: const Text('Open location'),
+                  onPressed: () async {
+                    final uri = Uri.tryParse(location);
+                    if (uri != null) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                ),
+              ),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
+}
+
+/// Live "Time left" label for a nudge, recomputed from [NudgeResponse.expiresAt]
+/// on each call so callers that rebuild on a timer show a ticking countdown.
+String _nudgeStateLabel(NudgeResponse nudge, bool isAccepted) {
+  final remaining = nudge.expiresAt.difference(DateTime.now());
+  final seconds = remaining.inSeconds.clamp(0, 99999);
+  final timerLabel =
+      '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
+  if (nudge.status == NudgeStatus.expired) return 'Expired';
+  if (isAccepted && !nudge.isResolved) return 'Accepted • $timerLabel';
+  if (isAccepted) return 'Accepted';
+  if (nudge.isResolved) return 'Resolved';
+  return timerLabel;
 }
 
 class _NudgeDetailRow extends StatelessWidget {

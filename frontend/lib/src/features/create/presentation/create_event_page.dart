@@ -834,7 +834,7 @@ class _PublishButton extends StatelessWidget {
                     : Text(
                         label,
                         style: theme.textTheme.displayMedium?.copyWith(
-                          color: const Color(0xFF1A1A1A),
+                          color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
                         ),

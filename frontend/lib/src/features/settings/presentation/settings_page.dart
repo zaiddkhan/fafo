@@ -15,6 +15,7 @@ import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/theme_mode_controller.dart';
 import 'package:fafu/src/features/creators/presentation/creator_application_page.dart';
+import 'package:fafu/src/features/events/data/saved_events_controller.dart';
 import 'package:fafu/src/features/location/selected_area_controller.dart';
 import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
@@ -138,6 +139,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     await ref.read(pushServiceProvider).unregister();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(onboardingCompleteKey);
+    // Drop device-local, account-scoped caches so they don't bleed into the
+    // next account signed in on this device.
+    await prefs.remove(savedEventIdsPreferenceKey);
     await FirebaseAuth.instance.signOut();
     ref.read(authTokenProvider.notifier).clearToken();
   }

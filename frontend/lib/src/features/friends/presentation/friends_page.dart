@@ -309,11 +309,11 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                   data: (items) => items.isEmpty
                       ? const _AllFriendsEmpty()
                       : Column(
-                          children: items
+                          children: _sortByNudged(items)
                               .map(
                                 (friend) => _FriendListCard(
                                   user: friend.user,
-                                  statusText: _statusForFriend(friend.user),
+                                  statusText: _statusForFriend(friend),
                                   onTap: () => _openNudgeFeed(friend.user),
                                   onProfile: () => context.push(
                                     PublicProfilePage.routePath,
@@ -440,10 +440,53 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     );
   }
 
-  String _statusForFriend(PublicUserResponse user) {
-    if (user.online) return 'New Nudge Received';
-    return 'Last Nudge Accepted';
+  String _statusForFriend(FriendResponse friend) {
+    final nudge = friend.lastNudge;
+    if (nudge != null) {
+      final ago = _relativeSince(nudge.createdAt);
+      if (!nudge.isResolved) {
+        return nudge.direction == NudgeDirection.received
+            ? 'Nudged you • $ago'
+            : 'Nudge sent • $ago';
+      }
+      final verb =
+          nudge.direction == NudgeDirection.received ? 'Nudged you' : 'You nudged';
+      return nudge.status == 'expired'
+          ? 'Nudge expired • $ago'
+          : '$verb • $ago';
+    }
+    if (friend.user.online) return 'Online now';
+    return 'No nudges yet';
   }
+
+  /// Friends with a recent nudge (either direction) float to the top, most
+  /// recent first; everyone else keeps the order the backend returned them in.
+  List<FriendResponse> _sortByNudged(List<FriendResponse> items) {
+    if (!items.any((f) => f.lastNudge != null)) return items;
+    final indexed = [
+      for (var i = 0; i < items.length; i++) (index: i, friend: items[i]),
+    ];
+    indexed.sort((a, b) {
+      final aAt = a.friend.lastNudge?.createdAt;
+      final bAt = b.friend.lastNudge?.createdAt;
+      if (aAt != null && bAt != null) return bAt.compareTo(aAt);
+      if (aAt != null) return -1;
+      if (bAt != null) return 1;
+      // Neither has a nudge: keep the backend's original order.
+      return a.index.compareTo(b.index);
+    });
+    return [for (final entry in indexed) entry.friend];
+  }
+}
+
+/// Compact relative-time label, e.g. "2h ago", used for nudge timestamps.
+String _relativeSince(DateTime time) {
+  final diff = DateTime.now().difference(time);
+  if (diff.inSeconds < 60) return 'just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return '${(diff.inDays / 7).floor()}w ago';
 }
 
 class _SearchBox extends StatelessWidget {

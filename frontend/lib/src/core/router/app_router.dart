@@ -26,6 +26,11 @@ import 'package:fafu/src/features/splash/presentation/splash_page.dart';
 
 const onboardingCompleteKey = 'onboarding_complete';
 
+// Fallback search centre (Bengaluru) used only if the search route is opened
+// without a resolved location; callers normally pass the map's current area.
+const _defaultSearchLat = 12.9716;
+const _defaultSearchLng = 77.5946;
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final prefs = ref.read(sharedPreferencesProvider).value;
 
@@ -113,8 +118,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: SearchPage.routePath,
         name: SearchPage.routeName,
         builder: (context, state) {
-          final events = state.extra as List<MockEvent>? ?? [];
-          return SearchPage(events: events);
+          final args = state.extra as ({double lat, double lng})?;
+          return SearchPage(
+            lat: args?.lat ?? _defaultSearchLat,
+            lng: args?.lng ?? _defaultSearchLng,
+          );
         },
       ),
       GoRoute(

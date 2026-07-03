@@ -10,6 +10,7 @@ import 'package:fafu/src/features/categories/data/categories_repository.dart';
 import 'package:fafu/src/features/categories/domain/category.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
+import 'package:fafu/src/features/events/domain/event_page.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/shared/widgets/app_pressable.dart';
 
@@ -29,18 +30,55 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
   static const _mumbaiLng = 72.8777;
   static const _bangaloreLat = 12.9716;
   static const _bangaloreLng = 77.5946;
+  static const _radiusKm = 70.0;
+  // How many events to pull per city, per page. Kept small so the listing
+  // genuinely paginates instead of loading everything up front.
+  static const _pageLimit = 20;
+  // Start loading the next page once the user scrolls within this many pixels
+  // of the bottom.
+  static const _loadMoreThreshold = 500.0;
 
   bool _loading = true;
+  bool _loadingMore = false;
   String? _error;
   String? _selectedCategoryId;
   List<CategoryResponse> _categories = const [];
   List<EventResponse> _events = const [];
   List<BlogResponse> _blogs = const [];
+  bool _usingDemoEvents = false;
+
+  // The listing merges two seed cities. The backend cursor is simply the id of
+  // the last event a city returned, so we track one cursor + "has more" flag per
+  // city and page them independently.
+  String? _mumbaiCursor;
+  String? _bangaloreCursor;
+  bool _mumbaiHasMore = false;
+  bool _bangaloreHasMore = false;
+
+  final ScrollController _scrollController = ScrollController();
+
+  bool get _hasMore => _mumbaiHasMore || _bangaloreHasMore;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadEventsIndex();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - _loadMoreThreshold) {
+      _loadMore();
+    }
   }
 
   Future<void> _loadEventsIndex() async {
@@ -61,24 +99,24 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
         eventsRepo.getEvents(
           lat: _mumbaiLat,
           lng: _mumbaiLng,
-          radiusKm: 70,
-          limit: 100,
+          radiusKm: _radiusKm,
+          limit: _pageLimit,
         ),
         eventsRepo.getEvents(
           lat: _bangaloreLat,
           lng: _bangaloreLng,
-          radiusKm: 70,
-          limit: 100,
+          radiusKm: _radiusKm,
+          limit: _pageLimit,
         ),
         blogsRepo.getBlogs(city: 'Bengaluru', limit: 10),
       ]);
 
       final categoriesResult = results[0] as List<CategoryResponse>;
-      final mumbaiEvents = results[1] as List<EventResponse>;
-      final bangaloreEvents = results[2] as List<EventResponse>;
+      final mumbaiPage = results[1] as EventPage;
+      final bangalorePage = results[2] as EventPage;
       final blogsResult = results[3] as List<BlogResponse>;
       final eventsById = <String, EventResponse>{
-        for (final event in [...mumbaiEvents, ...bangaloreEvents])
+        for (final event in [...mumbaiPage.items, ...bangalorePage.items])
           event.id: event,
       };
       final events = eventsById.values.toList()
@@ -95,11 +133,85 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
         _categories = categories;
         _events = displayEvents;
         _blogs = blogs;
+        _usingDemoEvents = usingDemoEvents;
+        _loadingMore = false;
+        // Cursors and "has more" are server-authoritative. Demo fallback data
+        // is never paginated.
+        _mumbaiCursor = mumbaiPage.nextCursor;
+        _bangaloreCursor = bangalorePage.nextCursor;
+        _mumbaiHasMore = !usingDemoEvents && mumbaiPage.hasMore;
+        _bangaloreHasMore = !usingDemoEvents && bangalorePage.hasMore;
       });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || _loading || !_hasMore) return;
+    setState(() => _loadingMore = true);
+
+    try {
+      final eventsRepo = ref.read(eventsRepositoryProvider);
+      final fetchMumbai = _mumbaiHasMore;
+      final fetchBangalore = _bangaloreHasMore;
+
+      final futures = <Future<EventPage>>[
+        if (fetchMumbai)
+          eventsRepo.getEvents(
+            lat: _mumbaiLat,
+            lng: _mumbaiLng,
+            radiusKm: _radiusKm,
+            limit: _pageLimit,
+            cursor: _mumbaiCursor,
+          ),
+        if (fetchBangalore)
+          eventsRepo.getEvents(
+            lat: _bangaloreLat,
+            lng: _bangaloreLng,
+            radiusKm: _radiusKm,
+            limit: _pageLimit,
+            cursor: _bangaloreCursor,
+          ),
+      ];
+      final pages = await Future.wait(futures);
+      if (!mounted) return;
+
+      var idx = 0;
+      final EventPage? mumbaiPage = fetchMumbai ? pages[idx++] : null;
+      final EventPage? bangalorePage = fetchBangalore ? pages[idx++] : null;
+
+      final merged = <String, EventResponse>{
+        for (final event in _events) event.id: event,
+      };
+      for (final event in [
+        ...?mumbaiPage?.items,
+        ...?bangalorePage?.items,
+      ]) {
+        merged[event.id] = event;
+      }
+      final events = merged.values.toList()
+        ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+      setState(() {
+        _events = events;
+        // Cursors and "has more" come straight from the server, so paging stops
+        // exactly when the backend says there is nothing left.
+        if (mumbaiPage != null) {
+          _mumbaiCursor = mumbaiPage.nextCursor;
+          _mumbaiHasMore = mumbaiPage.hasMore;
+        }
+        if (bangalorePage != null) {
+          _bangaloreCursor = bangalorePage.nextCursor;
+          _bangaloreHasMore = bangalorePage.hasMore;
+        }
+        _loadingMore = false;
+      });
+    } catch (_) {
+      // Keep whatever is already loaded; the user can scroll again to retry.
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -270,6 +382,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
         child: RefreshIndicator(
           onRefresh: _loadEventsIndex,
           child: ListView(
+            controller: _scrollController,
             padding: EdgeInsets.fromLTRB(22, 18, 22, bottomInset),
             children: [
               Text(
@@ -366,7 +479,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
                     textColor: bodyColor,
                     borderColor: borderColor,
                   )
-                else
+                else ...[
                   ..._filteredEvents.map(
                     (event) => Padding(
                       padding: const EdgeInsets.only(bottom: 16),
@@ -381,6 +494,30 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
                       ),
                     ),
                   ),
+                  if (_loadingMore)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.4),
+                        ),
+                      ),
+                    )
+                  else if (!_hasMore && !_usingDemoEvents)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: Text(
+                          "You're all caught up",
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: bodyColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ],
             ],
           ),

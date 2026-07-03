@@ -108,9 +108,23 @@ class FriendRequestResponse(BaseModel):
     responded_at: Optional[datetime] = None
 
 
+class FriendNudgeSummary(BaseModel):
+    """Compact summary of the most recent nudge exchanged with a friend, used to
+    surface nudge state on the friends list. `direction` is "sent" when the
+    current user created it, "received" when the friend did. `status` mirrors
+    NudgeStatus ("active" | "accepted_timer" | "resolved" | "expired")."""
+
+    id: str
+    title: str
+    direction: str
+    status: str
+    created_at: datetime
+
+
 class FriendResponse(BaseModel):
     user: PublicUserResponse
     friends_since: datetime
+    last_nudge: Optional[FriendNudgeSummary] = None
 
 
 class FriendStatsResponse(BaseModel):
@@ -367,6 +381,15 @@ class EventResponse(BaseModel):
     is_joined: bool = False
     created_at: datetime
     updated_at: datetime
+
+
+class EventListPage(BaseModel):
+    """Cursor-paginated page of events, returned by GET /events/search so the
+    client can lazily scroll through live events."""
+
+    items: list[EventResponse] = Field(default_factory=list)
+    next_cursor: Optional[str] = None
+    has_more: bool = False
 
 
 class EventBannerUploadResponse(BaseModel):

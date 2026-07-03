@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/network/dio_provider.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
+import 'package:fafu/src/features/events/domain/event_page.dart';
 
 final eventsRepositoryProvider = Provider<EventsRepository>((ref) {
   return EventsRepository(ref.watch(dioProvider));
@@ -102,7 +103,10 @@ class EventsRepository {
     };
   }
 
-  Future<List<EventResponse>> getEvents({
+  /// Cursor-paginated list of live events near a point. Pass the [cursor] from
+  /// the previous page's [EventPage.nextCursor] to fetch the next page, and stop
+  /// paging once [EventPage.hasMore] is false.
+  Future<EventPage> getEvents({
     required double lat,
     required double lng,
     double radiusKm = 15.0,
@@ -123,10 +127,42 @@ class EventsRepository {
       if (cursor != null) queryParams['cursor'] = cursor;
 
       final response = await _dio.get('/events', queryParameters: queryParams);
-      final data = response.data as List;
-      return data
-          .map((e) => EventResponse.fromJson(e as Map<String, dynamic>))
-          .toList();
+      return EventPage.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// Cursor-paginated, text-searchable list of live events for the search
+  /// screen. Pass the [cursor] from the previous page's [EventPage.nextCursor]
+  /// to fetch the next page.
+  Future<EventPage> searchEvents({
+    required double lat,
+    required double lng,
+    double radiusKm = 25.0,
+    String? categoryId,
+    String? query,
+    int limit = 20,
+    String? cursor,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{
+        'lat': lat,
+        'lng': lng,
+        'radius_km': radiusKm,
+        'limit': limit,
+      };
+      if (categoryId != null) queryParams['category_id'] = categoryId;
+      if (query != null && query.trim().isNotEmpty) {
+        queryParams['q'] = query.trim();
+      }
+      if (cursor != null) queryParams['cursor'] = cursor;
+
+      final response = await _dio.get(
+        '/events/search',
+        queryParameters: queryParams,
+      );
+      return EventPage.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

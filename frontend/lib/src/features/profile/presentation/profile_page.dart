@@ -393,10 +393,24 @@ class _QuestHistorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Cap the profile preview; the full list lives on a dedicated page reached
+    // via "See History", mirroring the Past Experiences section.
+    const previewCount = 3;
+    final hasItems = activations.asData?.value.isNotEmpty ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: 'Quest History'),
+        _SectionHeader(
+          title: 'Quest History',
+          actionLabel: hasItems ? 'See History' : '',
+          onAction: hasItems
+              ? () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const _QuestHistoryPage(),
+                  ),
+                )
+              : null,
+        ),
         const SizedBox(height: 12),
         activations.when(
           loading: () => const Padding(
@@ -421,6 +435,7 @@ class _QuestHistorySection extends StatelessWidget {
             }
             return Column(
               children: items
+                  .take(previewCount)
                   .map(
                     (a) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -432,6 +447,55 @@ class _QuestHistorySection extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+/// Full "Quest History" — every quest the user has started or completed, not
+/// just the preview shown on the profile. Opened from the "See History" link.
+/// Watches [questActivationsProvider] so it stays in sync with start/drop
+/// actions taken elsewhere.
+class _QuestHistoryPage extends ConsumerWidget {
+  const _QuestHistoryPage();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activations = ref.watch(questActivationsProvider);
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(title: const Text('Quest History')),
+      body: activations.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.accentPrimary),
+        ),
+        error: (error, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              error.toString(),
+              style: const TextStyle(color: Color(0xFFE5484D)),
+            ),
+          ),
+        ),
+        data: (items) {
+          if (items.isEmpty) {
+            return const Center(
+              child: Text("You haven't started any quests yet."),
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(questActivationsProvider),
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              itemCount: items.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (_, index) =>
+                  _QuestHistoryRow(activation: items[index], isDark: isDark),
+            ),
+          );
+        },
+      ),
     );
   }
 }

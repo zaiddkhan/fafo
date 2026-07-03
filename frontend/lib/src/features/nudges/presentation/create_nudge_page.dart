@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/features/friends/data/friends_providers.dart';
 import 'package:fafu/src/features/nudges/data/nudges_providers.dart';
 import 'package:fafu/src/features/nudges/data/nudges_repository.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
@@ -60,6 +61,11 @@ class _CreateNudgePageState extends ConsumerState<CreateNudgePage> {
             windowMinutes: _resolveWindow(),
           );
       ref.invalidate(nudgeFeedProvider(NudgeFeedKey(widget.feedType, widget.targetId)));
+      // Refresh the friends list so this friend floats to the top with an
+      // updated "Nudge sent • X ago" subtitle sourced from the backend.
+      if (widget.feedType == NudgeFeedType.friend) {
+        ref.invalidate(friendsListProvider);
+      }
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));

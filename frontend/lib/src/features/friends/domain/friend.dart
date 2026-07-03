@@ -94,16 +94,63 @@ class FriendRequestResponse {
   }
 }
 
+/// Direction of the most recent nudge between the current user and a friend.
+enum NudgeDirection { sent, received }
+
+/// Compact summary of the latest nudge exchanged with a friend, used to surface
+/// nudge state (and ordering) on the friends list.
+class FriendNudgeSummary {
+  const FriendNudgeSummary({
+    required this.id,
+    required this.title,
+    required this.direction,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String title;
+  final NudgeDirection direction;
+
+  /// Raw nudge status: "active" | "accepted_timer" | "resolved" | "expired".
+  final String status;
+  final DateTime createdAt;
+
+  bool get isResolved => status == 'resolved' || status == 'expired';
+
+  factory FriendNudgeSummary.fromJson(Map<String, dynamic> json) {
+    return FriendNudgeSummary(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      direction: json['direction'] == 'received'
+          ? NudgeDirection.received
+          : NudgeDirection.sent,
+      status: json['status'] as String? ?? 'active',
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
+
 class FriendResponse {
-  const FriendResponse({required this.user, required this.friendsSince});
+  const FriendResponse({
+    required this.user,
+    required this.friendsSince,
+    this.lastNudge,
+  });
 
   final PublicUserResponse user;
   final DateTime friendsSince;
+  final FriendNudgeSummary? lastNudge;
 
   factory FriendResponse.fromJson(Map<String, dynamic> json) {
     return FriendResponse(
       user: PublicUserResponse.fromJson(json['user'] as Map<String, dynamic>),
       friendsSince: DateTime.parse(json['friends_since'] as String),
+      lastNudge: json['last_nudge'] == null
+          ? null
+          : FriendNudgeSummary.fromJson(
+              json['last_nudge'] as Map<String, dynamic>,
+            ),
     );
   }
 }

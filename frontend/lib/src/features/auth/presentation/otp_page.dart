@@ -14,6 +14,7 @@ import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/theme/app_chrome.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/auth/data/auth_repository.dart';
+import 'package:fafu/src/features/auth/data/session_reset.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
@@ -235,6 +236,10 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     final repo = ref.read(authRepositoryProvider);
     ref.read(authTokenProvider.notifier).setToken(idToken);
     final session = await repo.createSession(idToken: idToken);
+
+    // Drop any cached data from a previously signed-in account so the profile
+    // and other user-scoped screens load fresh for this account.
+    resetUserScopedData(ref);
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(onboardingCompleteKey, session.onboardingComplete);
