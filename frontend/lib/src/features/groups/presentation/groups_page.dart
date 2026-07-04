@@ -50,7 +50,7 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
     } on ApiException catch (e) {
       if (mounted) _showSnack(e.message);
     } catch (e) {
-      if (mounted) _showSnack(e.toString());
+      if (mounted) _showSnack(friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -126,7 +126,7 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
             const _SectionTitle('Group invites'),
             invites.when(
               loading: () => const _LoadingBlock(),
-              error: (e, _) => _ErrorBlock(error: e.toString()),
+              error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
               data: (items) => items.isEmpty
                   ? const _EmptyBlock(text: 'No pending group invites.')
                   : Column(children: items.map((invite) => _InviteCard(invite: invite, busy: _busy, onAccept: () => _run(() => ref.read(groupsRepositoryProvider).acceptInvite(invite.id)), onDecline: () => _run(() => ref.read(groupsRepositoryProvider).declineInvite(invite.id)))).toList()),
@@ -135,7 +135,7 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
             const _SectionTitle('Your groups'),
             groups.when(
               loading: () => const _LoadingBlock(),
-              error: (e, _) => _ErrorBlock(error: e.toString()),
+              error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
               data: (items) => items.isEmpty
                   ? const _EmptyBlock(text: 'No groups yet.')
                   : Column(children: items.map((group) => _GroupCard(group: group, busy: _busy, onInvite: () => _inviteFriend(group), onRename: () async { final name = await _textDialog('Rename group', 'Group name', initial: group.name); if (name != null) await _run(() => ref.read(groupsRepositoryProvider).updateGroup(group.id, name).then((_) {})); }, onLeave: () async { final answers = await _negativeAnswers('Leave ${group.name}?'); if (answers != null) await _run(() => ref.read(groupsRepositoryProvider).leaveGroup(group.id, answers: answers)); }, onDissolve: () async { final answers = await _negativeAnswers('Dissolve ${group.name}?'); if (answers != null) await _run(() => ref.read(groupsRepositoryProvider).dissolveGroup(group.id, answers: answers)); }, onRemove: (uid) async { final answers = await _negativeAnswers('Remove member?'); if (answers != null) await _run(() => ref.read(groupsRepositoryProvider).removeMember(group.id, uid, answers: answers)); }, onTransfer: (uid) => _run(() => ref.read(groupsRepositoryProvider).transferOwnership(group.id, uid)))).toList()),

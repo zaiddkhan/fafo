@@ -83,7 +83,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = friendlyErrorMessage(e);
           _loadErrorType = e is ApiException ? e.type : ApiErrorType.unknown;
         });
       }
@@ -155,7 +155,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
         ).showSnackBar(const SnackBar(content: Text('You joined this event.')));
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _joining = false);
     }
@@ -239,7 +239,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
         ).showSnackBar(const SnackBar(content: Text('You left this event.')));
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _joining = false);
     }

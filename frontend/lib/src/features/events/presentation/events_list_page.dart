@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/blogs/data/blogs_repository.dart';
 import 'package:fafu/src/features/blogs/domain/blog.dart';
@@ -143,7 +144,7 @@ class _EventsListPageState extends ConsumerState<EventsListPage> {
         _bangaloreHasMore = !usingDemoEvents && bangalorePage.hasMore;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

@@ -79,7 +79,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     } on ApiException catch (e) {
       if (mounted) _showSnack(e.message);
     } catch (e) {
-      if (mounted) _showSnack(e.toString());
+      if (mounted) _showSnack(friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -281,7 +281,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                 _ListHeader('Search Results'),
                 search.when(
                   loading: () => const _LoadingBlock(),
-                  error: (e, _) => _ErrorBlock(error: e.toString()),
+                  error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
                   data: (users) => users.isEmpty
                       ? const _EmptyBlock(text: 'No users found.')
                       : Column(
@@ -305,7 +305,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
               if (_tab == _FriendsTab.all)
                 friends.when(
                   loading: () => const _LoadingBlock(),
-                  error: (e, _) => _ErrorBlock(error: e.toString()),
+                  error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
                   data: (items) => items.isEmpty
                       ? const _AllFriendsEmpty()
                       : Column(
@@ -355,7 +355,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
               if (_tab == _FriendsTab.incoming)
                 incoming.when(
                   loading: () => const _LoadingBlock(),
-                  error: (e, _) => _ErrorBlock(error: e.toString()),
+                  error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
                   data: (requests) => requests.isEmpty
                       ? const _EmptyBlock(text: 'No new friend requests.')
                       : Column(
@@ -383,7 +383,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
               if (_tab == _FriendsTab.pending)
                 outgoing.when(
                   loading: () => const _LoadingBlock(),
-                  error: (e, _) => _ErrorBlock(error: e.toString()),
+                  error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
                   data: (requests) => requests.isEmpty
                       ? const _EmptyBlock(text: 'No pending sent requests.')
                       : Column(

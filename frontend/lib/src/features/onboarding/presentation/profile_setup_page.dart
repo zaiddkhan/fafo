@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fafu/src/core/constants/app_spacing.dart';
+import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
@@ -196,7 +197,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
             .checkUsername(normalized);
         if (mounted) setState(() => _usernameAvailable = result.available);
       } catch (e) {
-        if (mounted) setState(() => _error = e.toString());
+        if (mounted) setState(() => _error = friendlyErrorMessage(e));
       } finally {
         if (mounted) setState(() => _checkingUsername = false);
       }
@@ -256,7 +257,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
         context.go(pendingPath ?? MainShell.routePath);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -549,7 +550,7 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
       final results = await _searchLocations(query);
       if (mounted) setState(() => _results = results);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _searching = false);
     }

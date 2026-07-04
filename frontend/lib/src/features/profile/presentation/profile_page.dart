@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/data/saved_events_controller.dart';
@@ -196,7 +197,7 @@ class ProfilePage extends ConsumerWidget {
               error: (error, _) => Padding(
                 padding: const EdgeInsets.only(bottom: 18),
                 child: Text(
-                  error.toString(),
+                  friendlyErrorMessage(error),
                   style: const TextStyle(color: Color(0xFFE5484D)),
                 ),
               ),
@@ -247,7 +248,7 @@ class ProfilePage extends ConsumerWidget {
               error: (error, _) => Padding(
                 padding: const EdgeInsets.only(bottom: 18),
                 child: Text(
-                  error.toString(),
+                  friendlyErrorMessage(error),
                   style: const TextStyle(color: Color(0xFFE5484D)),
                 ),
               ),
@@ -292,7 +293,7 @@ class ProfilePage extends ConsumerWidget {
               error: (error, _) => Padding(
                 padding: const EdgeInsets.only(bottom: 18),
                 child: Text(
-                  error.toString(),
+                  friendlyErrorMessage(error),
                   style: const TextStyle(color: Color(0xFFE5484D)),
                 ),
               ),
@@ -377,7 +378,7 @@ Future<void> _startQuest(
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(content: Text(friendlyErrorMessage(e))),
       );
     }
   }
@@ -422,7 +423,7 @@ class _QuestHistorySection extends StatelessWidget {
           error: (error, _) => Padding(
             padding: const EdgeInsets.only(bottom: 18),
             child: Text(
-              error.toString(),
+              friendlyErrorMessage(error),
               style: const TextStyle(color: Color(0xFFE5484D)),
             ),
           ),
@@ -473,7 +474,7 @@ class _QuestHistoryPage extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Text(
-              error.toString(),
+              friendlyErrorMessage(error),
               style: const TextStyle(color: Color(0xFFE5484D)),
             ),
           ),

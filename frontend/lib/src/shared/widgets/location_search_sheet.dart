@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import 'package:fafu/src/core/constants/app_spacing.dart';
+import 'package:fafu/src/core/network/api_exception.dart';
 
 /// A single geocoded place result.
 class LocationSearchResult {
@@ -97,7 +98,7 @@ class _LocationSearchSheetState extends State<LocationSearchSheet> {
       final results = await _searchLocations(query);
       if (mounted) setState(() => _results = results);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _searching = false);
     }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/nudges/data/nudges_providers.dart';
 import 'package:fafu/src/features/nudges/data/nudges_repository.dart';
@@ -100,7 +101,7 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
             Expanded(
               child: feed.when(
                 loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)),
-                error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(e.toString(), style: TextStyle(color: AppColors.textPrimary)))),
+                error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(friendlyErrorMessage(e), style: TextStyle(color: AppColors.textPrimary)))),
                 data: (items) {
                   final ordered = [...items]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
                   if (ordered.isEmpty) {
@@ -360,7 +361,7 @@ class _NudgeBubble extends ConsumerWidget {
                                         );
                                       } catch (e) {
                                         messenger.showSnackBar(
-                                          SnackBar(content: Text(e.toString())),
+                                          SnackBar(content: Text(friendlyErrorMessage(e))),
                                         );
                                       }
                                       onChanged();

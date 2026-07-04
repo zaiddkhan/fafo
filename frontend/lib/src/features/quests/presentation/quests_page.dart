@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/quests/data/quests_providers.dart';
 import 'package:fafu/src/features/quests/data/quests_repository.dart';
@@ -63,7 +64,7 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
   }
 
   String _friendlyError(Object e) {
-    final text = e.toString();
+    final text = friendlyErrorMessage(e);
     return text.replaceFirst('Exception: ', '');
   }
 
@@ -129,7 +130,7 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                   ),
                 ),
                 error: (error, _) => Text(
-                  error.toString(),
+                  friendlyErrorMessage(error),
                   style: const TextStyle(color: Color(0xFFE5484D)),
                 ),
                 data: (items) {

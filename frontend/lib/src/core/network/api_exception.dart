@@ -156,9 +156,77 @@ class ApiException implements Exception {
       return 'This code has expired. Please request a new one.';
     }
 
-    return message;
+    // Prefer a clean, backend-supplied message when it reads like real prose
+    // (e.g. a validation detail). Otherwise fall back to friendly copy keyed
+    // off the error type so users never see raw error identifiers.
+    if (_looksLikeCleanMessage(message)) return message;
+    return _defaultMessageForType;
+  }
+
+  String get _defaultMessageForType {
+    switch (type) {
+      case ApiErrorType.network:
+        return "Couldn't connect. Check your internet and try again.";
+      case ApiErrorType.unauthorized:
+        return 'Your session has expired. Please sign in again.';
+      case ApiErrorType.forbidden:
+        return "You don't have access to do that.";
+      case ApiErrorType.notFound:
+        return "We couldn't find what you were looking for.";
+      case ApiErrorType.validation:
+        return 'Please check your details and try again.';
+      case ApiErrorType.conflict:
+        return "That didn't go through. Please try again.";
+      case ApiErrorType.server:
+        return 'Something went wrong on our end. Please try again shortly.';
+      case ApiErrorType.unknown:
+        return 'Something went wrong. Please try again.';
+    }
+  }
+
+  /// Whether a message looks like human-readable copy rather than a raw
+  /// identifier or placeholder (e.g. "Unable to connect to server").
+  bool _looksLikeCleanMessage(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return false;
+    // Reject the internal placeholder strings we set for typed errors.
+    const placeholders = {
+      'unable to connect to server',
+      'session expired',
+      'access denied',
+      'not found',
+      'conflict',
+      'invalid input',
+      'server error',
+      'request failed',
+      'request cancelled',
+      'something went wrong',
+    };
+    if (placeholders.contains(trimmed.toLowerCase())) return false;
+    // Reject things that look like code identifiers (no spaces, has symbols).
+    if (!trimmed.contains(' ') &&
+        RegExp(r'[_\-.():]').hasMatch(trimmed)) {
+      return false;
+    }
+    return true;
   }
 
   @override
   String toString() => 'ApiException($type): $message';
+}
+
+/// Converts any thrown error into a clean, user-facing message.
+///
+/// Use this instead of `error.toString()` anywhere an error is shown in the UI
+/// so users never see raw exception details like `ApiException(...)`.
+String friendlyErrorMessage(
+  Object? error, {
+  String fallback = 'Something went wrong. Please try again.',
+}) {
+  if (error == null) return fallback;
+  if (error is ApiException) return error.friendlyMessage;
+  if (error is DioException) {
+    return ApiException.fromDioError(error).friendlyMessage;
+  }
+  return fallback;
 }

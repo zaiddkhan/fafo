@@ -10,6 +10,7 @@ import 'package:maplibre/maplibre.dart';
 
 import 'package:fafu/src/core/config/map_config.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
+import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/categories/data/categories_repository.dart';
 import 'package:fafu/src/features/categories/domain/category.dart';
@@ -130,7 +131,7 @@ class HomePageState extends ConsumerState<HomePage> {
       if (mounted) {
         setState(() {
           _events = const [];
-          _eventsError = e.toString();
+          _eventsError = friendlyErrorMessage(e);
           _loadingEvents = false;
         });
       }
@@ -327,7 +328,7 @@ class HomePageState extends ConsumerState<HomePage> {
           onError: (Object e) {
             if (mounted) {
               setState(() {
-                _eventsError = e.toString();
+                _eventsError = friendlyErrorMessage(e);
                 _loadingEvents = false;
               });
             }
@@ -386,7 +387,7 @@ class HomePageState extends ConsumerState<HomePage> {
       await _loadCategories();
       _subscribeToEvents();
     } catch (e) {
-      if (mounted) setState(() => _eventsError = e.toString());
+      if (mounted) setState(() => _eventsError = friendlyErrorMessage(e));
     }
   }
 

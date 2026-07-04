@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:fafu/src/core/constants/app_spacing.dart';
+import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/create/presentation/create_event_page.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
@@ -55,7 +56,7 @@ class _CreatorDashboardPageState extends ConsumerState<CreatorDashboardPage> {
             ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
       if (mounted) setState(() => _events = events);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -98,7 +99,7 @@ class _CreatorDashboardPageState extends ConsumerState<CreatorDashboardPage> {
             else
               item,
         ];
-        _error = e.toString();
+        _error = friendlyErrorMessage(e);
       });
     }
   }
@@ -296,7 +297,7 @@ class _EventJoineesPageState extends ConsumerState<EventJoineesPage> {
           .getJoinees(widget.event.id, limit: 100);
       if (mounted) setState(() => _joinees = joinees);
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -436,7 +437,7 @@ class _CancelEventPageState extends ConsumerState<CancelEventPage> {
       if (mounted) {
         setState(() {
           _submitting = false;
-          _error = e.toString();
+          _error = friendlyErrorMessage(e);
         });
       }
     }

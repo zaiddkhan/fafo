@@ -42,7 +42,6 @@ const _termsOfServiceUrl = 'https://fafo.app/terms';
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _pushNotifications = true;
-  bool _emailNotifications = false;
   bool _locationSharing = true;
   bool _busy = false;
 
@@ -357,12 +356,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     value: _pushNotifications,
                     loading: _pushBusy,
                     onChanged: _setPushNotifications,
-                  ),
-                  _SettingsToggle(
-                    icon: Icons.email_outlined,
-                    title: 'Email Notifications',
-                    value: _emailNotifications,
-                    onChanged: (v) => setState(() => _emailNotifications = v),
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
