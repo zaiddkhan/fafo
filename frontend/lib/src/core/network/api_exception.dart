@@ -152,15 +152,36 @@ class ApiException implements Exception {
         lower.contains('too many')) {
       return 'Too many attempts. Please try again later.';
     }
-    if (lower.contains('expired')) {
+    // Scope the bare "expired" heuristic to OTP/verification context so an
+    // unrelated message like "This event has expired" isn't mapped to code copy.
+    if (lower.contains('expired') &&
+        (lower.contains('code') || lower.contains('otp'))) {
       return 'This code has expired. Please request a new one.';
     }
 
-    // Prefer a clean, backend-supplied message when it reads like real prose
-    // (e.g. a validation detail). Otherwise fall back to friendly copy keyed
-    // off the error type so users never see raw error identifiers.
-    if (_looksLikeCleanMessage(message)) return message;
+    // Trust a clean backend-supplied message only for error types that carry
+    // meaningful user-facing detail (validation/conflict/not-found/auth).
+    // Transport-level errors (network/server/unknown) surface library text,
+    // so always use the friendly, type-keyed copy for those.
+    if (_typeHasMeaningfulDetail && _looksLikeCleanMessage(message)) {
+      return message;
+    }
     return _defaultMessageForType;
+  }
+
+  bool get _typeHasMeaningfulDetail {
+    switch (type) {
+      case ApiErrorType.validation:
+      case ApiErrorType.conflict:
+      case ApiErrorType.notFound:
+      case ApiErrorType.forbidden:
+      case ApiErrorType.unauthorized:
+        return true;
+      case ApiErrorType.network:
+      case ApiErrorType.server:
+      case ApiErrorType.unknown:
+        return false;
+    }
   }
 
   String get _defaultMessageForType {

@@ -9,6 +9,7 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/data/saved_events_controller.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
+import 'package:fafu/src/features/events/presentation/unjoin_reason_sheet.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/features/notifications/data/notifications_repository.dart';
 import 'package:fafu/src/features/notifications/presentation/notifications_page.dart';
@@ -943,7 +944,13 @@ class _JoinedEventCard extends ConsumerWidget {
     final uri = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=${event.lat},${event.lng}',
     );
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    var launched = false;
+    try {
+      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // launchUrl throws (e.g. PlatformException) when no handler is
+      // available; fall through to the failure snackbar below.
+    }
     if (!launched && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open maps.')),
@@ -952,51 +959,10 @@ class _JoinedEventCard extends ConsumerWidget {
   }
 
   Future<void> _cancelRsvp(BuildContext context, WidgetRef ref) async {
-    final reason = await showModalBottomSheet<UnjoinReason>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Cancel your RSVP?',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Pick an optional reason. No typing required.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final option in UnjoinReason.values)
-                    ChoiceChip(
-                      label: Text(_unjoinReasonLabel(option)),
-                      selected: false,
-                      onSelected: (_) => Navigator.of(context).pop(option),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Keep RSVP'),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final reason = await showUnjoinReasonSheet(
+      context,
+      title: 'Cancel your RSVP?',
+      keepLabel: 'Keep RSVP',
     );
     if (reason == null || !context.mounted) return;
 
@@ -1004,15 +970,14 @@ class _JoinedEventCard extends ConsumerWidget {
       await ref.read(eventsRepositoryProvider).unjoinEvent(
         event.id,
         reason: reason,
-        answers: [_unjoinReasonLabel(reason)],
+        answers: [unjoinReasonLabel(reason)],
       );
+      if (!context.mounted) return;
       bumpEventsRevision(ref);
       ref.invalidate(_joinedEventsProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('RSVP cancelled.')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('RSVP cancelled.')),
+      );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1020,15 +985,6 @@ class _JoinedEventCard extends ConsumerWidget {
         );
       }
     }
-  }
-
-  String _unjoinReasonLabel(UnjoinReason reason) {
-    return switch (reason) {
-      UnjoinReason.changeOfPlans => 'Change of plans',
-      UnjoinReason.schedulingConflict => 'Scheduling conflict',
-      UnjoinReason.noLongerInterested => 'No longer interested',
-      UnjoinReason.other => 'Other',
-    };
   }
 
   @override

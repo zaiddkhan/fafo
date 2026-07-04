@@ -47,7 +47,7 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
       // the real server state agrees — avoids a flicker back to the old state.
       await ref.read(questActivationsProvider.future);
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(_friendlyError(e))));
+      messenger.showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
     } finally {
       if (mounted) {
         setState(() {
@@ -61,11 +61,6 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
   /// Effective active state for a quest, applying any optimistic override.
   bool _isActive(String questId, Map<String, QuestActivation> byId) {
     return _optimisticActive[questId] ?? (byId[questId]?.isActive ?? false);
-  }
-
-  String _friendlyError(Object e) {
-    final text = friendlyErrorMessage(e);
-    return text.replaceFirst('Exception: ', '');
   }
 
   @override

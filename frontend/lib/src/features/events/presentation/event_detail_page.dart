@@ -19,6 +19,7 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
 import 'package:fafu/src/features/events/data/saved_events_controller.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
+import 'package:fafu/src/features/events/presentation/unjoin_reason_sheet.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/features/home/presentation/home_page.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
@@ -162,54 +163,13 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
   }
 
   Future<void> _handleUnjoinTap() async {
-    final reason = await showModalBottomSheet<UnjoinReason>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Leave this event?',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Pick an optional reason. No typing required.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final option in UnjoinReason.values)
-                    ChoiceChip(
-                      label: Text(_unjoinReasonLabel(option)),
-                      selected: false,
-                      onSelected: (_) => Navigator.of(context).pop(option),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Keep event'),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final reason = await showUnjoinReasonSheet(
+      context,
+      title: 'Leave this event?',
+      keepLabel: 'Keep event',
     );
     if (reason == null || !mounted) return;
-    final answers = <String>[_unjoinReasonLabel(reason)];
+    final answers = <String>[unjoinReasonLabel(reason)];
 
     setState(() {
       _joining = true;
@@ -257,15 +217,6 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
         ),
       ),
     );
-  }
-
-  String _unjoinReasonLabel(UnjoinReason reason) {
-    return switch (reason) {
-      UnjoinReason.changeOfPlans => 'Change of plans',
-      UnjoinReason.schedulingConflict => 'Scheduling conflict',
-      UnjoinReason.noLongerInterested => 'No longer interested',
-      UnjoinReason.other => 'Other',
-    };
   }
 
   MockEvent? get _displayEvent {

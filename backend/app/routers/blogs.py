@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from google.cloud import firestore
 
 from app.dependencies import get_admin_user, get_current_user, validate_document_id
 from app.firebase import get_firestore
@@ -12,6 +13,24 @@ router = APIRouter(prefix="/blogs", tags=["blogs"])
 
 def _normalize_city(city: str) -> str:
     return city.strip().lower()
+
+
+def _list_published_blogs(city: str, limit: int) -> list[BlogResponse]:
+    """Newest-first published blogs for a city.
+
+    Ordered server-side by ``created_at`` so ``limit`` keeps the newest posts
+    (an in-memory sort after ``.limit()`` would drop them). Backed by the
+    ``blogs`` composite index in firestore.indexes.json.
+    """
+    db = get_firestore()
+    query = (
+        db.collection("blogs")
+        .where("city_key", "==", _normalize_city(city))
+        .where("published", "==", True)
+        .order_by("created_at", direction=firestore.Query.DESCENDING)
+        .limit(limit)
+    )
+    return [_blog_to_response(doc.id, doc.to_dict()) for doc in query.stream()]
 
 
 def _blog_to_response(doc_id: str, data: dict) -> BlogResponse:
@@ -35,17 +54,7 @@ def list_blogs(
     limit: int = Query(default=10, ge=1, le=50),
     _: dict = Depends(get_current_user),
 ):
-    db = get_firestore()
-    city_key = _normalize_city(city)
-    query = (
-        db.collection("blogs")
-        .where("city_key", "==", city_key)
-        .where("published", "==", True)
-        .limit(limit)
-    )
-    blogs = [_blog_to_response(doc.id, doc.to_dict()) for doc in query.stream()]
-    blogs.sort(key=lambda b: b.created_at, reverse=True)
-    return blogs
+    return _list_published_blogs(city, limit)
 
 
 @router.get("/public", response_model=list[BlogResponse])
@@ -53,17 +62,7 @@ def list_public_blogs(
     city: str = Query(..., min_length=1, max_length=80),
     limit: int = Query(default=10, ge=1, le=50),
 ):
-    db = get_firestore()
-    city_key = _normalize_city(city)
-    query = (
-        db.collection("blogs")
-        .where("city_key", "==", city_key)
-        .where("published", "==", True)
-        .limit(limit)
-    )
-    blogs = [_blog_to_response(doc.id, doc.to_dict()) for doc in query.stream()]
-    blogs.sort(key=lambda b: b.created_at, reverse=True)
-    return blogs
+    return _list_published_blogs(city, limit)
 
 
 @router.get("/public/{blog_id}", response_model=BlogResponse)
