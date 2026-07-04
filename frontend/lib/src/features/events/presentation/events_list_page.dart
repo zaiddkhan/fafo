@@ -7,6 +7,7 @@ import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/blogs/data/blogs_repository.dart';
 import 'package:fafu/src/features/blogs/domain/blog.dart';
+import 'package:fafu/src/features/blogs/presentation/blog_web_view_page.dart';
 import 'package:fafu/src/features/categories/data/categories_repository.dart';
 import 'package:fafu/src/features/categories/domain/category.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
@@ -1012,7 +1013,9 @@ class _BlogCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return GestureDetector(
-      onTap: () {},
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => BlogWebViewPage(blog: blog)),
+      ),
       child: Container(
         width: 260,
         decoration: BoxDecoration(
