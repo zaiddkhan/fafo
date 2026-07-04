@@ -153,6 +153,19 @@ export interface NotificationTemplateVersion {
   updated_by?: string | null;
 }
 
+export interface Blog {
+  id: string;
+  city: string;
+  title: string;
+  subtitle?: string | null;
+  body: string;
+  image_url?: string | null;
+  read_time?: string | null;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AuditLogEntry {
   id: string;
   admin_uid: string;

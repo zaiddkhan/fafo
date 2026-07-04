@@ -1,0 +1,232 @@
+/* ---------- City Reads (public blog reader) ---------- */
+/* Reuses the marketing site's neo-brutalist tokens from index.css:
+   --ink, --blue, --card, --muted, --border, --shadow, --shadow-sm, --font. */
+
+.read-page {
+  min-height: 60vh;
+  padding: 56px 0 96px;
+}
+
+.read-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 26px;
+  transition: color 0.15s;
+}
+.read-back:hover { color: var(--ink); }
+.read-back span { font-size: 17px; line-height: 1; }
+
+/* ----- list header ----- */
+.read-head { max-width: 720px; margin-bottom: 40px; }
+.read-head h1 {
+  font-size: clamp(34px, 5vw, 54px);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 12px 0 14px;
+}
+.read-head p {
+  font-size: 18px;
+  font-weight: 500;
+  color: #3a3d45;
+  line-height: 1.5;
+}
+.read-city { text-transform: capitalize; }
+
+/* ----- card grid ----- */
+.read-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 26px;
+}
+.read-card {
+  display: flex;
+  flex-direction: column;
+  border: var(--border);
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.read-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 0 var(--ink); }
+.read-card:active { transform: translate(4px, 4px); box-shadow: 0 0 0 0 var(--ink); }
+.read-card-cover {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  object-fit: cover;
+  border-bottom: 2.5px solid var(--ink);
+  background: #f4f1ea;
+}
+.read-card-cover.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  background: linear-gradient(135deg, #eee7d6, #e4e9da);
+}
+.read-card-body { padding: 20px 22px 24px; display: flex; flex-direction: column; flex: 1; }
+.read-card-body h3 {
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.14;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+.read-card-body p {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.read-meta {
+  margin-top: auto;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+/* ----- states ----- */
+.read-state {
+  border: var(--border);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  padding: 40px 28px;
+  text-align: center;
+  max-width: 520px;
+}
+.read-state h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.read-state p { font-size: 15px; font-weight: 500; color: var(--muted); line-height: 1.5; }
+
+/* ----- article / reader ----- */
+.read-article { max-width: 760px; margin: 0 auto; }
+.read-hero {
+  width: 100%;
+  aspect-ratio: 16 / 8;
+  object-fit: cover;
+  border: var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  background: #f4f1ea;
+  margin-bottom: 34px;
+}
+.read-hero.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  background: linear-gradient(135deg, #eee7d6, #e4e9da);
+}
+.read-article h1 {
+  font-size: clamp(30px, 4.4vw, 46px);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+.read-subtitle {
+  font-size: 19px;
+  font-weight: 500;
+  color: #3a3d45;
+  line-height: 1.45;
+  margin-bottom: 18px;
+}
+.read-article-meta {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--blue);
+  padding-bottom: 26px;
+  margin-bottom: 30px;
+  border-bottom: 2.5px solid var(--ink);
+}
+
+/* ----- rendered markdown ----- */
+.read-prose { font-size: 17px; line-height: 1.7; color: var(--ink); font-weight: 500; }
+.read-prose > * + * { margin-top: 20px; }
+.read-prose h1, .read-prose h2, .read-prose h3, .read-prose h4 {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  margin-top: 38px;
+}
+.read-prose h1 { font-size: 30px; }
+.read-prose h2 { font-size: 25px; }
+.read-prose h3 { font-size: 21px; }
+.read-prose h4 { font-size: 18px; }
+.read-prose p { margin-top: 18px; }
+.read-prose a { color: var(--blue); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.read-prose a:hover { color: var(--blue-press); }
+.read-prose ul, .read-prose ol { margin-top: 18px; padding-left: 26px; }
+.read-prose ul { list-style: disc; }
+.read-prose ol { list-style: decimal; }
+.read-prose li { margin-top: 8px; }
+.read-prose li::marker { color: var(--blue); }
+.read-prose img {
+  max-width: 100%;
+  border: var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  margin: 26px 0;
+}
+.read-prose blockquote {
+  border-left: 4px solid var(--blue);
+  background: var(--cream);
+  border-radius: 0 12px 12px 0;
+  padding: 14px 20px;
+  font-style: italic;
+  color: #33363d;
+}
+.read-prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: #eef3fa;
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  padding: 1px 6px;
+}
+.read-prose pre {
+  background: var(--ink);
+  color: #f5f7fa;
+  border: var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  padding: 18px 20px;
+  overflow-x: auto;
+}
+.read-prose pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: 14px;
+}
+.read-prose hr { border: none; border-top: 2.5px solid var(--ink); margin: 34px 0; }
+.read-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  border: var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 15px;
+}
+.read-prose th, .read-prose td { border: 2px solid var(--ink); padding: 10px 14px; text-align: left; }
+.read-prose th { background: var(--cream); font-weight: 800; }
+.read-prose-scroll { overflow-x: auto; }
+
+@media (max-width: 680px) {
+  .read-page { padding: 40px 0 72px; }
+  .read-prose { font-size: 16px; }
+}

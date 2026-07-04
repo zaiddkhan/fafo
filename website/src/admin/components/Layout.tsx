@@ -9,6 +9,7 @@ const NAV = [
   { to: "/admin/density", label: "Density View" },
   { to: "/admin/users", label: "User Management" },
   { to: "/admin/notifications", label: "Notifications" },
+  { to: "/admin/blogs", label: "City Reads" },
 ];
 
 export function Layout() {

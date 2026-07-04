@@ -48,6 +48,35 @@ def list_blogs(
     return blogs
 
 
+@router.get("/public", response_model=list[BlogResponse])
+def list_public_blogs(
+    city: str = Query(..., min_length=1, max_length=80),
+    limit: int = Query(default=10, ge=1, le=50),
+):
+    db = get_firestore()
+    city_key = _normalize_city(city)
+    query = (
+        db.collection("blogs")
+        .where("city_key", "==", city_key)
+        .where("published", "==", True)
+        .limit(limit)
+    )
+    blogs = [_blog_to_response(doc.id, doc.to_dict()) for doc in query.stream()]
+    blogs.sort(key=lambda b: b.created_at, reverse=True)
+    return blogs
+
+
+@router.get("/public/{blog_id}", response_model=BlogResponse)
+def get_public_blog(blog_id: str):
+    validate_document_id(blog_id)
+    db = get_firestore()
+    doc = db.collection("blogs").document(blog_id).get()
+    data = doc.to_dict() if doc.exists else None
+    if not doc.exists or not data.get("published"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blog not found")
+    return _blog_to_response(doc.id, data)
+
+
 @router.post("/admin", response_model=BlogResponse, status_code=status.HTTP_201_CREATED)
 def create_blog(body: BlogCreateRequest, _: dict = Depends(get_admin_user)):
     db = get_firestore()

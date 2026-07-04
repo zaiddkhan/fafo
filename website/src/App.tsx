@@ -12,6 +12,11 @@ import { Footer } from './components/Footer'
 // it never ships in the landing-page bundle.
 const AdminApp = lazy(() => import('./admin/AdminApp'))
 
+// Public "City Reads" blog reader — lazy so react-markdown stays out of the
+// landing-page bundle.
+const CityReadsPage = lazy(() => import('./pages/read/CityReadsPage'))
+const BlogReaderPage = lazy(() => import('./pages/read/BlogReaderPage'))
+
 function Landing() {
   return (
     <>
@@ -32,6 +37,22 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route
+        path="/read/:city"
+        element={
+          <Suspense fallback={null}>
+            <CityReadsPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/read/:city/:id"
+        element={
+          <Suspense fallback={null}>
+            <BlogReaderPage />
+          </Suspense>
+        }
+      />
       <Route
         path="/admin/*"
         element={

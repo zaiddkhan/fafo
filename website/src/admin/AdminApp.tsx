@@ -11,6 +11,7 @@ import { EventSeedingPage } from "@admin/modules/seeding/EventSeedingPage";
 import { DensityViewPage } from "@admin/modules/density/DensityViewPage";
 import { UserManagementPage } from "@admin/modules/users/UserManagementPage";
 import { NotificationTemplatesPage } from "@admin/modules/notifications/NotificationTemplatesPage";
+import { BlogManagerPage } from "@admin/modules/blogs/BlogManagerPage";
 import "./admin.css";
 
 const queryClient = new QueryClient({
@@ -63,6 +64,7 @@ function Gate() {
         <Route path="density" element={<DensityViewPage />} />
         <Route path="users" element={<UserManagementPage />} />
         <Route path="notifications" element={<NotificationTemplatesPage />} />
+        <Route path="blogs" element={<BlogManagerPage />} />
         <Route path="*" element={<Navigate to="/admin/creators" replace />} />
       </Route>
     </Routes>
