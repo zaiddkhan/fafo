@@ -1,6 +1,24 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from google.cloud.firestore import SERVER_TIMESTAMP
+
+
+def parse_activity_date(value) -> date | None:
+    """Best-effort parse of a stored ``last_activity_date``.
+
+    Tolerates the two shapes the field can take across historical writes: an
+    ISO date string (``"2026-07-04"``) or a Firestore ``Timestamp`` (surfaced as
+    a ``datetime``). Returns ``None`` for anything unparseable so callers never
+    crash on legacy or malformed data.
+    """
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+    if isinstance(value, datetime):
+        return value.date()
+    return None
 
 
 def record_meaningful_action(db, uid: str, action_type: str, metadata: dict | None = None):

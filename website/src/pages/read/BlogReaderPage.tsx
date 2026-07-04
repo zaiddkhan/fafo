@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Header } from '../../components/Header'
 import { Footer } from '../../components/Footer'
-import { fetchBlog, BlogFetchError, type Blog } from '../../lib/blogs'
+import { fetchBlog, isEmbedded, BlogFetchError, type Blog } from '../../lib/blogs'
 import './read.css'
 
 type Status = 'loading' | 'ready' | 'notfound' | 'error'
@@ -46,14 +46,18 @@ export default function BlogReaderPage() {
     }
   }, [blog])
 
+  const embedded = isEmbedded()
+
   return (
     <>
-      <Header />
+      {!embedded && <Header />}
       <main className="read-page">
         <div className="wrap">
-          <Link to={backTo} className="read-back">
-            <span>←</span> All city reads
-          </Link>
+          {!embedded && (
+            <Link to={backTo} className="read-back">
+              <span>←</span> All city reads
+            </Link>
+          )}
 
           {status === 'loading' && (
             <div className="read-state">
@@ -113,7 +117,7 @@ export default function BlogReaderPage() {
           )}
         </div>
       </main>
-      <Footer />
+      {!embedded && <Footer />}
     </>
   )
 }

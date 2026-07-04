@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/network/auth_token_provider.dart';
+import 'package:fafu/src/core/network/session_expired_provider.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/theme/app_chrome.dart';
@@ -235,6 +236,9 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   Future<void> _completeSession(String idToken) async {
     final repo = ref.read(authRepositoryProvider);
     ref.read(authTokenProvider.notifier).setToken(idToken);
+    // Clear any prior "session expired" state so the router stops forcing us
+    // back to sign-in once this new session is live.
+    ref.read(sessionExpiredProvider.notifier).reset();
     final session = await repo.createSession(idToken: idToken);
 
     // Drop any cached data from a previously signed-in account so the profile
@@ -361,12 +365,17 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                         _waitingForCode
                             ? 'Sending code...'
                             : _resendSeconds > 0
-                            ? 'Resend code in ${_resendSeconds}s'
+                            ? 'Resend code in 0:${_resendSeconds.toString().padLeft(2, '0')}'
                             : 'Resend code',
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: _resendSeconds > 0 || _waitingForCode
+                          color: _waitingForCode
                               ? AppColors.textTertiary
+                              : _resendSeconds > 0
+                              ? AppColors.textSecondary
                               : AppColors.accentLight1,
+                          fontWeight: _resendSeconds > 0 && !_waitingForCode
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                         ),
                       ),
                     ),

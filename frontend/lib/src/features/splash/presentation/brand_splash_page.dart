@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/services/shared_preferences_provider.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/shared/widgets/fafo_wordmark.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/splash/presentation/splash_page.dart';
 
@@ -80,8 +81,7 @@ class _BrandSplashPageState extends ConsumerState<BrandSplashPage>
               // Wordmark. The squared "tomorrow" face echoes the blocky logo;
               // the hard offset shadow gives the extruded 3D look of the
               // original artwork.
-              Text(
-                'FaFo',
+              FafoWordmark(
                 style: GoogleFonts.tomorrow(
                   fontSize: 72,
                   fontWeight: FontWeight.w900,

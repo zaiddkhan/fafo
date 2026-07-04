@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/shared/widgets/fafo_wordmark.dart';
 import 'package:fafu/src/features/auth/presentation/login_page.dart';
 import 'package:fafu/src/features/auth/presentation/signup_page.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
@@ -29,9 +30,8 @@ class SplashPage extends StatelessWidget {
                 shaderCallback: (bounds) => const LinearGradient(
                   colors: [AppColors.accentPrimary, AppColors.accentWarm],
                 ).createShader(bounds),
-                child: Text(
-                  'FaFo',
-                  style: theme.textTheme.displayMedium?.copyWith(
+                child: FafoWordmark(
+                  style: theme.textTheme.displayMedium!.copyWith(
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),

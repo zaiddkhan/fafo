@@ -21,6 +21,19 @@ export type Blog = {
   updated_at?: string | null;
 };
 
+/**
+ * Whether the reader is being shown inside the mobile app's WebView (vs a
+ * normal browser). True when the app appends `?embed=1`, or when the page is
+ * running inside an Android WebView (UA contains "; wv"). Used to hide the
+ * marketing site chrome (header/footer) for a clean in-app reading surface.
+ */
+export function isEmbedded(): boolean {
+  if (typeof window === 'undefined') return false
+  const params = new URLSearchParams(window.location.search)
+  if (params.has('embed')) return true
+  return (navigator.userAgent || '').includes('; wv')
+}
+
 export class BlogFetchError extends Error {
   status: number;
   constructor(status: number, message: string) {

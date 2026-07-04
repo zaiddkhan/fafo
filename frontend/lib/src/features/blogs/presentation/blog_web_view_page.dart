@@ -13,11 +13,12 @@ class BlogWebViewPage extends StatefulWidget {
 
   final BlogResponse blog;
 
-  /// Public permalink for [blog] on the marketing site.
+  /// Public permalink for [blog] on the marketing site. `embed=1` tells the
+  /// web reader to hide the site header/footer for a clean in-app surface.
   static Uri urlFor(BlogResponse blog) {
     final base = AppConfig.publicWebBaseUrl.replaceAll(RegExp(r'/+$'), '');
     return Uri.parse(
-      '$base/read/${Uri.encodeComponent(blog.city)}/${blog.id}',
+      '$base/read/${Uri.encodeComponent(blog.city)}/${blog.id}?embed=1',
     );
   }
 

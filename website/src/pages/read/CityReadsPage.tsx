@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Header } from '../../components/Header'
 import { Footer } from '../../components/Footer'
-import { fetchCityReads, type Blog } from '../../lib/blogs'
+import { fetchCityReads, isEmbedded, type Blog } from '../../lib/blogs'
 import './read.css'
 
 type Status = 'loading' | 'ready' | 'error'
@@ -40,9 +40,11 @@ export default function CityReadsPage() {
     }
   }, [city])
 
+  const embedded = isEmbedded()
+
   return (
     <>
-      <Header />
+      {!embedded && <Header />}
       <main className="read-page">
         <div className="wrap">
           <Link to="/" className="read-back">
@@ -108,7 +110,7 @@ export default function CityReadsPage() {
           )}
         </div>
       </main>
-      <Footer />
+      {!embedded && <Footer />}
     </>
   )
 }

@@ -16,6 +16,7 @@ from app.config import (
     INACTIVITY_DORMANT_DAYS,
     INACTIVITY_WARM_DAYS,
 )
+from app.activity import parse_activity_date
 from app.firebase import get_firestore
 from app.notifications.service import notifications
 
@@ -35,14 +36,7 @@ def stage_for_days(days: int) -> str | None:
 
 
 def _parse_date(value) -> date | None:
-    if isinstance(value, str):
-        try:
-            return date.fromisoformat(value)
-        except ValueError:
-            return None
-    if isinstance(value, datetime):
-        return value.date()
-    return None
+    return parse_activity_date(value)
 
 
 def inactivity_sweep(*, now: datetime | None = None, limit: int = 1000) -> dict:

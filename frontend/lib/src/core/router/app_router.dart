@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:fafu/src/core/network/session_expired_provider.dart';
 import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/services/shared_preferences_provider.dart';
 import 'package:fafu/src/features/auth/data/auth_repository.dart';
@@ -31,14 +33,43 @@ const onboardingCompleteKey = 'onboarding_complete';
 const _defaultSearchLat = 12.9716;
 const _defaultSearchLng = 77.5946;
 
+// Auth-flow destinations. A user whose session has expired is allowed to sit
+// on any of these (they're already on the way to signing in); anywhere else,
+// the redirect below bounces them to the login screen.
+const _authRoutePaths = <String>{
+  BrandSplashPage.routePath,
+  SplashPage.routePath,
+  LoginPage.routePath,
+  SignupPage.routePath,
+  OtpPage.routePath,
+  ProfileSetupPage.routePath,
+};
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   final prefs = ref.read(sharedPreferencesProvider).value;
 
+  // Bridge the Riverpod session-expired flag to a Listenable GoRouter can watch,
+  // so `redirect` re-runs the moment the session dies mid-use.
+  final expiredListenable = ValueNotifier<bool>(ref.read(sessionExpiredProvider));
+  ref.onDispose(expiredListenable.dispose);
+  ref.listen<bool>(sessionExpiredProvider, (_, next) {
+    expiredListenable.value = next;
+  });
+
   return GoRouter(
     initialLocation: BrandSplashPage.routePath,
+    refreshListenable: expiredListenable,
     redirect: (context, state) {
-      final isOnboarded = prefs?.getBool(onboardingCompleteKey) ?? false;
       final path = state.matchedLocation;
+
+      // Highest priority: a revoked/unrefreshable session sends the user to
+      // sign-in from wherever they are. Auth screens are exempt so re-login can
+      // proceed.
+      if (ref.read(sessionExpiredProvider) && !_authRoutePaths.contains(path)) {
+        return LoginPage.routePath;
+      }
+
+      final isOnboarded = prefs?.getBool(onboardingCompleteKey) ?? false;
 
       // If onboarded and on splash, skip straight to main
       if (isOnboarded && path == SplashPage.routePath) {

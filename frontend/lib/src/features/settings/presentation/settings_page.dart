@@ -42,7 +42,6 @@ const _termsOfServiceUrl = 'https://fafo.app/terms';
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _pushNotifications = true;
-  bool _locationSharing = true;
   bool _busy = false;
 
   /// Tracks the in-flight push registration so we can show a brief spinner
@@ -367,12 +366,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  _SettingsToggle(
-                    icon: Icons.location_on_outlined,
-                    title: 'Location Sharing',
-                    value: _locationSharing,
-                    onChanged: (v) => setState(() => _locationSharing = v),
-                  ),
                   _SettingsTile(
                     icon: Icons.shield_outlined,
                     title: 'Privacy Policy',

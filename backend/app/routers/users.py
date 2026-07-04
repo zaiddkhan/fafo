@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from google.cloud import firestore
 from google.cloud.firestore import GeoPoint
 
+from app.activity import parse_activity_date
 from app.dependencies import get_current_user
 from app.firebase import get_firestore
 from app.schemas import (
@@ -185,12 +186,10 @@ def get_my_stats(current_user: dict = Depends(get_current_user)):
     )
     side_quests_activated = len(list(db.collection("users").document(uid).collection("quest_activations").stream()))
     current_streak = int(user_data.get("current_streak", 0) or 0)
-    last_activity_date = user_data.get("last_activity_date")
+    last_date = parse_activity_date(user_data.get("last_activity_date"))
     today = datetime.now(timezone.utc).date()
-    if last_activity_date:
-        last_date = datetime.fromisoformat(last_activity_date).date()
-        if (today - last_date).days > 1:
-            current_streak = 0
+    if last_date is not None and (today - last_date).days > 1:
+        current_streak = 0
     return ProfileStatsResponse(
         upcoming_events=events_joined,
         events_joined=events_joined,

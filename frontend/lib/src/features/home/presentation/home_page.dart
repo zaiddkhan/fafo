@@ -1143,13 +1143,57 @@ class HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-class _EventCard extends StatelessWidget {
+class _EventCard extends ConsumerStatefulWidget {
   const _EventCard({required this.event});
 
   final MockEvent event;
 
   @override
+  ConsumerState<_EventCard> createState() => _EventCardState();
+}
+
+class _EventCardState extends ConsumerState<_EventCard> {
+  bool _joining = false;
+  bool _joined = false;
+
+  Future<void> _handleRsvp() async {
+    if (_joining || _joined) return;
+    setState(() => _joining = true);
+    try {
+      await ref.read(eventsRepositoryProvider).joinEvent(widget.event.id);
+      if (!mounted) return;
+      bumpEventsRevision(ref);
+      setState(() => _joined = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You joined this event.')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.type == ApiErrorType.conflict) {
+        // Already joined (e.g. from an earlier session) — reflect that state
+        // instead of surfacing a "conflict" error the user can't act on.
+        setState(() => _joined = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You're already going to this event.")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(e))),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(friendlyErrorMessage(e))),
+      );
+    } finally {
+      if (mounted) setState(() => _joining = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final event = widget.event;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final cardBackground = isDark
@@ -1245,9 +1289,14 @@ class _EventCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _MapCardButton(
-                      label: 'RSVP',
+                      label: _joined
+                          ? 'GOING'
+                          : _joining
+                          ? 'JOINING…'
+                          : 'RSVP',
                       backgroundColor: AppColors.accentPrimary,
                       textColor: Colors.white,
+                      onTap: (_joining || _joined) ? null : _handleRsvp,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1264,6 +1313,8 @@ class _EventCard extends StatelessWidget {
                           ? Colors.white.withValues(alpha: 0.55)
                           : AppColors.accentPrimary,
                       outlined: true,
+                      onTap: () =>
+                          context.push('/event/${event.id}', extra: event),
                     ),
                   ),
                 ],
@@ -1440,6 +1491,7 @@ class _MapCardButton extends StatelessWidget {
     required this.textColor,
     this.outlined = false,
     this.borderColor,
+    this.onTap,
   });
 
   final String label;
@@ -1447,28 +1499,33 @@ class _MapCardButton extends StatelessWidget {
   final Color textColor;
   final bool outlined;
   final Color? borderColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 26,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(6),
-        border: outlined
-            ? Border.all(
-                color: borderColor ?? AppColors.accentPrimary,
-                width: 1.4,
-              )
-            : null,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: textColor,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 26,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(6),
+          border: outlined
+              ? Border.all(
+                  color: borderColor ?? AppColors.accentPrimary,
+                  width: 1.4,
+                )
+              : null,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: textColor,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

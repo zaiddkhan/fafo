@@ -267,7 +267,7 @@ class ProfilePage extends ConsumerWidget {
                       .map(
                         (event) => Padding(
                           padding: const EdgeInsets.only(bottom: 18),
-                          child: _JoinedEventCard(event: event),
+                          child: _JoinedEventCard(event: event, saved: true),
                         ),
                       )
                       .toList(),
@@ -936,9 +936,10 @@ class _SideQuestCard extends StatelessWidget {
 }
 
 class _JoinedEventCard extends ConsumerWidget {
-  const _JoinedEventCard({required this.event});
+  const _JoinedEventCard({required this.event, this.saved = false});
 
   final EventResponse event;
+  final bool saved;
 
   Future<void> _openLocation(BuildContext context) async {
     final uri = Uri.parse(
@@ -987,6 +988,22 @@ class _JoinedEventCard extends ConsumerWidget {
     }
   }
 
+  Future<void> _unsave(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(savedEventIdsProvider.notifier).toggle(event.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Removed from saved events.')),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(e))),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dateLabel = DateFormat(
@@ -1023,7 +1040,10 @@ class _JoinedEventCard extends ConsumerWidget {
           _RsvpCard(
             event: mock,
             onLocation: () => _openLocation(context),
-            onCancel: () => _cancelRsvp(context, ref),
+            onCancel: saved
+                ? () => _unsave(context, ref)
+                : () => _cancelRsvp(context, ref),
+            cancelLabel: saved ? 'UNSAVE' : 'CANCEL',
           ),
           const SizedBox(height: 6),
           Text(
@@ -1121,11 +1141,17 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _RsvpCard extends StatelessWidget {
-  const _RsvpCard({required this.event, this.onLocation, this.onCancel});
+  const _RsvpCard({
+    required this.event,
+    this.onLocation,
+    this.onCancel,
+    this.cancelLabel = 'CANCEL',
+  });
 
   final MockEvent event;
   final VoidCallback? onLocation;
   final VoidCallback? onCancel;
+  final String cancelLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1237,7 +1263,7 @@ class _RsvpCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 _CardActionButton(
-                  label: 'CANCEL',
+                  label: cancelLabel,
                   backgroundColor: isDark
                       ? const Color(0xFF333333)
                       : const Color(0xFFF1F1F1),

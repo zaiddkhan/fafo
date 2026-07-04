@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fafu/src/core/config/app_config.dart';
 import 'package:fafu/src/core/network/auth_token_provider.dart';
+import 'package:fafu/src/core/network/session_expired_provider.dart';
 import 'package:fafu/src/core/services/logger_provider.dart';
 
 final dioProvider = Provider<Dio>((ref) {
@@ -51,9 +52,25 @@ final dioProvider = Provider<Dio>((ref) {
 
         final alreadyRetried = error.requestOptions.extra['authRetry'] == true;
         if (error.response?.statusCode == 401 && !alreadyRetried) {
-          final freshToken = await FirebaseAuth.instance.currentUser?.getIdToken(
-            true,
-          );
+          final currentUser = FirebaseAuth.instance.currentUser;
+
+          // No signed-in user: this isn't an expired session, it's an
+          // unauthenticated request (e.g. previewing a shared event link).
+          // Let the normal routing/UI handle it — don't force a sign-out.
+          if (currentUser == null) {
+            handler.next(error);
+            return;
+          }
+
+          String? freshToken;
+          try {
+            freshToken = await currentUser.getIdToken(true);
+          } catch (_) {
+            // Refresh token is gone/revoked (signed out elsewhere, account
+            // disabled/deleted). Unrecoverable.
+            freshToken = null;
+          }
+
           if (freshToken != null) {
             ref.read(authTokenProvider.notifier).setToken(freshToken);
             final retryOptions = error.requestOptions;
@@ -65,10 +82,18 @@ final dioProvider = Provider<Dio>((ref) {
               handler.resolve(response);
               return;
             } on DioException catch (retryError) {
+              // A second 401 after a freshly minted token means the backend
+              // has revoked this session outright.
+              if (retryError.response?.statusCode == 401) {
+                ref.read(sessionExpiredProvider.notifier).markExpired();
+              }
               handler.next(retryError);
               return;
             }
           }
+
+          // Had a user but couldn't get a usable token — session is dead.
+          ref.read(sessionExpiredProvider.notifier).markExpired();
         }
 
         handler.next(error);
