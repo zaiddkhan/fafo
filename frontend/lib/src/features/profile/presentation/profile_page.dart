@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
@@ -933,13 +934,105 @@ class _SideQuestCard extends StatelessWidget {
   }
 }
 
-class _JoinedEventCard extends StatelessWidget {
+class _JoinedEventCard extends ConsumerWidget {
   const _JoinedEventCard({required this.event});
 
   final EventResponse event;
 
+  Future<void> _openLocation(BuildContext context) async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${event.lat},${event.lng}',
+    );
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open maps.')),
+      );
+    }
+  }
+
+  Future<void> _cancelRsvp(BuildContext context, WidgetRef ref) async {
+    final reason = await showModalBottomSheet<UnjoinReason>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Cancel your RSVP?',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Pick an optional reason. No typing required.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final option in UnjoinReason.values)
+                    ChoiceChip(
+                      label: Text(_unjoinReasonLabel(option)),
+                      selected: false,
+                      onSelected: (_) => Navigator.of(context).pop(option),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Keep RSVP'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (reason == null || !context.mounted) return;
+
+    try {
+      await ref.read(eventsRepositoryProvider).unjoinEvent(
+        event.id,
+        reason: reason,
+        answers: [_unjoinReasonLabel(reason)],
+      );
+      bumpEventsRevision(ref);
+      ref.invalidate(_joinedEventsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('RSVP cancelled.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(friendlyErrorMessage(e))),
+        );
+      }
+    }
+  }
+
+  String _unjoinReasonLabel(UnjoinReason reason) {
+    return switch (reason) {
+      UnjoinReason.changeOfPlans => 'Change of plans',
+      UnjoinReason.schedulingConflict => 'Scheduling conflict',
+      UnjoinReason.noLongerInterested => 'No longer interested',
+      UnjoinReason.other => 'Other',
+    };
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateLabel = DateFormat(
       'EEE, MMM d • h:mm a',
     ).format(event.dateTime.toLocal());
@@ -971,7 +1064,11 @@ class _JoinedEventCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _RsvpCard(event: mock),
+          _RsvpCard(
+            event: mock,
+            onLocation: () => _openLocation(context),
+            onCancel: () => _cancelRsvp(context, ref),
+          ),
           const SizedBox(height: 6),
           Text(
             dateLabel,
@@ -1068,9 +1165,11 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _RsvpCard extends StatelessWidget {
-  const _RsvpCard({required this.event});
+  const _RsvpCard({required this.event, this.onLocation, this.onCancel});
 
   final MockEvent event;
+  final VoidCallback? onLocation;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -1178,6 +1277,7 @@ class _RsvpCard extends StatelessWidget {
                   label: 'LOCATION',
                   backgroundColor: AppColors.accentPrimary,
                   textColor: Colors.white,
+                  onTap: onLocation,
                 ),
                 const SizedBox(height: 8),
                 _CardActionButton(
@@ -1190,6 +1290,7 @@ class _RsvpCard extends StatelessWidget {
                       : const Color(0xFF5F5F5F),
                   borderColor: borderColor.withValues(alpha: isDark ? 0.45 : 1),
                   isOutlined: true,
+                  onTap: onCancel,
                 ),
               ],
             ),
@@ -1207,6 +1308,7 @@ class _CardActionButton extends StatelessWidget {
     required this.textColor,
     this.isOutlined = false,
     this.borderColor,
+    this.onTap,
   });
 
   final String label;
@@ -1214,28 +1316,36 @@ class _CardActionButton extends StatelessWidget {
   final Color textColor;
   final bool isOutlined;
   final Color? borderColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 28,
-      decoration: BoxDecoration(
-        color: backgroundColor,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(6),
-        border: isOutlined
-            ? Border.all(
-                color: borderColor ?? Colors.white.withValues(alpha: 0.45),
-              )
-            : null,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.2,
+        child: Container(
+          height: 28,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(6),
+            border: isOutlined
+                ? Border.all(
+                    color: borderColor ?? Colors.white.withValues(alpha: 0.45),
+                  )
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: textColor,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
         ),
       ),
     );
