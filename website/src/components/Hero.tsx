@@ -1,6 +1,5 @@
-import { Phone } from './Phone'
-import { MapScreen } from './MapScreen'
 import { StoreBadges } from './StoreBadges'
+import { WaitlistForm } from './WaitlistForm'
 
 export function Hero() {
   return (
@@ -9,37 +8,30 @@ export function Hero() {
         <div>
           <span className="eyebrow">Your city, unfiltered</span>
           <h1>
-            See what's <span className="hl">popping</span> before the night does.
+            Tap in.<br />
+            <span className="hl">Nudge up.</span><br />
+            Pull up.
           </h1>
           <p className="lead">
-            FaFo is the live map of what's actually happening around you — right now,
-            not last week. Find it, nudge your people, and show up.
+            One nudge and your crew's in. FaFo is the live map of your city right now.
+            Spot a plan, send a nudge, they tap yes or no. No negotiation.
           </p>
           <StoreBadges />
-          <div className="launch-note">
-            <span className="dot" />
-            Launching city by city. Get on the list below.
+          <div className="hero-signup">
+            <p className="hero-signup-label">Get on the list and share with your friends.</p>
+            <WaitlistForm formClassName="notify" buttonClassName="btn btn-blue" />
           </div>
         </div>
 
-        <div className="hero-phone-wrap">
-          <Phone>
-            <MapScreen />
-          </Phone>
-          <div className="float-card float-streak">
-            <span className="fc-emoji">🔥</span>
-            <div>
-              7-night streak
-              <div className="fc-sub">You're out more than 92%</div>
-            </div>
-          </div>
-          <div className="float-card float-nudge">
-            <span className="fc-emoji">👋</span>
-            <div>
-              Maya nudged you
-              <div className="fc-sub">"come thru?"</div>
-            </div>
-          </div>
+        <div className="hero-media">
+          <img
+            className="hero-img"
+            src="/assets-temp/fafo-hero.png"
+            alt="FaFo app — live city map with quest and nudge cards"
+          />
+          <a href="#waitlist" className="btn btn-blue hero-explore">
+            Click here to explore the app
+          </a>
         </div>
       </div>
     </section>

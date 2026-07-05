@@ -1,42 +1,6 @@
-import { useState, type FormEvent } from 'react'
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
-import { db } from '../firebase'
-import { StoreBadges } from './StoreBadges'
-
-type Status = 'idle' | 'sending' | 'done' | 'error'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { WaitlistForm } from './WaitlistForm'
 
 export function FinalCTA() {
-  const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<Status>('idle')
-  const [error, setError] = useState('')
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    const value = email.trim().toLowerCase()
-    if (!EMAIL_RE.test(value)) {
-      setError('That email doesn\'t look right — give it another go.')
-      setStatus('error')
-      return
-    }
-    setStatus('sending')
-    setError('')
-    try {
-      await addDoc(collection(db, 'waitlist'), {
-        email: value,
-        source: 'website',
-        createdAt: serverTimestamp(),
-      })
-      setStatus('done')
-      setEmail('')
-    } catch (err) {
-      console.error('waitlist submit failed', err)
-      setError('Couldn\'t save that just now. Please try again in a moment.')
-      setStatus('error')
-    }
-  }
-
   return (
     <section className="cta-band" id="waitlist">
       <div className="wrap">
@@ -47,35 +11,9 @@ export function FinalCTA() {
           day it goes live where you are.
         </p>
 
-        {status === 'done' ? (
-          <div className="thanks">You're on the list. We'll be in touch. 🎉</div>
-        ) : (
-          <>
-            <form className="notify" onSubmit={onSubmit} noValidate>
-              <input
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="you@email.com"
-                aria-label="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <button
-                type="submit"
-                className="btn btn-ink btn-lg"
-                disabled={status === 'sending'}
-              >
-                {status === 'sending' ? 'Adding…' : 'Notify me'}
-              </button>
-            </form>
-            {status === 'error' && <div className="form-err">{error}</div>}
-          </>
-        )}
+        <WaitlistForm />
 
-        <StoreBadges />
-        <p className="cta-sub" style={{ marginTop: 22 }}>
+        <p className="cta-sub">
           No spam, ever. One email when we launch near you.
         </p>
       </div>

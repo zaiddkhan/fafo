@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Logo } from './icons'
 
 export function Header() {
   const [open, setOpen] = useState(false)
@@ -9,14 +8,13 @@ export function Header() {
     <header>
       <div className="wrap nav">
         <a href="#top" className="brand" onClick={close}>
-          <Logo />
+          <img src="/assets-temp/fafo-icon.png" alt="FaFo" className="logo" />
           FaFo
         </a>
 
         <nav className={`nav-links${open ? ' open' : ''}`}>
-          <a href="#how" onClick={close}>How it works</a>
           <a href="#features" onClick={close}>Features</a>
-          <a href="#peek" onClick={close}>The app</a>
+          <a href="#how" onClick={close}>How it works</a>
           <a href="#waitlist" onClick={close}>Join the waitlist</a>
         </nav>
 

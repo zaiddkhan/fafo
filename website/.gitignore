@@ -12,3 +12,5 @@ dist-ssr
 # Firebase
 .firebase
 firebase-debug.log
+
+public/assets-temp/website-screenshots
