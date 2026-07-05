@@ -66,6 +66,8 @@ img{max-width:100%;display:block}
 header{position:sticky;top:0;z-index:50;background:rgba(237,242,248,.86);backdrop-filter:blur(8px);border-bottom:2.5px solid var(--ink)}
 .nav{display:flex;align-items:center;justify-content:space-between;height:80px}
 .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:24px;letter-spacing:-.01em}
+/* Mirrors the second F of the FaFo wordmark, matching the brand logo. */
+.flip-f{display:inline-block;transform:scaleX(-1)}
 .brand .logo{width:40px;height:40px}
 .nav-links{display:flex;align-items:center;gap:30px}
 .nav-links a{font-weight:600;font-size:15px;color:var(--muted);transition:color .15s}

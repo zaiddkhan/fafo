@@ -1,5 +1,6 @@
 import { StoreBadges } from './StoreBadges'
 import { WaitlistForm } from './WaitlistForm'
+import { Wordmark } from './Wordmark'
 
 export function Hero() {
   return (
@@ -13,7 +14,7 @@ export function Hero() {
             Pull up.
           </h1>
           <p className="lead">
-            One nudge and your crew's in. FaFo is the live map of your city right now.
+            One nudge and your crew's in. <Wordmark /> is the live map of your city right now.
             Spot a plan, send a nudge, they tap yes or no. No negotiation.
           </p>
           <StoreBadges />

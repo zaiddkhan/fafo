@@ -1,3 +1,5 @@
+import { Wordmark } from './Wordmark'
+
 export function Footer() {
   const year = 2026
   return (
@@ -7,7 +9,7 @@ export function Footer() {
           <div className="foot-brand">
             <a href="#top" className="brand">
               <img src="/assets-temp/fafo-icon.png" alt="FaFo" className="logo" />
-              FaFo
+              <Wordmark />
             </a>
             <p>The live map of what's actually happening around you. Your city, unfiltered.</p>
           </div>
@@ -34,7 +36,7 @@ export function Footer() {
         </div>
 
         <div className="foot-bottom">
-          <p>© {year} FaFo. All rights reserved.</p>
+          <p>© {year} <Wordmark />. All rights reserved.</p>
           <p>Powered by SingleBit.</p>
           {/* <div className="fb-links">
             <a href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a>

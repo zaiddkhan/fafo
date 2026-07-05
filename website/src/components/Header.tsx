@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Wordmark } from './Wordmark'
 
 export function Header() {
   const [open, setOpen] = useState(false)
@@ -9,7 +10,7 @@ export function Header() {
       <div className="wrap nav">
         <a href="#top" className="brand" onClick={close}>
           <img src="/assets-temp/fafo-icon.png" alt="FaFo" className="logo" />
-          FaFo
+          <Wordmark />
         </a>
 
         <nav className={`nav-links${open ? ' open' : ''}`}>

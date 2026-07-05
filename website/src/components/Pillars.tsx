@@ -1,10 +1,12 @@
+import { Wordmark } from './Wordmark'
+
 export function Pillars() {
   return (
     <section className="band" id="features">
       <div className="wrap">
         <div className="sec-head">
           <span className="eyebrow">What you get</span>
-          <h2>Three ways <span className="hl">FaFo helps you</span> go out</h2>
+          <h2>Three ways <span className="hl"><Wordmark /> helps you</span> go out</h2>
         </div>
 
         <div className="pillars">
