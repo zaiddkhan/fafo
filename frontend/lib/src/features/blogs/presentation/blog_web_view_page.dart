@@ -16,11 +16,15 @@ class BlogWebViewPage extends StatefulWidget {
   final BlogResponse blog;
 
   /// Public permalink for [blog] on the marketing site. `embed=1` tells the
-  /// web reader to hide the site header/footer for a clean in-app surface.
+  /// web reader to hide the site header/footer for a clean in-app surface, and
+  /// `theme` hands it the app's current light/dark mode so the article matches
+  /// the surrounding chrome instead of always rendering on a light background.
   static Uri urlFor(BlogResponse blog) {
     final base = AppConfig.publicWebBaseUrl.replaceAll(RegExp(r'/+$'), '');
+    final theme = AppColors.isDark ? 'dark' : 'light';
     return Uri.parse(
-      '$base/read/${Uri.encodeComponent(blog.city)}/${blog.id}?embed=1',
+      '$base/read/${Uri.encodeComponent(blog.city)}/${blog.id}'
+      '?embed=1&theme=$theme',
     );
   }
 

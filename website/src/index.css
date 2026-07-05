@@ -14,6 +14,25 @@
   --border:2.5px solid var(--ink);
   --font:'Tomorrow', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
+/* Dark palette — opt-in via data-theme="dark" (the in-app reader sets this from
+   its ?theme=dark query param). Overrides the neo-brutalist tokens so borders,
+   surfaces and text flip for dark backgrounds; the hard offset shadows go near
+   the background colour so they recede instead of glaring white. */
+:root[data-theme="dark"]{
+  --bg:#111318;
+  --cream:#1B1E25;
+  --soft-blue-bg:#151A22;
+  --blue:#4A9BFF;
+  --blue-press:#7DB8FF;
+  --ink:#EAECEF;
+  --green:#37C766;
+  --red:#FF5C51;
+  --card:#1A1D24;
+  --muted:#9BA1AC;
+  --shadow:6px 6px 0 0 #05060A;
+  --shadow-sm:4px 4px 0 0 #05060A;
+}
+:root[data-theme="dark"] body{ background:var(--bg); }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{

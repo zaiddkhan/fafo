@@ -230,3 +230,21 @@
   .read-page { padding: 40px 0 72px; }
   .read-prose { font-size: 16px; }
 }
+
+/* ----- dark mode ----- */
+/* Most of the reader already runs on the --ink/--card/--muted/--cream tokens,
+   which flip in index.css. These rules cover the few hard-coded light values so
+   nothing stays cream-on-dark. */
+:root[data-theme="dark"] .read-head p,
+:root[data-theme="dark"] .read-subtitle { color: #B8BEC9; }
+:root[data-theme="dark"] .read-card-cover,
+:root[data-theme="dark"] .read-hero { background: #242832; }
+:root[data-theme="dark"] .read-card-cover.placeholder,
+:root[data-theme="dark"] .read-hero.placeholder {
+  background: linear-gradient(135deg, #242832, #2C313C);
+}
+:root[data-theme="dark"] .read-prose blockquote { color: #C4CAD4; }
+:root[data-theme="dark"] .read-prose code { background: #20252E; }
+/* pre uses `background: var(--ink)` for a dark code block in light mode; --ink
+   flips to near-white in dark, so pin it back to a dark surface + light text. */
+:root[data-theme="dark"] .read-prose pre { background: #0C0D11; color: #E6E9EE; }

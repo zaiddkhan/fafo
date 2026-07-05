@@ -34,6 +34,25 @@ export function isEmbedded(): boolean {
   return (navigator.userAgent || '').includes('; wv')
 }
 
+/**
+ * Applies the `?theme=dark|light` query param (passed by the in-app reader so
+ * the article matches the app's light/dark mode) to <html data-theme>. No param
+ * means the public site stays on its default light theme. Returns a cleanup that
+ * restores the previous value.
+ */
+export function applyThemeFromQuery(): () => void {
+  if (typeof window === 'undefined') return () => {}
+  const theme = new URLSearchParams(window.location.search).get('theme')
+  if (theme !== 'dark' && theme !== 'light') return () => {}
+  const root = document.documentElement
+  const previous = root.getAttribute('data-theme')
+  root.setAttribute('data-theme', theme)
+  return () => {
+    if (previous === null) root.removeAttribute('data-theme')
+    else root.setAttribute('data-theme', previous)
+  }
+}
+
 export class BlogFetchError extends Error {
   status: number;
   constructor(status: number, message: string) {

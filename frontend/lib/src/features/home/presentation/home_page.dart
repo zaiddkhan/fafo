@@ -109,6 +109,11 @@ class HomePageState extends ConsumerState<HomePage> {
   // changes a filter or re-centres the map.
   String? _focusedEventId;
 
+  // True while a "View on map" focus is animating the camera to the event.
+  // The carousel-settle handler keys off this so its pan-only camera move (which
+  // preserves the current, still zoomed-out camera) doesn't stomp the focus zoom.
+  bool _applyingFocus = false;
+
   double _lat = _defaultLat;
   double _lng = _defaultLng;
   bool _locationReady = false;
@@ -511,6 +516,25 @@ class HomePageState extends ConsumerState<HomePage> {
     });
   }
 
+  /// Keeps [_selectedEvent] in lockstep with whichever carousel card is centred,
+  /// driven by the pager's live scroll offset (not just its settle callback), so
+  /// the highlighted map pin tracks the pager as the user scrolls — even before
+  /// any pin has been tapped. Only rebuilds when the centred card actually
+  /// changes, so it doesn't setState on every scroll frame.
+  void _syncSelectionToPager() {
+    if (!mounted) return;
+    final controller = _eventPagerController;
+    if (controller == null || !controller.hasClients) return;
+    final page = controller.page;
+    if (page == null) return;
+    final events = _filteredEvents;
+    if (events.isEmpty) return;
+    final index = page.round().clamp(0, events.length - 1);
+    final event = events[index];
+    if (event.id == _selectedEvent?.id) return;
+    setState(() => _selectedEvent = event);
+  }
+
   /// Jumps the event carousel back to its first card after the current frame.
   /// Used when the selection is cleared so the highlighted pin (which falls back
   /// to the first card) matches whichever card is centred.
@@ -805,12 +829,17 @@ class HomePageState extends ConsumerState<HomePage> {
       );
       if (index >= 0) _animateCarouselToPage(index);
     }
-    await _mapController!.animateCamera(
-      center: Geographic(lon: target.lng, lat: target.lat),
-      zoom: 14.5,
-      pitch: 45,
-      nativeDuration: const Duration(milliseconds: 700),
-    );
+    _applyingFocus = true;
+    try {
+      await _mapController!.animateCamera(
+        center: Geographic(lon: target.lng, lat: target.lat),
+        zoom: 14.5,
+        pitch: 45,
+        nativeDuration: const Duration(milliseconds: 700),
+      );
+    } finally {
+      _applyingFocus = false;
+    }
     _rebuildVisibleEvents();
   }
 
@@ -1177,15 +1206,26 @@ class HomePageState extends ConsumerState<HomePage> {
                 top: false,
                 child: _EventPager(
                   events: filtered,
-                  controller: _eventPagerController ??= PageController(
-                    viewportFraction: 0.86,
-                  ),
+                  controller: _eventPagerController ??=
+                      (PageController(viewportFraction: 0.86)
+                        // Drive the selected-pin highlight straight off the
+                        // pager's live scroll position. onPageChanged only fires
+                        // once the page settles, so relying on it alone left the
+                        // map pin un-highlighted while (and sometimes after) a
+                        // swipe. This ticks as the user drags so the highlight
+                        // tracks whichever card is centred, every time.
+                        ..addListener(_syncSelectionToPager)),
                   onPageChanged: (index) {
                     if (index < 0 || index >= filtered.length) return;
                     final event = filtered[index];
-                    if (event.id == _selectedEvent?.id) return;
-                    setState(() => _selectedEvent = event);
-                    // Just a swipe — pan only, keep the current zoom/pitch.
+                    if (_selectedEvent?.id != event.id) {
+                      setState(() => _selectedEvent = event);
+                    }
+                    // While a "View on map" focus is settling, its own camera
+                    // move owns the zoom — don't let this pan-only settle (which
+                    // keeps the current, still zoomed-out camera) stomp on it.
+                    if (_applyingFocus) return;
+                    // On settle, pan the map to the centred card (keep zoom).
                     _focusEvent(event);
                   },
                 ),

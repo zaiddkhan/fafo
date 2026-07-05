@@ -600,19 +600,19 @@ class _QuestHistoryRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              completed
-                  ? 'Completed${whenLabel.isEmpty ? '' : ' • $whenLabel'}'
-                  : 'In progress',
-              textAlign: TextAlign.end,
-              style: TextStyle(
-                color: completed
-                    ? const Color(0xFF35B45A)
-                    : const Color(0xFF8A8A92),
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
-              ),
+          // Non-flex so the Expanded title above absorbs all the free space and
+          // this status label sits flush against the card's right edge.
+          Text(
+            completed
+                ? 'Completed${whenLabel.isEmpty ? '' : ' • $whenLabel'}'
+                : 'In progress',
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              color: completed
+                  ? const Color(0xFF35B45A)
+                  : const Color(0xFF8A8A92),
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
             ),
           ),
         ],

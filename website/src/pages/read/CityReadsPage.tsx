@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Header } from '../../components/Header'
 import { Footer } from '../../components/Footer'
-import { fetchCityReads, isEmbedded, type Blog } from '../../lib/blogs'
+import { fetchCityReads, isEmbedded, applyThemeFromQuery, type Blog } from '../../lib/blogs'
 import './read.css'
 
 type Status = 'loading' | 'ready' | 'error'
@@ -17,6 +17,9 @@ export default function CityReadsPage() {
   const [status, setStatus] = useState<Status>('loading')
 
   const cityLabel = prettyCity(city)
+
+  // Match the app's light/dark mode when opened in the in-app reader.
+  useEffect(() => applyThemeFromQuery(), [])
 
   useEffect(() => {
     document.title = `City Reads · ${cityLabel} · FaFo`

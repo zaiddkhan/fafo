@@ -11,6 +11,10 @@ class AppColors {
 
   static bool get _isDark => _themeMode == ThemeMode.dark;
 
+  /// Whether the app is currently in dark mode. Exposed so non-widget code
+  /// (e.g. building a themed WebView URL) can match the active theme.
+  static bool get isDark => _isDark;
+
   static const Color lightBgPrimary = Color(0xFFF8FBFD);
   static const Color lightBgSecondary = Color(0xFFFCFDFE);
   static const Color lightBgTertiary = Color(0xFFD6EAFB);

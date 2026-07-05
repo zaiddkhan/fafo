@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Header } from '../../components/Header'
 import { Footer } from '../../components/Footer'
-import { fetchBlog, isEmbedded, BlogFetchError, type Blog } from '../../lib/blogs'
+import { fetchBlog, isEmbedded, applyThemeFromQuery, BlogFetchError, type Blog } from '../../lib/blogs'
 import './read.css'
 
 type Status = 'loading' | 'ready' | 'notfound' | 'error'
@@ -15,6 +15,9 @@ export default function BlogReaderPage() {
   const [status, setStatus] = useState<Status>('loading')
 
   const backTo = `/read/${encodeURIComponent(city)}`
+
+  // Match the app's light/dark mode when opened in the in-app reader.
+  useEffect(() => applyThemeFromQuery(), [])
 
   useEffect(() => {
     let alive = true
