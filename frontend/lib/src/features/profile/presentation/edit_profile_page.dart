@@ -147,14 +147,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (_pickedPhoto != null) {
         await repo.uploadProfilePhoto(_pickedPhoto!);
       }
-      await repo.setupProfile(
+      final updated = await repo.setupProfile(
         ProfileSetupRequest(
           displayName: _displayName.text.trim(),
           username: _username.text.trim().toLowerCase(),
           area: _area,
         ),
       );
-      ref.invalidate(currentProfileProvider);
+      // Seed the cache with the authoritative profile the backend just returned
+      // so the UI reflects the saved values immediately. Relying on
+      // `invalidate` alone would trigger a `GET /users/me` refetch that can
+      // momentarily return stale data (read-after-write lag), making the save
+      // look like it didn't persist.
+      ref.read(currentProfileProvider.notifier).setProfile(updated);
       ref.invalidate(profileStatsProvider);
       if (mounted) {
         ScaffoldMessenger.of(
@@ -188,12 +193,6 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
         title: const Text('Edit Profile'),
-        actions: [
-          TextButton(
-            onPressed: _canSave ? _save : null,
-            child: Text(_saving ? 'Saving…' : 'Save'),
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),

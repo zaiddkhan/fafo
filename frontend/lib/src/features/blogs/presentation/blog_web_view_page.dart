@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -89,7 +91,21 @@ class _BlogWebViewPageState extends State<BlogWebViewPage> {
       ),
       body: Stack(
         children: [
-          if (!_failed) WebViewWidget(controller: _controller),
+          if (!_failed)
+            WebViewWidget(
+              controller: _controller,
+              // Give the WebView an eager vertical-drag recognizer so it owns
+              // vertical scroll directly instead of routing every drag/fling
+              // through Flutter's gesture arena. Under Android Hybrid
+              // Composition the arena round-trip adds per-frame latency, which
+              // is what made this reader feel choppy versus native Flutter
+              // scroll views elsewhere in the app.
+              gestureRecognizers: {
+                Factory<VerticalDragGestureRecognizer>(
+                  VerticalDragGestureRecognizer.new,
+                ),
+              },
+            ),
           if (_loading && !_failed)
             const Center(
               child: CircularProgressIndicator(color: AppColors.accentPrimary),

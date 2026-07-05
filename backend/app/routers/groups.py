@@ -66,10 +66,44 @@ def _require_admin(db, group_id: str, uid: str):
     return ref, data
 
 
+# Inbox-only group-lifecycle notifications (no push). Events that also warrant a
+# push go through the generic pipeline (triggers.* -> NotificationService), which
+# writes a content-rich inbox entry itself. These lower-priority events are inbox
+# only, but must still carry a real title/body and a `data.group_id` so the app
+# renders them with content and taps them through to the group — never an empty
+# card or a dead route.
+_GROUP_INBOX_COPY = {
+    "group_admin_promoted": lambda c: ("You're now an admin", f"You're now an admin of {c['group_name']}."),
+    "group_admin_changed": lambda c: ("New group admin", f"{c['group_name']} has a new admin."),
+    "group_joined": lambda c: ("Joined group", f"You joined {c['group_name']}."),
+    "group_member_left": lambda c: ("Someone left", f"{c['member_name']} left {c['group_name']}."),
+}
+
+
 def _notify(db, uid: str, notification_type: str, payload: dict):
+    """Write a well-formed inbox entry for an inbox-only group event.
+
+    Unknown/content-less types are ignored rather than written, so the inbox never
+    contains an empty notification (which the app would render as a blank card with
+    no navigation target).
+    """
+    builder = _GROUP_INBOX_COPY.get(notification_type)
+    if builder is None:
+        return
+    group_id = payload.get("group_id", "")
+    ctx = {
+        "group_id": group_id,
+        "group_name": payload.get("group_name") or _group_name(db, group_id),
+    }
+    if payload.get("uid"):
+        ctx["member_name"] = _display_name(db, payload["uid"])
+    title, body = builder(ctx)
     db.collection("users").document(uid).collection("notifications").document(str(uuid4())).set({
-        "type": notification_type,
-        "payload": payload,
+        "type": "groups",
+        "template_id": f"groups.{notification_type}",
+        "title": title,
+        "body": body,
+        "data": {"group_id": group_id},
         "read": False,
         "created_at": SERVER_TIMESTAMP,
     })
@@ -88,6 +122,13 @@ def _save_negative_action(db, actor_uid: str, action_type: str, answers: list[st
 def _display_name(db, uid: str) -> str:
     doc = db.collection("users").document(uid).get()
     return (doc.to_dict() or {}).get("display_name", "Someone") if doc.exists else "Someone"
+
+
+def _group_name(db, group_id: str) -> str:
+    if not group_id:
+        return "your group"
+    doc = db.collection("groups").document(group_id).get()
+    return (doc.to_dict() or {}).get("name", "your group") if doc.exists else "your group"
 
 
 def _member_responses(db, group_id: str, viewer_uid: str) -> list[GroupMemberResponse]:
@@ -143,9 +184,11 @@ def _promote_next_or_dissolve(db, group_ref, group_id: str, leaving_uid: str):
     next_uid = next_doc.id
     group_ref.update({"admin_uid": next_uid, "updated_at": SERVER_TIMESTAMP})
     next_doc.reference.update({"is_admin": True})
-    _notify(db, next_uid, "group_admin_promoted", {"group_id": group_id})
+    group_name = _group_name(db, group_id)
+    _notify(db, next_uid, "group_admin_promoted", {"group_id": group_id, "group_name": group_name})
     for member_doc in candidates[1:]:
-        _notify(db, member_doc.id, "group_admin_changed", {"group_id": group_id, "admin_uid": next_uid})
+        _notify(db, member_doc.id, "group_admin_changed",
+                {"group_id": group_id, "admin_uid": next_uid, "group_name": group_name})
     return next_uid
 
 
@@ -241,7 +284,6 @@ def invite_member(group_id: str, body: GroupInviteCreateRequest, background_task
         "created_at": SERVER_TIMESTAMP,
         "responded_at": None,
     })
-    _notify(db, recipient_uid, "group_invite", {"group_id": group_id, "group_name": data.get("name", "")})
     triggers.group_invite_received(
         background_tasks, invite_id=invite_ref.id, group_id=group_id, recipient_uid=recipient_uid,
         inviter_name=_display_name(db, uid), group_name=data.get("name", "your group"),
@@ -321,7 +363,6 @@ def remove_member(group_id: str, member_uid: str, body: NegativeActionAnswers, b
     member_ref.delete()
     group_ref.update({"updated_at": SERVER_TIMESTAMP})
     _save_negative_action(db, uid, "remove_group_member", body.answers, group_id=group_id, target_uid=member_uid)
-    _notify(db, member_uid, "group_member_removed", {"group_id": group_id})
     triggers.group_member_removed(
         background_tasks, group_id=group_id, recipient_uid=member_uid,
         group_name=group_data.get("name", "your group"),
@@ -341,8 +382,10 @@ def leave_group(group_id: str, body: NegativeActionAnswers, current_user: dict =
     else:
         group_ref.update({"updated_at": SERVER_TIMESTAMP})
     _save_negative_action(db, uid, "leave_group", body.answers, group_id=group_id)
+    group_name = group_data.get("name", "")
     for member_doc in group_ref.collection("members").stream():
-        _notify(db, member_doc.id, "group_member_left", {"group_id": group_id, "uid": uid})
+        _notify(db, member_doc.id, "group_member_left",
+                {"group_id": group_id, "uid": uid, "group_name": group_name})
     return {"detail": "Left group"}
 
 
@@ -354,8 +397,7 @@ def dissolve_group(group_id: str, body: NegativeActionAnswers, background_tasks:
     member_ids = [doc.id for doc in group_ref.collection("members").stream()]
     for member_uid in member_ids:
         group_ref.collection("members").document(member_uid).delete()
-        if member_uid != uid:
-            _notify(db, member_uid, "group_dissolved", {"group_id": group_id, "admin_uid": uid})
+        # group_dissolved push + inbox is handled below via triggers.group_dissolved.
     # Delete all nudge card history for this group's feed (PRD: deleted for everyone).
     for nudge_doc in db.collection("nudges").where("feed_id", "==", f"group_{group_id}").stream():
         nudge_doc.reference.delete()

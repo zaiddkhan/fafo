@@ -90,6 +90,12 @@ class HomePageState extends ConsumerState<HomePage> {
   List<MockEvent> _events = [];
   PageController? _eventPagerController;
   double _currentZoom = _initialMapZoom;
+  double _currentPitch = 0;
+  // Whether MapLibre's native "you are here" location puck has been enabled.
+  // Enabling requires a granted runtime permission, which the user may only
+  // grant *after* the map is created (via the locate button), so this is not
+  // necessarily set in _onMapCreated.
+  bool _locationPuckEnabled = false;
   bool _eventsVisibleOnMap = _initialMapZoom >= _minEventVisibilityZoom;
   _DateTimeFilter _selectedDateTime = _DateTimeFilter.any;
   RangeValues _selectedRadiusRange = _defaultRadiusRange;
@@ -230,6 +236,11 @@ class HomePageState extends ConsumerState<HomePage> {
             'Enable location permission in settings to show where you are.';
         return false;
       }
+
+      // Permission is granted (possibly just now, via this call's prompt).
+      // Turn on the native location puck so the "you are here" navigator marker
+      // appears immediately instead of only after the next cold start.
+      await _enableLocationPuck();
 
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -585,6 +596,25 @@ class HomePageState extends ConsumerState<HomePage> {
       _scheduleMapFocus(pendingFocus);
     }
 
+    // Draw the native "you are here" puck if permission is already granted.
+    // If it isn't yet, this is a no-op — the puck is enabled later, the moment
+    // the user grants permission through the locate button.
+    await _enableLocationPuck();
+  }
+
+  /// Enables MapLibre's native location puck (the "you are here" navigator
+  /// marker) once, but only when a runtime location permission is granted.
+  ///
+  /// The map is created once and kept alive in MainShell's IndexedStack, so
+  /// [_onMapCreated] does not fire again after the user grants permission via
+  /// the locate button. Without calling this at grant-time, the puck would only
+  /// appear on the next cold start — the "navigator shows up 10 minutes later"
+  /// regression. Calling it here makes the marker appear promptly.
+  Future<void> _enableLocationPuck() async {
+    if (_locationPuckEnabled) return;
+    final controller = _mapController;
+    if (controller == null) return;
+
     // MapLibre's Android location component can throw a native
     // SecurityException if enabled without a granted runtime permission. The
     // exception is raised asynchronously from MapView.onStart, so a Dart
@@ -599,6 +629,7 @@ class HomePageState extends ConsumerState<HomePage> {
       // The native location component renders the "you are here" puck (with
       // heading) and keeps it live-synced with the map camera.
       await controller.enableLocation();
+      _locationPuckEnabled = true;
     } catch (_) {
       // Location permissions or platform support may be unavailable.
     }
@@ -632,6 +663,7 @@ class HomePageState extends ConsumerState<HomePage> {
     if (event is! MapEventMoveCamera) return;
 
     _currentZoom = event.camera.zoom;
+    _currentPitch = event.camera.pitch;
     final shouldShowEvents = _currentZoom >= _minEventVisibilityZoom;
 
     if (shouldShowEvents == _eventsVisibleOnMap) return;
@@ -689,10 +721,15 @@ class HomePageState extends ConsumerState<HomePage> {
   Future<void> _focusEvent(MockEvent event, {bool adjustZoom = false}) async {
     if (_mapController == null) return;
 
+    // IMPORTANT: never pass a null zoom/pitch here. On Android, animateCamera
+    // builds a fresh CameraPosition, so an unset zoom defaults to 0 — which
+    // slingshots the map all the way out to a country/world view (the "tapping
+    // an event zoomed the map all the way out" bug). To keep the current zoom
+    // while merely panning between cards, pass the tracked live values.
     await _mapController!.animateCamera(
       center: Geographic(lon: event.lng, lat: event.lat),
-      zoom: adjustZoom ? 14.5 : null,
-      pitch: adjustZoom ? 45 : null,
+      zoom: adjustZoom ? 14.5 : _currentZoom,
+      pitch: adjustZoom ? 45 : _currentPitch,
       nativeDuration: Duration(milliseconds: adjustZoom ? 600 : 350),
     );
   }
@@ -785,19 +822,32 @@ class HomePageState extends ConsumerState<HomePage> {
   }
 
   List<Marker> _visibleMarkers(List<MockEvent> events) {
-    final nearestId = _nearestEventId(events);
+    final selectedId = _selectedEvent?.id;
+    // Only fall back to the "nearest to you" highlight when no card is focused;
+    // otherwise the selected card's pin owns the highlight.
+    final nearestId = selectedId == null ? _nearestEventId(events) : null;
     return events
         .map((event) {
+          // The pin for the currently-shown carousel card is highlighted and
+          // enlarged so it's unmistakable which pin the slider card refers to.
+          final isSelected = event.id == selectedId;
           final isNearest = event.id == nearestId;
-          // The nearest event is rendered slightly larger to draw the eye.
-          final size = isNearest ? const Size(60, 78) : const Size(48, 62);
+          final size = isSelected
+              ? const Size(72, 92)
+              : isNearest
+              ? const Size(60, 78)
+              : const Size(48, 62);
           return Marker(
             point: Geographic(lon: event.lng, lat: event.lat),
             size: size,
             alignment: Alignment.bottomCenter,
             child: GestureDetector(
               onTap: () => _openEventPager(event),
-              child: _EventMapMarker(event: event, isNearest: isNearest),
+              child: _EventMapMarker(
+                event: event,
+                isNearest: isNearest,
+                isSelected: isSelected,
+              ),
             ),
           );
         })
@@ -1359,12 +1409,21 @@ class _MockEventIconTile extends StatelessWidget {
 }
 
 class _EventMapMarker extends StatelessWidget {
-  const _EventMapMarker({required this.event, this.isNearest = false});
+  const _EventMapMarker({
+    required this.event,
+    this.isNearest = false,
+    this.isSelected = false,
+  });
 
   final MockEvent event;
 
   /// The marker for the event nearest the user is drawn slightly larger.
   final bool isNearest;
+
+  /// The marker for the event whose card is currently shown in the carousel.
+  /// It is enlarged and wrapped in an accent ring so the user can immediately
+  /// tell which pin the slider card is about.
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1377,7 +1436,11 @@ class _EventMapMarker extends StatelessWidget {
             _ => '🎉',
           };
 
-    final scale = isNearest ? 1.25 : 1.0;
+    final scale = isSelected
+        ? 1.5
+        : isNearest
+        ? 1.25
+        : 1.0;
 
     return SizedBox(
       width: 48 * scale,
@@ -1385,6 +1448,31 @@ class _EventMapMarker extends StatelessWidget {
       child: Stack(
         alignment: Alignment.topCenter,
         children: [
+          // Accent ring/glow behind the selected pin's head, tying it visually
+          // to the focused carousel card.
+          if (isSelected)
+            Positioned(
+              top: 2 * scale,
+              child: Container(
+                width: 42 * scale,
+                height: 42 * scale,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.accentPrimary.withValues(alpha: 0.25),
+                  border: Border.all(
+                    color: AppColors.accentPrimary,
+                    width: 2.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accentPrimary.withValues(alpha: 0.45),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           Positioned(
             top: 0,
             child: CustomPaint(

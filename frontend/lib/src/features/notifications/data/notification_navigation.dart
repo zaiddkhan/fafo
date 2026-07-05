@@ -30,7 +30,15 @@ void routeFromNotificationData(GoRouter router, Map<String, dynamic> data) {
     return;
   }
 
-  router.push(NotificationsPage.routePath);
+  // No actionable target. This runs both for a system push tap (where opening
+  // the inbox is the sensible landing spot) and for an inbox tap (where the user
+  // is already on the notifications page). Only surface the inbox if we're not
+  // already there — otherwise every tap stacks a duplicate notifications route,
+  // trapping the user behind a pile of identical screens.
+  final currentPath = router.routeInformationProvider.value.uri.path;
+  if (currentPath != NotificationsPage.routePath) {
+    router.push(NotificationsPage.routePath);
+  }
 }
 
 String? _str(Object? value) {

@@ -14,9 +14,31 @@ final usersRepositoryProvider = Provider<UsersRepository>((ref) {
 
 /// Current user's profile (including creator status), fetched from `/users/me`.
 /// Used to gate creator-only actions. Refresh with `ref.invalidate`.
-final currentProfileProvider = FutureProvider<ProfileResponse>((ref) {
-  return ref.watch(usersRepositoryProvider).getMe();
-});
+///
+/// Implemented as an [AsyncNotifier] (rather than a plain [FutureProvider]) so
+/// that write flows which already receive the fresh, authoritative profile from
+/// the backend (e.g. Edit Profile's `PUT /users/profile`) can seed the cache
+/// directly via [CurrentProfileNotifier.setProfile]. This avoids a redundant
+/// `GET /users/me` refetch that can momentarily return stale data
+/// (read-after-write lag) and make a successful save look like it didn't persist.
+final currentProfileProvider =
+    AsyncNotifierProvider<CurrentProfileNotifier, ProfileResponse>(
+  CurrentProfileNotifier.new,
+);
+
+class CurrentProfileNotifier extends AsyncNotifier<ProfileResponse> {
+  @override
+  Future<ProfileResponse> build() {
+    return ref.watch(usersRepositoryProvider).getMe();
+  }
+
+  /// Seed the cache with an already-fetched profile (e.g. the response returned
+  /// by a profile update), so readers reflect the new values immediately
+  /// without waiting on a fresh network round-trip.
+  void setProfile(ProfileResponse profile) {
+    state = AsyncValue.data(profile);
+  }
+}
 
 class UsersRepository {
   UsersRepository(this._dio);

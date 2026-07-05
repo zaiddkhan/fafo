@@ -127,25 +127,51 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
                   // A nudge thread can only hold one live nudge at a time — you
                   // can't fire a new one (or nudge back) while the current one
                   // is still unresolved, so disable the button until it clears.
-                  final hasActive = items.any((n) => !n.isResolved);
-                  return SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.accentPrimary,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(0xFFCFCFCF),
-                        disabledForegroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  final active = items.where((n) => !n.isResolved).toList();
+                  final hasActive = active.isNotEmpty;
+                  // Surface WHEN the button re-enables: the soonest active nudge
+                  // expiry. The sheet's 1s ticker rebuilds this live.
+                  String? untilLabel;
+                  if (hasActive) {
+                    final soonest = active
+                        .map((n) => n.expiresAt)
+                        .reduce((a, b) => a.isBefore(b) ? a : b);
+                    untilLabel = _formatCountdown(soonest.difference(DateTime.now()));
+                  }
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.accentPrimary,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0xFFCFCFCF),
+                            disabledForegroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: hasActive ? null : () => _createNudge(items),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: Text(
+                            hasActive ? 'Nudge in progress' : 'Nudge',
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
                       ),
-                      onPressed: hasActive ? null : () => _createNudge(items),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: Text(
-                        hasActive ? 'Nudge in progress' : 'Nudge',
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
+                      if (hasActive && untilLabel != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'You can nudge again in $untilLabel',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
                   );
                 },
                 orElse: () => const SizedBox(height: 46),
@@ -241,7 +267,22 @@ class _NudgeBubble extends ConsumerWidget {
     final canVote = !isMine && !nudge.isResolved && !nudge.votes.containsKey(myUid);
     final used = nudge.reminderCount;
     final total = nudge.reminderLimit;
-    final canRemind = isMine && !nudge.isResolved && total > used && (nudge.nextReminderAvailableAt == null || !DateTime.now().isBefore(nudge.nextReminderAvailableAt!));
+    final remindersLeft = total - used;
+    final cooldownRemaining = nudge.nextReminderAvailableAt == null
+        ? Duration.zero
+        : nudge.nextReminderAvailableAt!.difference(DateTime.now());
+    final inCooldown = cooldownRemaining > Duration.zero;
+    final canRemind = isMine && !nudge.isResolved && remindersLeft > 0 && !inCooldown;
+    // Explain the disabled reminder button: show the live cooldown countdown,
+    // or that the limit is used up. Falls back to the plain remaining count.
+    final String reminderLabel;
+    if (remindersLeft <= 0) {
+      reminderLabel = 'No reminders left';
+    } else if (inCooldown) {
+      reminderLabel = 'Available in ${_formatCountdown(cooldownRemaining)} ($remindersLeft/$total)';
+    } else {
+      reminderLabel = 'Send Reminder ($remindersLeft/$total)';
+    }
 
     return Padding(
       padding: EdgeInsets.only(bottom: 18, left: isMine ? 82 : 0, right: isMine ? 0 : 82),
@@ -367,7 +408,7 @@ class _NudgeBubble extends ConsumerWidget {
                                       onChanged();
                                     }
                                   : null,
-                              child: Text('Send Reminder (${total - used}/$total)', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
+                              child: Text(reminderLabel, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800)),
                             ),
                           )
                         else
@@ -546,6 +587,13 @@ class _NudgeDetailsSheetState extends State<_NudgeDetailsSheet> {
       ),
     );
   }
+}
+
+/// Formats a remaining [Duration] as mm:ss (clamped at zero), for the live
+/// cooldown/expiry countdowns shown on disabled nudge and reminder buttons.
+String _formatCountdown(Duration remaining) {
+  final seconds = remaining.inSeconds.clamp(0, 99999);
+  return '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
 }
 
 /// Live "Time left" label for a nudge, recomputed from [NudgeResponse.expiresAt]

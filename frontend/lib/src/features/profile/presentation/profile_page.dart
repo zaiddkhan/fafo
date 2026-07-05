@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
@@ -11,6 +10,8 @@ import 'package:fafu/src/features/events/data/saved_events_controller.dart';
 import 'package:fafu/src/features/events/domain/event.dart';
 import 'package:fafu/src/features/events/presentation/unjoin_reason_sheet.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
+import 'package:fafu/src/features/home/presentation/home_page.dart';
+import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/notifications/data/notifications_repository.dart';
 import 'package:fafu/src/features/notifications/presentation/notifications_page.dart';
 import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
@@ -84,269 +85,304 @@ class ProfilePage extends ConsumerWidget {
     final atQuestLimit = activeCount >= kMaxActiveQuests;
     final rsvpedEvents = savedEvents.take(3).toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Which shell tab is currently showing. The profile lives at index 5 inside
+    // the shell's IndexedStack, so it stays mounted (and its PopScope stays
+    // registered) even when another tab is on screen — hence gating on this.
+    final currentTab = ref.watch(mainShellTabProvider);
 
     ref.listen(eventsRevisionProvider, (_, _) {
       ref.invalidate(_joinedEventsProvider);
       ref.invalidate(profileStatsProvider);
     });
 
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF1F1F1F) : AppColors.bgPrimary,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 120),
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Profile',
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    color: AppColors.accentPrimary,
-                    fontSize: 28,
-                    height: 1,
+    return PopScope(
+      // Only intercept the system back gesture while the Profile tab is the one
+      // being shown. On any other tab this widget must let back pass through so
+      // it behaves normally (and can exit the app from the map).
+      canPop: currentTab != 5,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        // Back from the Profile tab returns to the map instead of exiting the
+        // app. Pressing back again (now on the map) exits Fafo as usual.
+        ref.read(mainShellTabProvider.notifier).setTab(0);
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF1F1F1F) : AppColors.bgPrimary,
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 120),
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Profile',
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      color: AppColors.accentPrimary,
+                      fontSize: 28,
+                      height: 1,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                _NotificationBell(isDark: isDark),
-                const SizedBox(width: 10),
-                if (profile.hasValue)
-                  _HeaderIconButton(
-                    icon: Icons.edit_outlined,
-                    isDark: isDark,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            EditProfilePage(profile: profile.value!),
+                  const Spacer(),
+                  _NotificationBell(isDark: isDark),
+                  const SizedBox(width: 10),
+                  if (profile.hasValue)
+                    _HeaderIconButton(
+                      icon: Icons.edit_outlined,
+                      isDark: isDark,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              EditProfilePage(profile: profile.value!),
+                        ),
                       ),
                     ),
-                  ),
-                if (profile.hasValue) const SizedBox(width: 10),
-                _HeaderIconButton(
-                  icon: Icons.settings_outlined,
-                  isDark: isDark,
-                  onTap: () => context.push(SettingsPage.routePath),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            profile.when(
-              loading: () => const SizedBox(
-                height: 64,
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.accentPrimary,
-                  ),
-                ),
-              ),
-              error: (_, _) => const SizedBox.shrink(),
-              data: (p) => _IdentityHeader(profile: p, isDark: isDark),
-            ),
-            const SizedBox(height: 18),
-            stats.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, _) => const SizedBox.shrink(),
-              data: (s) => Row(
-                children: [
-                  Expanded(
-                    child: _StatPill(
-                      label: 'Upcoming',
-                      value: '${s.upcomingEvents}',
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _StatPill(
-                      label: 'Joined',
-                      value: '${s.eventsJoined}',
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _StatPill(
-                      label: 'Quests',
-                      value: '${s.sideQuestsActivated}',
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _StatPill(
-                      label: 'Friends',
-                      value: '${s.friendsCount}',
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: _StatPill(
-                      label: 'Streak',
-                      value: '${s.currentStreak}',
-                    ),
+                  if (profile.hasValue) const SizedBox(width: 10),
+                  _HeaderIconButton(
+                    icon: Icons.settings_outlined,
+                    isDark: isDark,
+                    onTap: () => context.push(SettingsPage.routePath),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 18),
-            _SectionHeader(title: 'Joined events', actionLabel: 'View All'),
-            const SizedBox(height: 12),
-            joinedEvents.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.only(bottom: 18),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.accentPrimary,
+              const SizedBox(height: 16),
+              profile.when(
+                loading: () => const SizedBox(
+                  height: 64,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.accentPrimary,
+                    ),
+                  ),
+                ),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (p) => _IdentityHeader(profile: p, isDark: isDark),
+              ),
+              const SizedBox(height: 18),
+              stats.when(
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+                data: (s) => Row(
+                  children: [
+                    Expanded(
+                      child: _StatPill(
+                        label: 'Upcoming',
+                        value: '${s.upcomingEvents}',
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _StatPill(
+                        label: 'Joined',
+                        value: '${s.eventsJoined}',
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _StatPill(
+                        label: 'Quests',
+                        value: '${s.sideQuestsActivated}',
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _StatPill(
+                        label: 'Friends',
+                        value: '${s.friendsCount}',
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _StatPill(
+                        label: 'Streak',
+                        value: '${s.currentStreak}',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              _SectionHeader(
+                title: 'Joined events',
+                actionLabel: 'View All',
+                onAction: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const _JoinedEventsListPage(),
                   ),
                 ),
               ),
-              error: (error, _) => Padding(
-                padding: const EdgeInsets.only(bottom: 18),
-                child: Text(
-                  friendlyErrorMessage(error),
-                  style: const TextStyle(color: Color(0xFFE5484D)),
+              const SizedBox(height: 12),
+              joinedEvents.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.only(bottom: 18),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.accentPrimary,
+                    ),
+                  ),
+                ),
+                error: (error, _) => Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: Text(
+                    friendlyErrorMessage(error),
+                    style: const TextStyle(color: Color(0xFFE5484D)),
+                  ),
+                ),
+                data: (events) {
+                  if (events.isEmpty && rsvpedEvents.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 18),
+                      child: Text('Join an event to see it here.'),
+                    );
+                  }
+                  if (events.isNotEmpty) {
+                    return Column(
+                      children: events
+                          .take(3)
+                          .map(
+                            (event) => Padding(
+                              padding: const EdgeInsets.only(bottom: 18),
+                              child: _JoinedEventCard(event: event),
+                            ),
+                          )
+                          .toList(),
+                    );
+                  }
+                  return Column(
+                    children: rsvpedEvents
+                        .map(
+                          (event) => Padding(
+                            padding: const EdgeInsets.only(bottom: 18),
+                            child: _RsvpCard(event: event),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              _SectionHeader(
+                title: 'Saved events',
+                actionLabel: 'View All',
+                onAction: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const _SavedEventsListPage(),
+                  ),
                 ),
               ),
-              data: (events) {
-                if (events.isEmpty && rsvpedEvents.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.only(bottom: 18),
-                    child: Text('Join an event to see it here.'),
-                  );
-                }
-                if (events.isNotEmpty) {
+              const SizedBox(height: 12),
+              savedBackendEvents.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.only(bottom: 18),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.accentPrimary,
+                    ),
+                  ),
+                ),
+                error: (error, _) => Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: Text(
+                    friendlyErrorMessage(error),
+                    style: const TextStyle(color: Color(0xFFE5484D)),
+                  ),
+                ),
+                data: (events) {
+                  if (events.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 18),
+                      child: Text(
+                        'Tap the bookmark on an event to save it here.',
+                      ),
+                    );
+                  }
                   return Column(
                     children: events
                         .take(3)
                         .map(
                           (event) => Padding(
                             padding: const EdgeInsets.only(bottom: 18),
-                            child: _JoinedEventCard(event: event),
+                            child: _JoinedEventCard(event: event, saved: true),
                           ),
                         )
                         .toList(),
                   );
-                }
-                return Column(
-                  children: rsvpedEvents
-                      .map(
-                        (event) => Padding(
-                          padding: const EdgeInsets.only(bottom: 18),
-                          child: _RsvpCard(event: event),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _SectionHeader(title: 'Saved events'),
-            const SizedBox(height: 12),
-            savedBackendEvents.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.only(bottom: 18),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.accentPrimary,
+                },
+              ),
+              const SizedBox(height: 12),
+              _SectionHeader(
+                title: 'Side Quests',
+                actionLabel: 'View All',
+                onAction: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const QuestsPage())),
+              ),
+              const SizedBox(height: 12),
+              quests.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.only(bottom: 18),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.accentPrimary,
+                    ),
                   ),
                 ),
-              ),
-              error: (error, _) => Padding(
-                padding: const EdgeInsets.only(bottom: 18),
-                child: Text(
-                  friendlyErrorMessage(error),
-                  style: const TextStyle(color: Color(0xFFE5484D)),
-                ),
-              ),
-              data: (events) {
-                if (events.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.only(bottom: 18),
-                    child: Text('Tap the bookmark on an event to save it here.'),
-                  );
-                }
-                return Column(
-                  children: events
-                      .take(3)
-                      .map(
-                        (event) => Padding(
-                          padding: const EdgeInsets.only(bottom: 18),
-                          child: _JoinedEventCard(event: event, saved: true),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _SectionHeader(
-              title: 'Side Quests',
-              actionLabel: 'View All',
-              onAction: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const QuestsPage())),
-            ),
-            const SizedBox(height: 12),
-            quests.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.only(bottom: 18),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.accentPrimary,
+                error: (error, _) => Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: Text(
+                    friendlyErrorMessage(error),
+                    style: const TextStyle(color: Color(0xFFE5484D)),
                   ),
                 ),
-              ),
-              error: (error, _) => Padding(
-                padding: const EdgeInsets.only(bottom: 18),
-                child: Text(
-                  friendlyErrorMessage(error),
-                  style: const TextStyle(color: Color(0xFFE5484D)),
-                ),
-              ),
-              data: (items) {
-                if (items.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.only(bottom: 18),
-                    child: Text('No side quests published yet.'),
-                  );
-                }
-                return Column(
-                  children: items
-                      .take(4)
-                      .map(
-                        (quest) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _SideQuestCard(
-                            quest: quest,
-                            isDark: isDark,
-                            activation: activationById[quest.id],
-                            atLimit: atQuestLimit,
-                            onStart: () => _startQuest(ref, context, quest.id),
+                data: (items) {
+                  if (items.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.only(bottom: 18),
+                      child: Text('No side quests published yet.'),
+                    );
+                  }
+                  return Column(
+                    children: items
+                        .take(4)
+                        .map(
+                          (quest) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _SideQuestCard(
+                              quest: quest,
+                              isDark: isDark,
+                              activation: activationById[quest.id],
+                              atLimit: atQuestLimit,
+                              onStart: () =>
+                                  _startQuest(ref, context, quest.id),
+                            ),
                           ),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-            ),
-            const SizedBox(height: 6),
-            _QuestHistorySection(activations: activations, isDark: isDark),
-            const SizedBox(height: 6),
-            _SectionHeader(
-              title: 'Past Experiences',
-              actionLabel: 'See History',
-              onAction: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const _PastExperiencesPage(),
-                ),
+                        )
+                        .toList(),
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 12),
-            ..._pastExperiences
-                .take(3)
-                .map(
-                  (experience) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: _PastExperienceCard(experience: experience),
+              const SizedBox(height: 6),
+              _QuestHistorySection(activations: activations, isDark: isDark),
+              const SizedBox(height: 6),
+              _SectionHeader(
+                title: 'Past Experiences',
+                actionLabel: 'See History',
+                onAction: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const _PastExperiencesPage(),
                   ),
                 ),
-          ],
+              ),
+              const SizedBox(height: 12),
+              ..._pastExperiences
+                  .take(3)
+                  .map(
+                    (experience) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _PastExperienceCard(experience: experience),
+                    ),
+                  ),
+            ],
+          ),
         ),
       ),
     );
@@ -379,9 +415,9 @@ Future<void> _startQuest(
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(e))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
     }
   }
 }
@@ -408,9 +444,7 @@ class _QuestHistorySection extends StatelessWidget {
           actionLabel: hasItems ? 'See History' : '',
           onAction: hasItems
               ? () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const _QuestHistoryPage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const _QuestHistoryPage()),
                 )
               : null,
         ),
@@ -493,8 +527,11 @@ class _QuestHistoryPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
               itemCount: items.length,
               separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (_, index) =>
-                  _QuestHistoryRow(activation: items[index], isDark: isDark),
+              itemBuilder: (_, index) => _QuestHistoryRow(
+                activation: items[index],
+                isDark: isDark,
+                expandTitle: true,
+              ),
             ),
           );
         },
@@ -504,10 +541,19 @@ class _QuestHistoryPage extends ConsumerWidget {
 }
 
 class _QuestHistoryRow extends StatelessWidget {
-  const _QuestHistoryRow({required this.activation, required this.isDark});
+  const _QuestHistoryRow({
+    required this.activation,
+    required this.isDark,
+    this.expandTitle = false,
+  });
 
   final QuestActivation activation;
   final bool isDark;
+
+  /// When true (the full "Quest History" screen) the title wraps to as many
+  /// lines as it needs instead of being clipped with an ellipsis, so the user
+  /// sees the whole quest name.
+  final bool expandTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -529,6 +575,9 @@ class _QuestHistoryRow extends StatelessWidget {
         ),
       ),
       child: Row(
+        crossAxisAlignment: expandTitle
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           Icon(
             completed ? Icons.check_circle : Icons.bolt,
@@ -541,8 +590,8 @@ class _QuestHistoryRow extends StatelessWidget {
           Expanded(
             child: Text(
               activation.quest.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: expandTitle ? null : 1,
+              overflow: expandTitle ? TextOverflow.clip : TextOverflow.ellipsis,
               style: TextStyle(
                 color: isDark ? Colors.white : const Color(0xFF171717),
                 fontWeight: FontWeight.w800,
@@ -551,16 +600,19 @@ class _QuestHistoryRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            completed
-                ? 'Completed${whenLabel.isEmpty ? '' : ' • $whenLabel'}'
-                : 'In progress',
-            style: TextStyle(
-              color: completed
-                  ? const Color(0xFF35B45A)
-                  : const Color(0xFF8A8A92),
-              fontWeight: FontWeight.w700,
-              fontSize: 11,
+          Flexible(
+            child: Text(
+              completed
+                  ? 'Completed${whenLabel.isEmpty ? '' : ' • $whenLabel'}'
+                  : 'In progress',
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: completed
+                    ? const Color(0xFF35B45A)
+                    : const Color(0xFF8A8A92),
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
             ),
           ),
         ],
@@ -941,22 +993,18 @@ class _JoinedEventCard extends ConsumerWidget {
   final EventResponse event;
   final bool saved;
 
-  Future<void> _openLocation(BuildContext context) async {
-    final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${event.lat},${event.lng}',
-    );
-    var launched = false;
-    try {
-      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      // launchUrl throws (e.g. PlatformException) when no handler is
-      // available; fall through to the failure snackbar below.
-    }
-    if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open maps.')),
-      );
-    }
+  /// Opens the in-app Fafo map centred on this event — the same behaviour as
+  /// the event detail page's "View on map" button. Previously this launched
+  /// Google Maps via url_launcher, which was inconsistent with the rest of the
+  /// app.
+  void _openLocation(BuildContext context, WidgetRef ref) {
+    ref
+        .read(homeMapFocusProvider.notifier)
+        .setFocus(
+          HomeMapFocusTarget(eventId: event.id, lat: event.lat, lng: event.lng),
+        );
+    ref.read(mainShellTabProvider.notifier).setTab(0);
+    context.goNamed(MainShell.routeName);
   }
 
   Future<void> _cancelRsvp(BuildContext context, WidgetRef ref) async {
@@ -968,22 +1016,24 @@ class _JoinedEventCard extends ConsumerWidget {
     if (reason == null || !context.mounted) return;
 
     try {
-      await ref.read(eventsRepositoryProvider).unjoinEvent(
-        event.id,
-        reason: reason,
-        answers: [unjoinReasonLabel(reason)],
-      );
+      await ref
+          .read(eventsRepositoryProvider)
+          .unjoinEvent(
+            event.id,
+            reason: reason,
+            answers: [unjoinReasonLabel(reason)],
+          );
       if (!context.mounted) return;
       bumpEventsRevision(ref);
       ref.invalidate(_joinedEventsProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('RSVP cancelled.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('RSVP cancelled.')));
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
       }
     }
   }
@@ -997,9 +1047,9 @@ class _JoinedEventCard extends ConsumerWidget {
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
       }
     }
   }
@@ -1039,7 +1089,7 @@ class _JoinedEventCard extends ConsumerWidget {
         children: [
           _RsvpCard(
             event: mock,
-            onLocation: () => _openLocation(context),
+            onLocation: () => _openLocation(context, ref),
             onCancel: saved
                 ? () => _unsave(context, ref)
                 : () => _cancelRsvp(context, ref),
@@ -1408,6 +1458,103 @@ class _PastExperienceCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Full "Joined events" list reached from the section's "View All" link. Shows
+/// every event the user has joined, not just the three-item preview on the
+/// profile. Watches the same [_joinedEventsProvider] so it stays in sync.
+class _JoinedEventsListPage extends ConsumerWidget {
+  const _JoinedEventsListPage();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final joinedEvents = ref.watch(_joinedEventsProvider);
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(title: const Text('Joined events')),
+      body: joinedEvents.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.accentPrimary),
+        ),
+        error: (error, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              friendlyErrorMessage(error),
+              style: const TextStyle(color: Color(0xFFE5484D)),
+            ),
+          ),
+        ),
+        data: (events) {
+          if (events.isEmpty) {
+            return const Center(child: Text('Join an event to see it here.'));
+          }
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(_joinedEventsProvider);
+              await ref.read(_joinedEventsProvider.future);
+            },
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
+              itemCount: events.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 18),
+              itemBuilder: (_, index) => _JoinedEventCard(event: events[index]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Full "Saved events" list reached from the section's "View All" link. Mirrors
+/// [_JoinedEventsListPage] but reads the saved-events feed and renders the cards
+/// in "saved" mode (so the secondary action is UNSAVE).
+class _SavedEventsListPage extends ConsumerWidget {
+  const _SavedEventsListPage();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final savedBackendEvents = ref.watch(savedEventsProvider);
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(title: const Text('Saved events')),
+      body: savedBackendEvents.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.accentPrimary),
+        ),
+        error: (error, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              friendlyErrorMessage(error),
+              style: const TextStyle(color: Color(0xFFE5484D)),
+            ),
+          ),
+        ),
+        data: (events) {
+          if (events.isEmpty) {
+            return const Center(
+              child: Text('Tap the bookmark on an event to save it here.'),
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(savedEventsProvider);
+              await ref.read(savedEventsProvider.future);
+            },
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
+              itemCount: events.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 18),
+              itemBuilder: (_, index) =>
+                  _JoinedEventCard(event: events[index], saved: true),
+            ),
+          );
+        },
       ),
     );
   }

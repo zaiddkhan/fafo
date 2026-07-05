@@ -20,6 +20,11 @@ class AppNotification {
   final bool read;
   final DateTime createdAt;
 
+  /// Whether this notification carries anything worth showing. A record with no
+  /// title (and no body) renders as an empty card — just an icon and a
+  /// timestamp — so it must never reach the inbox list.
+  bool get hasContent => title.trim().isNotEmpty || body.trim().isNotEmpty;
+
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(
       id: json['id'] as String,
@@ -45,6 +50,9 @@ class NotificationList {
     final items = (json['items'] as List? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(AppNotification.fromJson)
+        // Drop content-less records (missing/empty title and body) so the inbox
+        // never shows a blank card the user can't understand or act on.
+        .where((n) => n.hasContent)
         .toList(growable: false);
     return NotificationList(
       items: items,
