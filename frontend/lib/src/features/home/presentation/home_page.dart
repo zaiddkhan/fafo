@@ -386,6 +386,9 @@ class HomePageState extends ConsumerState<HomePage> {
       final ids = _filteredEvents.map((e) => e.id).toSet();
       if (_selectedEvent != null && !ids.contains(_selectedEvent!.id)) {
         _selectedEvent = null;
+        // Selection is gone; realign the carousel to the first card so the
+        // highlighted pin matches the card now on screen.
+        _snapPagerToStart();
       }
     });
   }
@@ -503,7 +506,20 @@ class HomePageState extends ConsumerState<HomePage> {
 
       if (_selectedEvent != null && !filteredIds.contains(_selectedEvent!.id)) {
         _selectedEvent = null;
+        _snapPagerToStart();
       }
+    });
+  }
+
+  /// Jumps the event carousel back to its first card after the current frame.
+  /// Used when the selection is cleared so the highlighted pin (which falls back
+  /// to the first card) matches whichever card is centred.
+  void _snapPagerToStart() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final controller = _eventPagerController;
+      if (controller == null || !controller.hasClients) return;
+      if ((controller.page ?? 0).round() != 0) controller.jumpToPage(0);
     });
   }
 
@@ -726,9 +742,16 @@ class HomePageState extends ConsumerState<HomePage> {
     // slingshots the map all the way out to a country/world view (the "tapping
     // an event zoomed the map all the way out" bug). To keep the current zoom
     // while merely panning between cards, pass the tracked live values.
+    //
+    // For an explicit tap (adjustZoom) settle at the standard event zoom, but
+    // never zoom *out*: if the user is already closer than 14.5 we keep their
+    // zoom and only recentre, so tapping a pin never pulls the map back out.
+    final targetZoom = adjustZoom
+        ? (_currentZoom > 14.5 ? _currentZoom : 14.5)
+        : _currentZoom;
     await _mapController!.animateCamera(
       center: Geographic(lon: event.lng, lat: event.lat),
-      zoom: adjustZoom ? 14.5 : _currentZoom,
+      zoom: targetZoom,
       pitch: adjustZoom ? 45 : _currentPitch,
       nativeDuration: Duration(milliseconds: adjustZoom ? 600 : 350),
     );
@@ -806,36 +829,21 @@ class HomePageState extends ConsumerState<HomePage> {
     _rebuildVisibleEvents();
   }
 
-  /// The id of the event closest to the user, so its marker can be drawn a
-  /// little larger to highlight it.
-  String? _nearestEventId(List<MockEvent> events) {
-    String? nearestId;
-    var nearestDistance = double.infinity;
-    for (final event in events) {
-      final distance = _distanceFromUserInKm(event);
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestId = event.id;
-      }
-    }
-    return nearestId;
-  }
-
   List<Marker> _visibleMarkers(List<MockEvent> events) {
-    final selectedId = _selectedEvent?.id;
-    // Only fall back to the "nearest to you" highlight when no card is focused;
-    // otherwise the selected card's pin owns the highlight.
-    final nearestId = selectedId == null ? _nearestEventId(events) : null;
+    // The carousel always shows a card, but onPageChanged does NOT fire for the
+    // initial page — so before the user swipes (or right after the selection is
+    // cleared and the pager snaps back to the start) _selectedEvent is null
+    // while the first card is the one on screen. Treat that first card as
+    // selected so its pin is highlighted from the start, matching what's shown.
+    final selectedId =
+        _selectedEvent?.id ?? (events.isNotEmpty ? events.first.id : null);
     return events
         .map((event) {
           // The pin for the currently-shown carousel card is highlighted and
           // enlarged so it's unmistakable which pin the slider card refers to.
           final isSelected = event.id == selectedId;
-          final isNearest = event.id == nearestId;
           final size = isSelected
               ? const Size(72, 92)
-              : isNearest
-              ? const Size(60, 78)
               : const Size(48, 62);
           return Marker(
             point: Geographic(lon: event.lng, lat: event.lat),
@@ -843,11 +851,7 @@ class HomePageState extends ConsumerState<HomePage> {
             alignment: Alignment.bottomCenter,
             child: GestureDetector(
               onTap: () => _openEventPager(event),
-              child: _EventMapMarker(
-                event: event,
-                isNearest: isNearest,
-                isSelected: isSelected,
-              ),
+              child: _EventMapMarker(event: event, isSelected: isSelected),
             ),
           );
         })
@@ -1409,16 +1413,9 @@ class _MockEventIconTile extends StatelessWidget {
 }
 
 class _EventMapMarker extends StatelessWidget {
-  const _EventMapMarker({
-    required this.event,
-    this.isNearest = false,
-    this.isSelected = false,
-  });
+  const _EventMapMarker({required this.event, this.isSelected = false});
 
   final MockEvent event;
-
-  /// The marker for the event nearest the user is drawn slightly larger.
-  final bool isNearest;
 
   /// The marker for the event whose card is currently shown in the carousel.
   /// It is enlarged and wrapped in an accent ring so the user can immediately
@@ -1436,11 +1433,7 @@ class _EventMapMarker extends StatelessWidget {
             _ => '🎉',
           };
 
-    final scale = isSelected
-        ? 1.5
-        : isNearest
-        ? 1.25
-        : 1.0;
+    final scale = isSelected ? 1.5 : 1.0;
 
     return SizedBox(
       width: 48 * scale,

@@ -243,7 +243,12 @@ def delete_account(body: NegativeActionAnswers, current_user: dict = Depends(get
 def get_photo_upload_path(current_user: dict = Depends(get_current_user)):
     uid = current_user["uid"]
     upload_path = f"users/{uid}/profile.jpg"
-    photo_url = f"https://firebasestorage.googleapis.com/v0/b/{FIREBASE_STORAGE_BUCKET}/o/users%2F{uid}%2Fprofile.jpg?alt=media"
+    # The storage object path is fixed, so the download URL would be identical on
+    # every re-upload — which makes the app's image cache keep serving the old
+    # photo until a restart. Append a per-upload version token so each new photo
+    # gets a unique URL and the client fetches the fresh bytes immediately.
+    version = int(datetime.now(timezone.utc).timestamp())
+    photo_url = f"https://firebasestorage.googleapis.com/v0/b/{FIREBASE_STORAGE_BUCKET}/o/users%2F{uid}%2Fprofile.jpg?alt=media&v={version}"
 
     db = get_firestore()
     db.collection("users").document(uid).update({"photo_url": photo_url})
