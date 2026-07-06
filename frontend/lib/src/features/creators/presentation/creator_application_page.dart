@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/features/creators/data/creators_providers.dart';
 import 'package:fafu/src/features/creators/data/creators_repository.dart';
 import 'package:fafu/src/features/creators/domain/creator_application.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
@@ -86,6 +87,10 @@ class _CreatorApplicationPageState
 
     try {
       await ref.read(creatorsRepositoryProvider).apply(request);
+      // Drop the cached application status (likely a cached 404 from before the
+      // user applied) so the Create tab gate re-fetches and shows the pending
+      // state instead of the apply form when the user returns to it.
+      ref.invalidate(creatorApplicationProvider);
       if (!mounted) return;
       setState(() {
         _submitting = false;
