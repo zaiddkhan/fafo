@@ -13,7 +13,8 @@ import 'package:fafu/src/features/friends/data/friends_providers.dart';
 import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
 import 'package:fafu/src/features/friends/presentation/contacts_sync_page.dart';
-import 'package:fafu/src/features/groups/presentation/groups_page.dart';
+import 'package:fafu/src/features/groups/data/groups_providers.dart';
+import 'package:fafu/src/features/groups/presentation/groups_body.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
 import 'package:fafu/src/features/nudges/presentation/nudge_feed_sheet.dart';
 import 'package:fafu/src/features/profile/presentation/public_profile_page.dart';
@@ -30,14 +31,14 @@ class FriendsPage extends ConsumerStatefulWidget {
   ConsumerState<FriendsPage> createState() => _FriendsPageState();
 }
 
-enum _FriendsTab { all, incoming, pending }
+enum _FriendsTab { friends, groups, requests }
 
 class _FriendsPageState extends ConsumerState<FriendsPage> {
   final _searchController = TextEditingController();
   Timer? _debounce;
   String _query = '';
   bool _busy = false;
-  _FriendsTab _tab = _FriendsTab.all;
+  _FriendsTab _tab = _FriendsTab.friends;
 
   @override
   void initState() {
@@ -153,15 +154,24 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     final outgoing = ref.watch(outgoingFriendRequestsProvider);
     final friends = ref.watch(friendsListProvider);
     final blocked = ref.watch(blockedUsersProvider);
+    final groupInvites = ref.watch(incomingGroupInvitesProvider);
     final search = _query.length >= 2
         ? ref.watch(friendSearchProvider(_query))
         : const AsyncValue<List<PublicUserResponse>>.data([]);
 
-    // Counts drive the segmented-tab badges; read straight from the lists we
-    // already watch so they stay in sync with what each tab shows.
-    final friendsCount = friends.asData?.value.length ?? 0;
+    // Tab badges are notification-style counts of actionable items, read from
+    // the lists we already watch so they stay in sync with each tab.
+    // Friends = friends who nudged you with a still-unresolved nudge;
+    // Groups = pending group invites; Requests = incoming friend requests.
+    final newNudgesCount = friends.asData?.value
+            .where((f) =>
+                f.lastNudge != null &&
+                f.lastNudge!.direction == NudgeDirection.received &&
+                !f.lastNudge!.isResolved)
+            .length ??
+        0;
+    final groupInvitesCount = groupInvites.asData?.value.length ?? 0;
     final incomingCount = incoming.asData?.value.length ?? 0;
-    final outgoingCount = outgoing.asData?.value.length ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -179,80 +189,102 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(22, 24, 22, 120),
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Friends',
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        color: AppColors.accentPrimary,
-                        fontSize: 28,
-                        height: 1,
-                      ),
-                    ),
-                  ),
-                  _SmallActionButton(
-                    label: 'Groups',
-                    onTap: () => context.push(GroupsPage.routePath),
-                  ),
-                ],
+              Text(
+                'Friends',
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                  color: AppColors.accentPrimary,
+                  fontSize: 28,
+                  height: 1,
+                ),
               ),
               const SizedBox(height: 24),
-              _SearchBox(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-              ),
-              const SizedBox(height: 18),
               _SegmentedTabs(
                 current: _tab,
                 onChanged: (tab) => setState(() => _tab = tab),
                 segments: [
-                  _TabSpec(_FriendsTab.all, 'Friends', friendsCount),
-                  _TabSpec(_FriendsTab.incoming, 'Requests', incomingCount),
-                  _TabSpec(_FriendsTab.pending, 'Sent', outgoingCount),
+                  _TabSpec(_FriendsTab.friends, 'Friends', newNudgesCount),
+                  _TabSpec(_FriendsTab.groups, 'Groups', groupInvitesCount),
+                  _TabSpec(_FriendsTab.requests, 'Requests', incomingCount),
                 ],
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StickerAction(
-                      icon: Icons.contacts_outlined,
-                      label: 'Sync Contacts',
-                      onTap: _busy
-                          ? null
-                          : () => context.push(ContactsSyncPage.routePath),
+              const SizedBox(height: 18),
+              if (_tab == _FriendsTab.groups) const GroupsBody(showIntro: false),
+              if (_tab == _FriendsTab.requests) ...[
+                _SearchBox(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StickerAction(
+                        icon: Icons.contacts_outlined,
+                        label: 'Sync Contacts',
+                        onTap: _busy
+                            ? null
+                            : () => context.push(ContactsSyncPage.routePath),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StickerAction(
-                      icon: Icons.ios_share,
-                      label: 'Invite Link',
-                      onTap: _busy ? null : _createInvite,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _StickerAction(
+                        icon: Icons.ios_share,
+                        label: 'Invite Link',
+                        onTap: _busy ? null : _createInvite,
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                if (_query.length >= 2) ...[
+                  _ListHeader('Search Results'),
+                  search.when(
+                    loading: () => const _LoadingBlock(),
+                    error: (e, _) =>
+                        _ErrorBlock(error: friendlyErrorMessage(e)),
+                    data: (users) => users.isEmpty
+                        ? const _EmptyBlock(text: 'No users found.')
+                        : Column(
+                            children: users
+                                .map(
+                                  (user) => _SearchResultRow(
+                                    user: user,
+                                    busy: _busy,
+                                    onAdd: () => _runAction(
+                                      () => ref
+                                          .read(friendsRepositoryProvider)
+                                          .sendFriendRequest(uid: user.uid),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
                   ),
+                  const SizedBox(height: 18),
                 ],
-              ),
-              const SizedBox(height: 22),
-              if (_query.length >= 2) ...[
-                _ListHeader('Search Results'),
-                search.when(
+                _ListHeader('Requests'),
+                incoming.when(
                   loading: () => const _LoadingBlock(),
                   error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
-                  data: (users) => users.isEmpty
-                      ? const _EmptyBlock(text: 'No users found.')
+                  data: (requests) => requests.isEmpty
+                      ? const _EmptyBlock(text: 'No new friend requests.')
                       : Column(
-                          children: users
+                          children: requests
                               .map(
-                                (user) => _SearchResultRow(
-                                  user: user,
-                                  busy: _busy,
-                                  onAdd: () => _runAction(
+                                (request) => _RequestCard(
+                                  user: request.requester,
+                                  primaryLabel: 'Accept',
+                                  secondaryLabel: 'Decline',
+                                  onPrimary: () => _runAction(
                                     () => ref
                                         .read(friendsRepositoryProvider)
-                                        .sendFriendRequest(uid: user.uid),
+                                        .acceptRequest(request.id),
+                                  ),
+                                  onSecondary: () => _runAction(
+                                    () => ref
+                                        .read(friendsRepositoryProvider)
+                                        .declineRequest(request.id),
                                   ),
                                 ),
                               )
@@ -260,8 +292,26 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                         ),
                 ),
                 const SizedBox(height: 18),
+                _ListHeader('Sent'),
+                outgoing.when(
+                  loading: () => const _LoadingBlock(),
+                  error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
+                  data: (requests) => requests.isEmpty
+                      ? const _EmptyBlock(text: 'No pending sent requests.')
+                      : Column(
+                          children: requests
+                              .map(
+                                (request) => _RequestCard(
+                                  user: request.recipient,
+                                  primaryLabel: 'Pending',
+                                  onPrimary: null,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                ),
               ],
-              if (_tab == _FriendsTab.all)
+              if (_tab == _FriendsTab.friends)
                 friends.when(
                   loading: () => const _LoadingBlock(),
                   error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
@@ -311,55 +361,9 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                               .toList(),
                         ),
                 ),
-              if (_tab == _FriendsTab.incoming)
-                incoming.when(
-                  loading: () => const _LoadingBlock(),
-                  error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
-                  data: (requests) => requests.isEmpty
-                      ? const _EmptyBlock(text: 'No new friend requests.')
-                      : Column(
-                          children: requests
-                              .map(
-                                (request) => _RequestCard(
-                                  user: request.requester,
-                                  primaryLabel: 'Accept',
-                                  secondaryLabel: 'Decline',
-                                  onPrimary: () => _runAction(
-                                    () => ref
-                                        .read(friendsRepositoryProvider)
-                                        .acceptRequest(request.id),
-                                  ),
-                                  onSecondary: () => _runAction(
-                                    () => ref
-                                        .read(friendsRepositoryProvider)
-                                        .declineRequest(request.id),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                ),
-              if (_tab == _FriendsTab.pending)
-                outgoing.when(
-                  loading: () => const _LoadingBlock(),
-                  error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
-                  data: (requests) => requests.isEmpty
-                      ? const _EmptyBlock(text: 'No pending sent requests.')
-                      : Column(
-                          children: requests
-                              .map(
-                                (request) => _RequestCard(
-                                  user: request.recipient,
-                                  primaryLabel: 'Pending',
-                                  onPrimary: null,
-                                ),
-                              )
-                              .toList(),
-                        ),
-                ),
               // Blocked Users belongs only under the Friends tab — it is not a
               // request/sent state, so keep it out of those tabs.
-              if (_tab == _FriendsTab.all) ...[
+              if (_tab == _FriendsTab.friends) ...[
                 const SizedBox(height: 24),
                 blocked.when(
                   loading: () => const SizedBox.shrink(),
@@ -557,7 +561,7 @@ class _SearchBox extends StatelessWidget {
             color: AppColors.textSecondary,
             size: 24,
           ),
-          hintText: 'Search Friends...',
+          hintText: 'Search users to add...',
           hintStyle: TextStyle(
             color: AppColors.textSecondary,
             fontSize: 20,
@@ -849,34 +853,6 @@ class _AllFriendsEmpty extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SmallActionButton extends StatelessWidget {
-  const _SmallActionButton({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.ink,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 13,
-          ),
-        ),
       ),
     );
   }

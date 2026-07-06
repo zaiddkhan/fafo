@@ -133,8 +133,6 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                     return const Text('No side quests published yet.');
                   }
                   final canExpand = items.length > _kQuestPreviewCount;
-                  final collapsed = canExpand && !_showAllQuests;
-                  final hiddenCount = items.length - _kQuestPreviewCount;
                   final visible = (_showAllQuests || !canExpand)
                       ? items
                       : items.take(_kQuestPreviewCount).toList();
@@ -160,14 +158,6 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                         ),
                         const SizedBox(height: 14),
                       ],
-                      if (collapsed) ...[
-                        _MoreQuestsHint(
-                          hiddenCount: hiddenCount,
-                          onTap: () =>
-                              setState(() => _showAllQuests = true),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
                       ...visible.map((quest) {
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
@@ -183,81 +173,15 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
                                   .read(questsRepositoryProvider)
                                   .activateQuest(quest.id),
                             ),
-                            onDrop: () => _run(
-                              quest.id,
-                              activate: false,
-                              action: () => ref
-                                  .read(questsRepositoryProvider)
-                                  .abandonQuest(quest.id),
-                            ),
                           ),
                         );
                       }),
-                      if (collapsed)
-                        _MoreQuestsHint(
-                          hiddenCount: hiddenCount,
-                          onTap: () =>
-                              setState(() => _showAllQuests = true),
-                        ),
                     ],
                   );
                 },
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Banner shown above and below the collapsed preview to tell the user how many
-/// more side quests are hidden, and to expand the full list when tapped.
-class _MoreQuestsHint extends StatelessWidget {
-  const _MoreQuestsHint({required this.hiddenCount, required this.onTap});
-
-  final int hiddenCount;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final label = hiddenCount == 1
-        ? '1 more side quest to explore'
-        : '$hiddenCount more side quests to explore';
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.accentPrimary.withValues(alpha: isDark ? 0.18 : 0.10),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.accentPrimary.withValues(alpha: 0.35),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.accentPrimary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(
-              Icons.expand_more_rounded,
-              color: AppColors.accentPrimary,
-              size: 18,
-            ),
-          ],
         ),
       ),
     );
@@ -271,14 +195,12 @@ class _QuestCard extends StatelessWidget {
     required this.atLimit,
     required this.busy,
     required this.onStart,
-    required this.onDrop,
   });
   final QuestResponse quest;
   final bool isActive;
   final bool atLimit;
   final bool busy;
   final VoidCallback onStart;
-  final VoidCallback onDrop;
 
   @override
   Widget build(BuildContext context) {
@@ -360,11 +282,10 @@ class _QuestCard extends StatelessWidget {
             ),
           ] else ...[
             const SizedBox(height: 14),
-            _QuestButton(
-              label: 'Drop quest',
+            const _QuestButton(
+              label: 'Started',
               filled: false,
-              loading: busy,
-              onTap: busy ? null : onDrop,
+              onTap: null,
             ),
           ],
         ],

@@ -794,15 +794,15 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                             icon: _isOwner
                                 ? Icons.verified_user_outlined
                                 : (_joined
-                                      ? Icons.check_circle_outline
+                                      ? Icons.logout
                                       : Icons.how_to_reg_outlined),
                             label: _joinLabel,
                             isActive:
                                 !_isOwner &&
-                                (_joined ||
-                                    (!_isFull &&
-                                        _registrationOpen &&
-                                        !_joinWindowClosed)) &&
+                                !_joined &&
+                                (!_isFull &&
+                                    _registrationOpen &&
+                                    !_joinWindowClosed) &&
                                 !_joining,
                             onTap: _isOwner ? null : _handleRegisterTap,
                           ),

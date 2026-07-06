@@ -22,18 +22,38 @@ class FriendsRepository {
     }
   }
 
+  /// Max phone numbers the backend accepts per request. Address books larger
+  /// than this are sent in batches so a big contact list can't fail the whole
+  /// sync (the backend rejects lists outside 1..500 with HTTP 422).
+  static const int _kContactSyncBatchSize = 500;
+
   Future<List<ContactMatchResponse>> syncContacts(
     List<String> phoneNumbers,
   ) async {
+    // Nothing to match — skip the call (an empty list would 422) and return no
+    // matches rather than surfacing an error.
+    if (phoneNumbers.isEmpty) return const [];
+
     try {
-      final response = await _dio.post(
-        '/friends/contacts/sync',
-        data: {'phone_numbers': phoneNumbers},
-      );
-      final data = response.data as Map<String, dynamic>;
-      return (data['matches'] as List)
-          .map((e) => ContactMatchResponse.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final matchesByUid = <String, ContactMatchResponse>{};
+      for (var i = 0; i < phoneNumbers.length; i += _kContactSyncBatchSize) {
+        final batch = phoneNumbers.sublist(
+          i,
+          (i + _kContactSyncBatchSize).clamp(0, phoneNumbers.length),
+        );
+        final response = await _dio.post(
+          '/friends/contacts/sync',
+          data: {'phone_numbers': batch},
+        );
+        final data = response.data as Map<String, dynamic>;
+        for (final e in data['matches'] as List) {
+          final match = ContactMatchResponse.fromJson(
+            e as Map<String, dynamic>,
+          );
+          matchesByUid[match.user.uid] = match;
+        }
+      }
+      return matchesByUid.values.toList();
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

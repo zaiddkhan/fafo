@@ -14,6 +14,7 @@ import 'package:fafu/src/core/network/auth_token_provider.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/theme_mode_controller.dart';
+import 'package:fafu/src/core/utils/legal_links.dart';
 import 'package:fafu/src/features/creators/data/creators_providers.dart';
 import 'package:fafu/src/features/creators/presentation/creator_application_page.dart';
 import 'package:fafu/src/features/events/data/saved_events_controller.dart';
@@ -36,10 +37,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 /// SharedPreferences key for the per-device push opt-out.
 const _pushEnabledKey = 'push_notifications_enabled';
-
-// TODO(ops): replace with the real hosted legal documents before launch.
-const _privacyPolicyUrl = 'https://fafo.app/privacy';
-const _termsOfServiceUrl = 'https://fafo.app/terms';
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _pushNotifications = true;
@@ -175,16 +172,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
-  /// Opens an external document (privacy policy, terms) in the device browser.
-  Future<void> _openExternalUrl(String url) async {
-    final uri = Uri.parse(url);
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open $url')),
-      );
-    }
-  }
 
   Future<void> _showMapDataLicenses() async {
     final theme = Theme.of(context);
@@ -394,12 +381,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   _SettingsTile(
                     icon: Icons.shield_outlined,
                     title: 'Privacy Policy',
-                    onTap: () => _openExternalUrl(_privacyPolicyUrl),
+                    onTap: () => openExternalUrl(context, privacyUrl),
                   ),
                   _SettingsTile(
                     icon: Icons.description_outlined,
                     title: 'Terms of Service',
-                    onTap: () => _openExternalUrl(_termsOfServiceUrl),
+                    onTap: () => openExternalUrl(context, termsUrl),
                   ),
                   const SizedBox(height: AppSpacing.xl),
 

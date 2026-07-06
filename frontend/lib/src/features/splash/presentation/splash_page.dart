@@ -1,17 +1,36 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/core/utils/legal_links.dart';
 import 'package:fafu/src/shared/widgets/fafo_wordmark.dart';
 import 'package:fafu/src/features/auth/presentation/login_page.dart';
 import 'package:fafu/src/features/auth/presentation/signup_page.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
 
-class SplashPage extends StatelessWidget {
+class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
   static const routeName = 'splash';
   static const routePath = '/';
+
+  @override
+  State<SplashPage> createState() => _SplashPageState();
+}
+
+class _SplashPageState extends State<SplashPage> {
+  late final TapGestureRecognizer _termsRecognizer = TapGestureRecognizer()
+    ..onTap = () => openExternalUrl(context, termsUrl);
+  late final TapGestureRecognizer _privacyRecognizer = TapGestureRecognizer()
+    ..onTap = () => openExternalUrl(context, privacyUrl);
+
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,10 +101,32 @@ class SplashPage extends StatelessWidget {
                 onPressed: () => context.push(LoginPage.routePath),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Text(
-                'By continuing, you agree to our Terms and Privacy Policy.',
+              Text.rich(
+                TextSpan(
+                  text: 'By continuing, you agree to our ',
+                  style: theme.textTheme.labelSmall,
+                  children: [
+                    TextSpan(
+                      text: 'Terms',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.accentPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      recognizer: _termsRecognizer,
+                    ),
+                    const TextSpan(text: ' and '),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.accentPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      recognizer: _privacyRecognizer,
+                    ),
+                    const TextSpan(text: '.'),
+                  ],
+                ),
                 textAlign: TextAlign.center,
-                style: theme.textTheme.labelSmall,
               ),
               const SizedBox(height: AppSpacing.md),
             ],
