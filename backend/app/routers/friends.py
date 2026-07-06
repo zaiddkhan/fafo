@@ -405,6 +405,12 @@ def list_friends(
     friend_docs = db.collection("users").document(uid).collection("friends").order_by("friends_since", direction=firestore.Query.DESCENDING).limit(limit).stream()
     responses = []
     for friend_doc in friend_docs:
+        # Defense in depth: never surface a blocked user (either direction) as a
+        # friend, even if a stale friendship doc lingers from before block cleanup.
+        if db.collection("users").document(uid).collection("blocks").document(friend_doc.id).get().exists:
+            continue
+        if db.collection("users").document(friend_doc.id).collection("blocks").document(uid).get().exists:
+            continue
         user_doc = db.collection("users").document(friend_doc.id).get()
         if not user_doc.exists:
             continue
@@ -447,6 +453,10 @@ def block_user(target_uid: str, body: NegativeActionAnswers, current_user: dict 
     db = get_firestore()
     now = _now()
     db.collection("users").document(uid).collection("blocks").document(target_uid).set({"uid": target_uid, "blocked_at": now})
+    # Blocking severs any existing friendship — otherwise the blocked user keeps
+    # showing up in both parties' friends lists (they're friends AND blocked).
+    db.collection("users").document(uid).collection("friends").document(target_uid).delete()
+    db.collection("users").document(target_uid).collection("friends").document(uid).delete()
     request_ref = db.collection("friend_requests").document(_pair_request_id(uid, target_uid))
     if request_ref.get().exists and request_ref.get().to_dict().get("status") == FriendRequestStatus.pending.value:
         request_ref.update({"status": FriendRequestStatus.declined.value, "responded_at": SERVER_TIMESTAMP})
@@ -485,6 +495,11 @@ def unblock_user(target_uid: str, body: NegativeActionAnswers, current_user: dic
     if not block_ref.get().exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blocked user not found")
     block_ref.delete()
+    # Unblocking never restores a friendship. Clear any friendship docs that may
+    # linger from a block created before block-time cleanup existed, so the user
+    # doesn't silently reappear as a friend after being unblocked.
+    db.collection("users").document(uid).collection("friends").document(target_uid).delete()
+    db.collection("users").document(target_uid).collection("friends").document(uid).delete()
     db.collection("negative_action_responses").document(str(uuid4())).set({
         "actor_uid": uid,
         "target_uid": target_uid,
