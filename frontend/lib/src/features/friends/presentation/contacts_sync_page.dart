@@ -295,8 +295,8 @@ class _ContactsSearchBox extends StatelessWidget {
     return Container(
       height: 58,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.ink, width: 1.5),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border, width: 1.5),
         borderRadius: BorderRadius.circular(12),
       ),
       alignment: Alignment.center,
@@ -305,16 +305,20 @@ class _ContactsSearchBox extends StatelessWidget {
         onChanged: onChanged,
         keyboardType: TextInputType.text,
         textInputAction: TextInputAction.search,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        decoration: const InputDecoration(
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary,
+        ),
+        decoration: InputDecoration(
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
           filled: false,
-          prefixIcon: Icon(Icons.search, color: Colors.black54, size: 22),
+          prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 22),
           hintText: 'Search contacts...',
           hintStyle: TextStyle(
-            color: Color(0xFF6D6D78),
+            color: AppColors.textSecondary,
             fontSize: 17,
             fontWeight: FontWeight.w800,
           ),
@@ -399,8 +403,8 @@ class _ContactRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.ink, width: 1.4),
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border, width: 1.4),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -426,8 +430,8 @@ class _ContactRow extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF74747D),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
@@ -477,8 +481,8 @@ class _ContactAvatar extends StatelessWidget {
       width: 46,
       height: 46,
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
-        border: Border.all(color: AppColors.ink, width: 2),
+        color: AppColors.bgSecondary,
+        border: Border.all(color: AppColors.border, width: 2),
         borderRadius: BorderRadius.circular(8),
         image: photoUrl == null
             ? null
@@ -488,7 +492,10 @@ class _ContactAvatar extends StatelessWidget {
           ? Center(
               child: Text(
                 label.isEmpty ? '🙂' : label.characters.first.toUpperCase(),
-                style: const TextStyle(fontWeight: FontWeight.w900),
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textPrimary,
+                ),
               ),
             )
           : null,

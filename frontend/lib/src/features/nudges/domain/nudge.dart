@@ -3,6 +3,8 @@ enum NudgeStatus { active, acceptedTimer, resolved, expired }
 enum NudgeVote { yes, no }
 
 String nudgeFeedTypeToJson(NudgeFeedType value) => value == NudgeFeedType.friend ? 'friend' : 'group';
+NudgeFeedType nudgeFeedTypeFromJson(String? value) =>
+    value == 'group' ? NudgeFeedType.group : NudgeFeedType.friend;
 String nudgeVoteToJson(NudgeVote value) => value == NudgeVote.yes ? 'yes' : 'no';
 
 NudgeStatus nudgeStatusFromJson(String? value) => switch (value) {

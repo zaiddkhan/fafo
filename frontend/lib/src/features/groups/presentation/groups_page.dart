@@ -14,10 +14,17 @@ import 'package:fafu/src/features/nudges/presentation/nudge_feed_sheet.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
 
 class GroupsPage extends ConsumerStatefulWidget {
-  const GroupsPage({super.key});
+  const GroupsPage({this.focusGroupId, super.key});
+
+  /// When set (via a group notification deep-link), that group is auto-expanded
+  /// and scrolled into view instead of just landing on the groups list.
+  final String? focusGroupId;
 
   static const routeName = 'groups';
   static const routePath = '/groups';
+
+  /// Named route for the `/groups/:groupId` deep-link variant.
+  static const focusRouteName = 'group-detail';
 
   @override
   ConsumerState<GroupsPage> createState() => _GroupsPageState();
@@ -25,6 +32,25 @@ class GroupsPage extends ConsumerStatefulWidget {
 
 class _GroupsPageState extends ConsumerState<GroupsPage> {
   bool _busy = false;
+  final GlobalKey _focusedGroupKey = GlobalKey();
+  bool _scrolledToFocus = false;
+
+  /// Scrolls the deep-linked group into view once its card is laid out. Guarded
+  /// so it only fires once even though it's triggered from the async data build.
+  void _maybeScrollToFocus() {
+    if (_scrolledToFocus || widget.focusGroupId == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _focusedGroupKey.currentContext;
+      if (ctx != null && !_scrolledToFocus) {
+        _scrolledToFocus = true;
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 300),
+          alignment: 0.1,
+        );
+      }
+    });
+  }
 
   void _refresh() {
     ref.invalidate(groupsListProvider);
@@ -63,41 +89,70 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
     );
   }
 
-  Future<String?> _textDialog(String title, String label, {String initial = ''}) {
+  Future<String?> _textDialog(
+    String title,
+    String label, {
+    String initial = '',
+  }) {
     return showDialog<String>(
       context: context,
-      builder: (context) => _TextInputDialog(title: title, label: label, initial: initial),
+      builder: (context) =>
+          _TextInputDialog(title: title, label: label, initial: initial),
     );
   }
 
   Future<void> _createGroup() async {
     final name = await _textDialog('Create group', 'Group name');
     if (name == null) return;
-    await _run(() => ref.read(groupsRepositoryProvider).createGroup(name).then((_) {}));
+    await _run(
+      () => ref.read(groupsRepositoryProvider).createGroup(name).then((_) {}),
+    );
   }
 
   Future<void> _inviteFriend(GroupResponse group) async {
     final friends = await ref.read(friendsListProvider.future);
+    // Blocked users must never be invitable — otherwise blocking has no effect.
+    final blocked = await ref.read(blockedUsersProvider.future);
     if (!mounted) return;
+    final blockedUids = blocked.map((b) => b.user.uid).toSet();
+    final invitable = friends
+        .where(
+          (friend) => !group.members.any(
+            (member) => member.user.uid == friend.user.uid,
+          ),
+        )
+        .where((friend) => !blockedUids.contains(friend.user.uid))
+        .toList();
     final selectedUid = await showDialog<String>(
       context: context,
       builder: (context) => SimpleDialog(
         title: const Text('Invite a friend'),
-        children: friends.isEmpty
-            ? [const Padding(padding: EdgeInsets.all(16), child: Text('No friends available to invite.'))]
-            : friends
-                .where((friend) => !group.members.any((member) => member.user.uid == friend.user.uid))
-                .map(
-                  (friend) => SimpleDialogOption(
-                    onPressed: () => Navigator.of(context).pop(friend.user.uid),
-                    child: Text('${friend.user.displayName} (@${friend.user.username})'),
-                  ),
-                )
-                .toList(),
+        children: invitable.isEmpty
+            ? [
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No friends available to invite.'),
+                ),
+              ]
+            : invitable
+                  .map(
+                    (friend) => SimpleDialogOption(
+                      onPressed: () =>
+                          Navigator.of(context).pop(friend.user.uid),
+                      child: Text(
+                        '${friend.user.displayName} (@${friend.user.username})',
+                      ),
+                    ),
+                  )
+                  .toList(),
       ),
     );
     if (selectedUid == null) return;
-    await _run(() => ref.read(groupsRepositoryProvider).inviteMember(group.id, selectedUid));
+    await _run(
+      () => ref
+          .read(groupsRepositoryProvider)
+          .inviteMember(group.id, selectedUid),
+    );
   }
 
   @override
@@ -110,18 +165,40 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
         title: const Text('Groups'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).maybePop()),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async => _refresh(),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 120),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            120,
+          ),
           children: [
-            Text('Private groups', style: theme.textTheme.displayLarge?.copyWith(color: AppColors.accentPrimary)),
+            Text(
+              'Private groups',
+              style: theme.textTheme.displayLarge?.copyWith(
+                color: AppColors.accentPrimary,
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
-            Text('Create friend-only groups, handle invites, and manage membership.', style: theme.textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary)),
+            Text(
+              'Create friend-only groups, handle invites, and manage membership.',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
             const SizedBox(height: AppSpacing.lg),
-            AppButton(label: _busy ? 'Working…' : 'Create group', variant: AppButtonVariant.featured, onPressed: _busy ? null : _createGroup),
+            AppButton(
+              label: _busy ? 'Working…' : 'Create group',
+              variant: AppButtonVariant.featured,
+              onPressed: _busy ? null : _createGroup,
+            ),
             const SizedBox(height: AppSpacing.xl),
             const _SectionTitle('Group invites'),
             invites.when(
@@ -129,7 +206,26 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
               error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
               data: (items) => items.isEmpty
                   ? const _EmptyBlock(text: 'No pending group invites.')
-                  : Column(children: items.map((invite) => _InviteCard(invite: invite, busy: _busy, onAccept: () => _run(() => ref.read(groupsRepositoryProvider).acceptInvite(invite.id)), onDecline: () => _run(() => ref.read(groupsRepositoryProvider).declineInvite(invite.id)))).toList()),
+                  : Column(
+                      children: items
+                          .map(
+                            (invite) => _InviteCard(
+                              invite: invite,
+                              busy: _busy,
+                              onAccept: () => _run(
+                                () => ref
+                                    .read(groupsRepositoryProvider)
+                                    .acceptInvite(invite.id),
+                              ),
+                              onDecline: () => _run(
+                                () => ref
+                                    .read(groupsRepositoryProvider)
+                                    .declineInvite(invite.id),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
             ),
             const SizedBox(height: AppSpacing.xl),
             const _SectionTitle('Your groups'),
@@ -138,7 +234,79 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
               error: (e, _) => _ErrorBlock(error: friendlyErrorMessage(e)),
               data: (items) => items.isEmpty
                   ? const _EmptyBlock(text: 'No groups yet.')
-                  : Column(children: items.map((group) => _GroupCard(group: group, busy: _busy, onInvite: () => _inviteFriend(group), onRename: () async { final name = await _textDialog('Rename group', 'Group name', initial: group.name); if (name != null) await _run(() => ref.read(groupsRepositoryProvider).updateGroup(group.id, name).then((_) {})); }, onLeave: () async { final answers = await _negativeAnswers('Leave ${group.name}?'); if (answers != null) await _run(() => ref.read(groupsRepositoryProvider).leaveGroup(group.id, answers: answers)); }, onDissolve: () async { final answers = await _negativeAnswers('Dissolve ${group.name}?'); if (answers != null) await _run(() => ref.read(groupsRepositoryProvider).dissolveGroup(group.id, answers: answers)); }, onRemove: (uid) async { final answers = await _negativeAnswers('Remove member?'); if (answers != null) await _run(() => ref.read(groupsRepositoryProvider).removeMember(group.id, uid, answers: answers)); }, onTransfer: (uid) => _run(() => ref.read(groupsRepositoryProvider).transferOwnership(group.id, uid)))).toList()),
+                  : Column(
+                      children: items.map((group) {
+                        final focused = group.id == widget.focusGroupId;
+                        if (focused) _maybeScrollToFocus();
+                        return _GroupCard(
+                          key: focused ? _focusedGroupKey : null,
+                          initiallyExpanded: focused,
+                          group: group,
+                          busy: _busy,
+                          onInvite: () => _inviteFriend(group),
+                          onRename: () async {
+                            final name = await _textDialog(
+                              'Rename group',
+                              'Group name',
+                              initial: group.name,
+                            );
+                            if (name != null) {
+                              await _run(
+                                () => ref
+                                    .read(groupsRepositoryProvider)
+                                    .updateGroup(group.id, name)
+                                    .then((_) {}),
+                              );
+                            }
+                          },
+                          onLeave: () async {
+                            final answers = await _negativeAnswers(
+                              'Leave ${group.name}?',
+                            );
+                            if (answers != null) {
+                              await _run(
+                                () => ref
+                                    .read(groupsRepositoryProvider)
+                                    .leaveGroup(group.id, answers: answers),
+                              );
+                            }
+                          },
+                          onDissolve: () async {
+                            final answers = await _negativeAnswers(
+                              'Dissolve ${group.name}?',
+                            );
+                            if (answers != null) {
+                              await _run(
+                                () => ref
+                                    .read(groupsRepositoryProvider)
+                                    .dissolveGroup(group.id, answers: answers),
+                              );
+                            }
+                          },
+                          onRemove: (uid) async {
+                            final answers = await _negativeAnswers(
+                              'Remove member?',
+                            );
+                            if (answers != null) {
+                              await _run(
+                                () => ref
+                                    .read(groupsRepositoryProvider)
+                                    .removeMember(
+                                      group.id,
+                                      uid,
+                                      answers: answers,
+                                    ),
+                              );
+                            }
+                          },
+                          onTransfer: (uid) => _run(
+                            () => ref
+                                .read(groupsRepositoryProvider)
+                                .transferOwnership(group.id, uid),
+                          ),
+                        );
+                      }).toList(),
+                    ),
             ),
           ],
         ),
@@ -148,7 +316,12 @@ class _GroupsPageState extends ConsumerState<GroupsPage> {
 }
 
 class _InviteCard extends StatelessWidget {
-  const _InviteCard({required this.invite, required this.busy, required this.onAccept, required this.onDecline});
+  const _InviteCard({
+    required this.invite,
+    required this.busy,
+    required this.onAccept,
+    required this.onDecline,
+  });
 
   final GroupInviteResponse invite;
   final bool busy;
@@ -161,20 +334,41 @@ class _InviteCard extends StatelessWidget {
       child: ListTile(
         title: Text(invite.groupName),
         subtitle: Text('Invited by @${invite.inviter.username}'),
-        trailing: Wrap(spacing: 8, children: [
-          OutlinedButton(onPressed: busy ? null : onDecline, child: const Text('Decline')),
-          FilledButton(onPressed: busy ? null : onAccept, child: const Text('Accept')),
-        ]),
+        trailing: Wrap(
+          spacing: 8,
+          children: [
+            OutlinedButton(
+              onPressed: busy ? null : onDecline,
+              child: const Text('Decline'),
+            ),
+            FilledButton(
+              onPressed: busy ? null : onAccept,
+              child: const Text('Accept'),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _GroupCard extends StatelessWidget {
-  const _GroupCard({required this.group, required this.busy, required this.onInvite, required this.onRename, required this.onLeave, required this.onDissolve, required this.onRemove, required this.onTransfer});
+  const _GroupCard({
+    required this.group,
+    required this.busy,
+    required this.onInvite,
+    required this.onRename,
+    required this.onLeave,
+    required this.onDissolve,
+    required this.onRemove,
+    required this.onTransfer,
+    this.initiallyExpanded = false,
+    super.key,
+  });
 
   final GroupResponse group;
   final bool busy;
+  final bool initiallyExpanded;
   final VoidCallback onInvite;
   final VoidCallback onRename;
   final VoidCallback onLeave;
@@ -198,6 +392,7 @@ class _GroupCard extends StatelessWidget {
         side: BorderSide(color: AppColors.border, width: 1.5),
       ),
       child: ExpansionTile(
+        initiallyExpanded: initiallyExpanded,
         tilePadding: const EdgeInsets.fromLTRB(20, 10, 14, 10),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
         shape: RoundedRectangleBorder(borderRadius: borderRadius),
@@ -205,14 +400,20 @@ class _GroupCard extends StatelessWidget {
         backgroundColor: AppColors.bgSecondary,
         collapsedBackgroundColor: AppColors.bgSecondary,
         title: Text(group.name),
-        subtitle: Text('${group.members.length} member${group.members.length == 1 ? '' : 's'}'),
+        subtitle: Text(
+          '${group.members.length} member${group.members.length == 1 ? '' : 's'}',
+        ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             if (value == 'nudge') {
               Navigator.of(context).push<void>(
                 MaterialPageRoute(
                   fullscreenDialog: true,
-                  builder: (context) => NudgeFeedSheet(feedType: NudgeFeedType.group, targetId: group.id, title: group.name),
+                  builder: (context) => NudgeFeedSheet(
+                    feedType: NudgeFeedType.group,
+                    targetId: group.id,
+                    title: group.name,
+                  ),
                 ),
               );
             }
@@ -223,21 +424,39 @@ class _GroupCard extends StatelessWidget {
           },
           itemBuilder: (context) => [
             const PopupMenuItem(value: 'nudge', child: Text('Nudge feed')),
-            if (_isAdmin) const PopupMenuItem(value: 'invite', child: Text('Invite friend')),
-            if (_isAdmin) const PopupMenuItem(value: 'rename', child: Text('Rename')),
+            if (_isAdmin)
+              const PopupMenuItem(
+                value: 'invite',
+                child: Text('Invite friend'),
+              ),
+            if (_isAdmin)
+              const PopupMenuItem(value: 'rename', child: Text('Rename')),
             const PopupMenuItem(value: 'leave', child: Text('Leave')),
-            if (_isAdmin) const PopupMenuItem(value: 'dissolve', child: Text('Dissolve')),
+            if (_isAdmin)
+              const PopupMenuItem(value: 'dissolve', child: Text('Dissolve')),
           ],
         ),
         children: group.members.map((member) {
           final canManage = _isAdmin && member.user.uid != group.adminUid;
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 4,
+            ),
             minLeadingWidth: 52,
             leading: Stack(
               clipBehavior: Clip.none,
               children: [
-                CircleAvatar(child: Text((member.user.displayName.isEmpty ? member.user.username : member.user.displayName).characters.first.toUpperCase())),
+                CircleAvatar(
+                  child: Text(
+                    (member.user.displayName.isEmpty
+                            ? member.user.username
+                            : member.user.displayName)
+                        .characters
+                        .first
+                        .toUpperCase(),
+                  ),
+                ),
                 if (member.user.online)
                   Positioned(
                     right: -1,
@@ -248,14 +467,25 @@ class _GroupCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFF4ED164),
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.bgSecondary, width: 2),
+                        border: Border.all(
+                          color: AppColors.bgSecondary,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
               ],
             ),
-            title: Text(member.user.displayName.isEmpty ? '@${member.user.username}' : member.user.displayName),
-            subtitle: Text(member.isAdmin ? '@${member.user.username} • Admin' : '@${member.user.username}'),
+            title: Text(
+              member.user.displayName.isEmpty
+                  ? '@${member.user.username}'
+                  : member.user.displayName,
+            ),
+            subtitle: Text(
+              member.isAdmin
+                  ? '@${member.user.username} • Admin'
+                  : '@${member.user.username}',
+            ),
             trailing: canManage
                 ? PopupMenuButton<String>(
                     onSelected: (value) {
@@ -263,7 +493,10 @@ class _GroupCard extends StatelessWidget {
                       if (value == 'transfer') onTransfer(member.user.uid);
                     },
                     itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'transfer', child: Text('Make admin')),
+                      PopupMenuItem(
+                        value: 'transfer',
+                        child: Text('Make admin'),
+                      ),
                       PopupMenuItem(value: 'remove', child: Text('Remove')),
                     ],
                   )
@@ -281,7 +514,11 @@ class _GroupCard extends StatelessWidget {
 /// out and the [TextField] still depends on inherited widgets) triggers the
 /// `InheritedElement.debugDeactivated` `_dependents.isEmpty` assertion crash.
 class _TextInputDialog extends StatefulWidget {
-  const _TextInputDialog({required this.title, required this.label, required this.initial});
+  const _TextInputDialog({
+    required this.title,
+    required this.label,
+    required this.initial,
+  });
 
   final String title;
   final String label;
@@ -292,7 +529,9 @@ class _TextInputDialog extends StatefulWidget {
 }
 
 class _TextInputDialogState extends State<_TextInputDialog> {
-  late final TextEditingController _controller = TextEditingController(text: widget.initial);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initial,
+  );
 
   @override
   void dispose() {
@@ -304,9 +543,16 @@ class _TextInputDialogState extends State<_TextInputDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.title),
-      content: TextField(controller: _controller, autofocus: true, decoration: InputDecoration(labelText: widget.label)),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: InputDecoration(labelText: widget.label),
+      ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: () {
             final value = _controller.text.trim();
@@ -332,7 +578,10 @@ class _NegativeAnswersDialog extends StatefulWidget {
 }
 
 class _NegativeAnswersDialogState extends State<_NegativeAnswersDialog> {
-  final List<TextEditingController> _controllers = List.generate(3, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    3,
+    (_) => TextEditingController(),
+  );
 
   @override
   void dispose() {
@@ -351,18 +600,39 @@ class _NegativeAnswersDialogState extends State<_NegativeAnswersDialog> {
         children: [
           const Text('Answer these quick questions to confirm.'),
           const SizedBox(height: 16),
-          TextField(controller: _controllers[0], decoration: const InputDecoration(labelText: 'Why are you doing this?')),
+          TextField(
+            controller: _controllers[0],
+            decoration: const InputDecoration(
+              labelText: 'Why are you doing this?',
+            ),
+          ),
           const SizedBox(height: 16),
-          TextField(controller: _controllers[1], decoration: const InputDecoration(labelText: 'Was this accidental?')),
+          TextField(
+            controller: _controllers[1],
+            decoration: const InputDecoration(
+              labelText: 'Was this accidental?',
+            ),
+          ),
           const SizedBox(height: 16),
-          TextField(controller: _controllers[2], decoration: const InputDecoration(labelText: 'Anything we should know?')),
+          TextField(
+            controller: _controllers[2],
+            decoration: const InputDecoration(
+              labelText: 'Anything we should know?',
+            ),
+          ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: () {
-            final answers = _controllers.map((c) => c.text.trim()).where((text) => text.isNotEmpty).toList();
+            final answers = _controllers
+                .map((c) => c.text.trim())
+                .where((text) => text.isNotEmpty)
+                .toList();
             if (answers.length < 3) return;
             Navigator.of(context).pop(answers);
           },
@@ -377,25 +647,46 @@ class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
   final String text;
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.sm), child: Text(text, style: Theme.of(context).textTheme.displayMedium));
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+    child: Text(text, style: Theme.of(context).textTheme.displayMedium),
+  );
 }
 
 class _LoadingBlock extends StatelessWidget {
   const _LoadingBlock();
   @override
-  Widget build(BuildContext context) => const Padding(padding: EdgeInsets.all(AppSpacing.md), child: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)));
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.all(AppSpacing.md),
+    child: Center(
+      child: CircularProgressIndicator(color: AppColors.accentPrimary),
+    ),
+  );
 }
 
 class _EmptyBlock extends StatelessWidget {
   const _EmptyBlock({required this.text});
   final String text;
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.md), child: Text(text, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary)));
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+    child: Text(
+      text,
+      style: Theme.of(
+        context,
+      ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+    ),
+  );
 }
 
 class _ErrorBlock extends StatelessWidget {
   const _ErrorBlock({required this.error});
   final String error;
   @override
-  Widget build(BuildContext context) => Text(error, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.accentPrimary));
+  Widget build(BuildContext context) => Text(
+    error,
+    style: Theme.of(
+      context,
+    ).textTheme.bodyMedium?.copyWith(color: AppColors.accentPrimary),
+  );
 }

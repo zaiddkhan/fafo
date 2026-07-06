@@ -27,6 +27,24 @@
       href="https://fonts.googleapis.com/css2?family=Tomorrow:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <!--
+      Apply the in-app reader's light/dark theme BEFORE first paint. The mobile
+      app opens the reader with ?theme=dark|light; setting data-theme here (rather
+      than only in a React effect) avoids a flash of light-mode CSS over the app's
+      dark WebView surface — the cause of the "dark text on dark background" bug.
+      Only the explicit query param is honoured, so the public marketing site
+      stays on its intended light theme regardless of the visitor's OS setting.
+    -->
+    <script>
+      (function () {
+        try {
+          var t = new URLSearchParams(window.location.search).get('theme');
+          if (t === 'dark' || t === 'light') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

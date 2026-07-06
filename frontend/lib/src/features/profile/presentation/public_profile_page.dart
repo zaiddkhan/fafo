@@ -53,12 +53,9 @@ class PublicProfilePage extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xl),
           switch (user.friendshipStatus) {
             FriendshipStatus.friends => FilledButton(
-                onPressed: () => showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (context) => FractionallySizedBox(
-                    heightFactor: 0.85,
-                    child: NudgeFeedSheet(
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (context) => NudgeFeedSheet(
                       feedType: NudgeFeedType.friend,
                       targetId: user.uid,
                       title: displayName,

@@ -15,6 +15,7 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.darkBgPrimary,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.accentPrimary,
+        onPrimary: Colors.white,
         secondary: AppColors.accentSecondary,
         surface: AppColors.darkSurface,
       ),
@@ -51,6 +52,11 @@ class AppTheme {
         ),
         hintStyle: textTheme.bodyMedium,
         labelStyle: textTheme.bodyMedium,
+        floatingLabelStyle: textTheme.labelLarge,
+      ),
+      dialogTheme: DialogThemeData(
+        titleTextStyle: textTheme.displayMedium,
+        contentTextStyle: textTheme.bodyMedium,
       ),
     );
   }
@@ -64,6 +70,7 @@ class AppTheme {
       textTheme: textTheme,
       colorScheme: const ColorScheme.light(
         primary: AppColors.accentPrimary,
+        onPrimary: Colors.white,
         secondary: AppColors.accentSecondary,
         surface: AppColors.lightSurface,
         onSurface: AppColors.lightTextPrimary,
@@ -100,6 +107,11 @@ class AppTheme {
         ),
         hintStyle: textTheme.bodyMedium,
         labelStyle: textTheme.bodyMedium,
+        floatingLabelStyle: textTheme.labelLarge,
+      ),
+      dialogTheme: DialogThemeData(
+        titleTextStyle: textTheme.displayMedium,
+        contentTextStyle: textTheme.bodyMedium,
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {

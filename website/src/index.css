@@ -32,12 +32,14 @@
   --shadow:6px 6px 0 0 #05060A;
   --shadow-sm:4px 4px 0 0 #05060A;
 }
-:root[data-theme="dark"] body{ background:var(--bg); }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
   font-family:var(--font);
   color:var(--ink);
+  /* Always paint an opaque themed background so the in-app reader never lets the
+     app's (dark) native WebView surface show through the page in light mode. */
+  background:var(--bg);
   -webkit-font-smoothing:antialiased;
   overflow-x:hidden;
 }

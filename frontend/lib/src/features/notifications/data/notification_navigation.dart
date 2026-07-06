@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:fafu/src/features/friends/presentation/friends_page.dart';
 import 'package:fafu/src/features/groups/presentation/groups_page.dart';
 import 'package:fafu/src/features/notifications/presentation/notifications_page.dart';
+import 'package:fafu/src/features/nudges/presentation/nudge_feed_sheet.dart';
 
 /// Routes a notification (push tap or inbox tap) to the most relevant screen
 /// based on the backend `data` payload. Falls back to the in-app inbox when the
@@ -18,9 +19,31 @@ void routeFromNotificationData(GoRouter router, Map<String, dynamic> data) {
     return;
   }
 
+  // A nudge that carries its feed coordinates (feed_type + target_id) deep-links
+  // straight to that friend/group's nudge feed. Checked before group_id so a
+  // *group* nudge opens its nudge feed rather than the group page. Older nudge
+  // notifications lack these fields and fall through to the friends-page
+  // fallback below.
+  final nudgeFeedType = _str(data['feed_type']);
+  final nudgeTargetId = _str(data['target_id']);
+  if (_str(data['nudge_id']) != null &&
+      nudgeFeedType != null &&
+      nudgeTargetId != null) {
+    final params = <String, String>{
+      'feed_type': nudgeFeedType,
+      'target_id': nudgeTargetId,
+    };
+    final title = _str(data['title']);
+    if (title != null) params['title'] = title;
+    router.push(Uri(path: NudgeFeedSheet.routePath, queryParameters: params).toString());
+    return;
+  }
+
   final groupId = _str(data['group_id']);
   if (groupId != null) {
-    router.push(GroupsPage.routePath);
+    // Open the specific group (expanded + scrolled into view), not the whole
+    // groups list. Backend attaches the group's document id as `group_id`.
+    router.push('${GroupsPage.routePath}/$groupId');
     return;
   }
 

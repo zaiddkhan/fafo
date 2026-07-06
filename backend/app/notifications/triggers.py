@@ -35,24 +35,39 @@ def _ensure_utc(dt: datetime) -> datetime:
 
 # --- Social pull (friend nudges) -----------------------------------------------
 
-def nudge_received(background_tasks, *, nudge_id, recipient_uids, sender_name):
+def nudge_received(background_tasks, *, nudge_id, recipient_uids, sender_name, sender_uid):
+    # feed_type/target_id/title let the app deep-link straight to this nudge's
+    # feed. For a friend nudge the recipient opens the feed keyed on the *sender*
+    # (that's the friend, from the recipient's side), with the sender's name as
+    # the header title.
     _send(
         background_tasks,
         template_id="social_pull.nudge_received",
         recipient_uids=recipient_uids,
         variables={"sender_name": sender_name},
-        data={"nudge_id": nudge_id},
+        data={
+            "nudge_id": nudge_id,
+            "feed_type": "friend",
+            "target_id": sender_uid,
+            "title": sender_name,
+        },
         dedupe_base=f"social_pull.nudge_received:{nudge_id}",
     )
 
 
-def nudge_accepted(background_tasks, *, nudge_id, recipient_uids, friend_name):
+def nudge_accepted(background_tasks, *, nudge_id, recipient_uids, friend_name, accepter_uid):
+    # Notifies the sender; tapping opens the friend feed keyed on the accepter.
     _send(
         background_tasks,
         template_id="social_pull.nudge_accepted",
         recipient_uids=recipient_uids,
         variables={"friend_name": friend_name},
-        data={"nudge_id": nudge_id},
+        data={
+            "nudge_id": nudge_id,
+            "feed_type": "friend",
+            "target_id": accepter_uid,
+            "title": friend_name,
+        },
         # Occurrence includes the accepting friend so multiple acceptances each notify once.
         dedupe_base=f"social_pull.nudge_accepted:{nudge_id}:{friend_name}",
     )
@@ -61,12 +76,19 @@ def nudge_accepted(background_tasks, *, nudge_id, recipient_uids, friend_name):
 # --- Group nudges --------------------------------------------------------------
 
 def group_nudge_received(background_tasks, *, nudge_id, group_id, recipient_uids, group_name):
+    # A group nudge's feed is keyed on the group id; deep-link straight to it.
     _send(
         background_tasks,
         template_id="groups.group_nudge_received",
         recipient_uids=recipient_uids,
         variables={"group_name": group_name},
-        data={"nudge_id": nudge_id, "group_id": group_id},
+        data={
+            "nudge_id": nudge_id,
+            "group_id": group_id,
+            "feed_type": "group",
+            "target_id": group_id,
+            "title": group_name,
+        },
         dedupe_base=f"groups.group_nudge_received:{nudge_id}",
     )
 
@@ -78,6 +100,7 @@ def nudge_reminder(
     recipient_uids,
     reminder_count,
     sender_name=None,
+    sender_uid=None,
     group_id=None,
     group_name=None,
 ):
@@ -85,6 +108,9 @@ def nudge_reminder(
     dedupe base so each reminder is a distinct, deliverable notification (rather
     than collapsing into the original nudge). Group nudges use the dedicated
     reminder template; friend nudges reuse the nudge-received copy.
+
+    feed_type/target_id/title deep-link the tap to the nudge's feed (see
+    nudge_received); the friend feed is keyed on the sender.
     """
     if group_id is not None:
         _send(
@@ -92,7 +118,13 @@ def nudge_reminder(
             template_id="groups.reminder_received",
             recipient_uids=recipient_uids,
             variables={"group_name": group_name or "your group"},
-            data={"nudge_id": nudge_id, "group_id": group_id},
+            data={
+                "nudge_id": nudge_id,
+                "group_id": group_id,
+                "feed_type": "group",
+                "target_id": group_id,
+                "title": group_name or "your group",
+            },
             dedupe_base=f"groups.reminder_received:{nudge_id}:{reminder_count}",
         )
     else:
@@ -101,7 +133,12 @@ def nudge_reminder(
             template_id="social_pull.nudge_received",
             recipient_uids=recipient_uids,
             variables={"sender_name": sender_name or "Someone"},
-            data={"nudge_id": nudge_id},
+            data={
+                "nudge_id": nudge_id,
+                "feed_type": "friend",
+                "target_id": sender_uid,
+                "title": sender_name or "Someone",
+            },
             dedupe_base=f"social_pull.nudge_received:{nudge_id}:reminder:{reminder_count}",
         )
 

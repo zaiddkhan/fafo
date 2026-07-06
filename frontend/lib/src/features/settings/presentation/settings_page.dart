@@ -14,6 +14,7 @@ import 'package:fafu/src/core/network/auth_token_provider.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/theme_mode_controller.dart';
+import 'package:fafu/src/features/creators/data/creators_providers.dart';
 import 'package:fafu/src/features/creators/presentation/creator_application_page.dart';
 import 'package:fafu/src/features/events/data/saved_events_controller.dart';
 import 'package:fafu/src/features/location/selected_area_controller.dart';
@@ -239,6 +240,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final isDarkMode = themeMode == ThemeMode.dark;
     final selectedArea = ref.watch(selectedAreaProvider);
     final isCreator = ref.watch(currentProfileProvider).value?.isCreator ?? false;
+    // A submitted-but-unreviewed application means the user already filled the
+    // form — offer a "pending" tile instead of inviting them to apply again.
+    final creatorApplicationPending = ref
+        .watch(creatorApplicationProvider)
+        .maybeWhen(
+          data: (a) {
+            final status = a.status.toLowerCase();
+            return status == 'pending' || status == 'reapplied';
+          },
+          orElse: () => false,
+        );
     final areaLabel = selectedArea == null
         ? 'Auto (GPS)'
         : selectedArea.label.split(',').first;
@@ -333,12 +345,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: _changeArea,
                   ),
                   if (!isCreator)
-                    _SettingsTile(
-                      icon: Icons.verified_outlined,
-                      title: 'Become a Creator',
-                      onTap: () =>
-                          context.pushNamed(CreatorApplicationPage.routeName),
-                    ),
+                    creatorApplicationPending
+                        ? _SettingsTile(
+                            icon: Icons.hourglass_top_outlined,
+                            title: 'Creator application pending',
+                            onTap: () =>
+                                ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Your creator application is under review. We\'ll reach out over email.',
+                                ),
+                              ),
+                            ),
+                          )
+                        : _SettingsTile(
+                            icon: Icons.verified_outlined,
+                            title: 'Become a Creator',
+                            onTap: () => context
+                                .pushNamed(CreatorApplicationPage.routeName),
+                          ),
                   const SizedBox(height: AppSpacing.xl),
 
                   // Notifications section

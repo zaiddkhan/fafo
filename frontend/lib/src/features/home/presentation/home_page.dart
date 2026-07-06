@@ -114,6 +114,12 @@ class HomePageState extends ConsumerState<HomePage> {
   // preserves the current, still zoomed-out camera) doesn't stomp the focus zoom.
   bool _applyingFocus = false;
 
+  // True while the carousel is programmatically animating to a tapped event. The
+  // selection trackers ignore the intermediate cards the pager sweeps past so the
+  // map jumps straight to the target pin instead of flickering every pin (resize)
+  // and lurching the camera through each in-between event.
+  bool _animatingPager = false;
+
   double _lat = _defaultLat;
   double _lng = _defaultLng;
   bool _locationReady = false;
@@ -523,6 +529,10 @@ class HomePageState extends ConsumerState<HomePage> {
   /// changes, so it doesn't setState on every scroll frame.
   void _syncSelectionToPager() {
     if (!mounted) return;
+    // During a programmatic slide to a tapped event, don't re-select every card
+    // the pager passes through — that cascades pin-resize flicker across the map.
+    // _openEventPager has already set the target selection.
+    if (_animatingPager) return;
     final controller = _eventPagerController;
     if (controller == null || !controller.hasClients) return;
     final page = controller.page;
@@ -744,11 +754,18 @@ class HomePageState extends ConsumerState<HomePage> {
       if (!mounted) return;
       final controller = _eventPagerController;
       if (controller == null || !controller.hasClients) return;
-      controller.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutCubic,
-      );
+      // Gate the selection trackers while the pager sweeps to the target card so
+      // intermediate cards neither resize their pins nor pan the camera.
+      _animatingPager = true;
+      controller
+          .animateToPage(
+            index,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+          )
+          .whenComplete(() {
+            if (mounted) _animatingPager = false;
+          });
     });
   }
 
@@ -1217,6 +1234,10 @@ class HomePageState extends ConsumerState<HomePage> {
                         ..addListener(_syncSelectionToPager)),
                   onPageChanged: (index) {
                     if (index < 0 || index >= filtered.length) return;
+                    // Skip the intermediate pages a programmatic slide sweeps
+                    // through — panning the camera to each makes the map lurch
+                    // before it reaches the tapped event's pin.
+                    if (_animatingPager) return;
                     final event = filtered[index];
                     if (_selectedEvent?.id != event.id) {
                       setState(() => _selectedEvent = event);

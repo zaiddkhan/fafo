@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fafu/src/core/network/api_exception.dart';
@@ -23,25 +22,19 @@ class CreateNudgePage extends ConsumerStatefulWidget {
 
 class _CreateNudgePageState extends ConsumerState<CreateNudgePage> {
   final _title = TextEditingController();
-  final _startIn = TextEditingController(text: '15');
   final _location = TextEditingController();
   bool _busy = false;
 
-  // Backend only accepts these response windows.
-  static const _allowedWindows = [5, 10, 15, 20];
+  // Backend only accepts these response windows. Users pick from a dropdown so
+  // the value is always valid — no free-typed, out-of-range numbers.
+  static const _allowedWindows = [5, 10, 15];
+  int _startInMinutes = 15;
 
   @override
   void dispose() {
     _title.dispose();
-    _startIn.dispose();
     _location.dispose();
     super.dispose();
-  }
-
-  int _resolveWindow() {
-    final raw = int.tryParse(_startIn.text.trim()) ?? 15;
-    // Snap to the nearest allowed window (5 / 10 / 15).
-    return _allowedWindows.reduce((a, b) => (raw - a).abs() <= (raw - b).abs() ? a : b);
   }
 
   Future<void> _submit() async {
@@ -58,7 +51,7 @@ class _CreateNudgePageState extends ConsumerState<CreateNudgePage> {
             targetId: widget.targetId,
             title: title,
             location: location.isEmpty ? null : location,
-            windowMinutes: _resolveWindow(),
+            windowMinutes: _startInMinutes,
           );
       ref.invalidate(nudgeFeedProvider(NudgeFeedKey(widget.feedType, widget.targetId)));
       // Refresh the friends list so this friend floats to the top with an
@@ -129,11 +122,30 @@ class _CreateNudgePageState extends ConsumerState<CreateNudgePage> {
                   const SizedBox(height: 22),
                   const _FieldLabel('Start in (min)'),
                   const SizedBox(height: 10),
-                  _NudgeField(
-                    controller: _startIn,
-                    hintText: '15',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  Container(
+                    height: 50,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      border: Border.all(color: AppColors.border, width: 1.6),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _startInMinutes,
+                        isExpanded: true,
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+                        dropdownColor: AppColors.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        items: _allowedWindows
+                            .map((m) => DropdownMenuItem<int>(value: m, child: Text('$m minutes')))
+                            .toList(),
+                        onChanged: _busy ? null : (value) {
+                          if (value != null) setState(() => _startInMinutes = value);
+                        },
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 22),
                   const _FieldLabel('Location (Optional)'),
@@ -187,15 +199,11 @@ class _NudgeField extends StatelessWidget {
   const _NudgeField({
     required this.controller,
     required this.hintText,
-    this.keyboardType,
-    this.inputFormatters,
     this.maxLength,
   });
 
   final TextEditingController controller;
   final String hintText;
-  final TextInputType? keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
   final int? maxLength;
 
   @override
@@ -211,8 +219,6 @@ class _NudgeField extends StatelessWidget {
       ),
       child: TextField(
         controller: controller,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
         maxLength: maxLength,
         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
         decoration: InputDecoration(

@@ -23,6 +23,11 @@ class NudgeFeedSheet extends ConsumerStatefulWidget {
     super.key,
   });
 
+  /// Deep-link route for opening a nudge feed straight from a notification tap.
+  /// Expects `feed_type`, `target_id` and (optional) `title` query params.
+  static const routePath = '/nudge';
+  static const routeName = 'nudge-feed';
+
   final NudgeFeedType feedType;
   final String targetId;
   final String title;

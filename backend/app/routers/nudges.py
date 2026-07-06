@@ -205,7 +205,7 @@ def create_nudge(body: NudgeCreateRequest, background_tasks: BackgroundTasks, cu
     recipients = [u for u in participants if u != uid] if body.feed_type == NudgeFeedType.friend \
         else [u for u in _member_ids(db, body.target_id) if u != uid]
     if body.feed_type == NudgeFeedType.friend:
-        triggers.nudge_received(background_tasks, nudge_id=ref.id, recipient_uids=recipients, sender_name=_display_name(db, uid))
+        triggers.nudge_received(background_tasks, nudge_id=ref.id, recipient_uids=recipients, sender_name=_display_name(db, uid), sender_uid=uid)
     else:
         triggers.group_nudge_received(background_tasks, nudge_id=ref.id, group_id=body.target_id, recipient_uids=recipients, group_name=_group_name(db, body.target_id))
 
@@ -239,7 +239,7 @@ def respond_nudge(nudge_id: str, body: NudgeRespondRequest, background_tasks: Ba
         # Tell the sender their plan is happening (fire-and-forget).
         sender = data.get("sender_uid")
         if sender and sender != uid:
-            triggers.nudge_accepted(background_tasks, nudge_id=nudge_id, recipient_uids=[sender], friend_name=_display_name(db, uid))
+            triggers.nudge_accepted(background_tasks, nudge_id=nudge_id, recipient_uids=[sender], friend_name=_display_name(db, uid), accepter_uid=uid)
     ref.update(update)
     data = {**data, **update}
     data = _expire_or_resolve(ref, data)
@@ -284,6 +284,7 @@ def send_reminder(nudge_id: str, background_tasks: BackgroundTasks, current_user
                 recipient_uids=recipients,
                 reminder_count=new_count,
                 sender_name=_display_name(db, uid),
+                sender_uid=uid,
             )
         else:
             triggers.nudge_reminder(

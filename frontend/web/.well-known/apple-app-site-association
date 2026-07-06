@@ -4,12 +4,20 @@
     "details": [
       {
         "appIDs": [
-          "REPLACE_WITH_TEAM_ID.com.example.whatspoppn"
+          "REPLACE_WITH_APPLE_TEAM_ID.com.getfafo.app"
         ],
         "components": [
           {
+            "/": "/",
+            "comment": "Open the site root in the Fafo app (home)."
+          },
+          {
             "/": "/event/*",
-            "comment": "Open shared event links in the WhatsPopn app."
+            "comment": "Open shared event links in the Fafo app."
+          },
+          {
+            "/": "/invite/*",
+            "comment": "Open friend invite links in the Fafo app."
           }
         ]
       }

@@ -14,10 +14,13 @@ import 'package:fafu/src/features/creators/presentation/creator_application_page
 import 'package:fafu/src/features/events/presentation/event_detail_page.dart';
 import 'package:fafu/src/features/friends/presentation/contacts_sync_page.dart';
 import 'package:fafu/src/features/friends/presentation/friends_page.dart';
+import 'package:fafu/src/features/friends/presentation/invite_landing_page.dart';
 import 'package:fafu/src/features/groups/presentation/groups_page.dart';
 import 'package:fafu/src/features/home/data/mock_events.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/notifications/presentation/notifications_page.dart';
+import 'package:fafu/src/features/nudges/domain/nudge.dart';
+import 'package:fafu/src/features/nudges/presentation/nudge_feed_sheet.dart';
 import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
 import 'package:fafu/src/features/profile/presentation/public_profile_page.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
@@ -145,6 +148,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+      // Friend invite deep link (`https://getfafo.app/invite/<token>`).
+      GoRoute(
+        path: InviteLandingPage.routePath,
+        name: InviteLandingPage.routeName,
+        builder: (context, state) =>
+            InviteLandingPage(token: state.pathParameters['token'] ?? ''),
+      ),
       GoRoute(
         path: SearchPage.routePath,
         name: SearchPage.routeName,
@@ -185,6 +195,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: GroupsPage.routePath,
         name: GroupsPage.routeName,
         builder: (context, state) => const GroupsPage(),
+      ),
+      // Deep-link target for group notifications: opens the Groups page with the
+      // specific group expanded and scrolled into view.
+      GoRoute(
+        path: '${GroupsPage.routePath}/:groupId',
+        name: GroupsPage.focusRouteName,
+        builder: (context, state) =>
+            GroupsPage(focusGroupId: state.pathParameters['groupId']),
+      ),
+      // Deep-link target for nudge notifications: opens the nudge feed for the
+      // friend/group the nudge belongs to (feed_type + target_id in the payload).
+      GoRoute(
+        path: NudgeFeedSheet.routePath,
+        name: NudgeFeedSheet.routeName,
+        builder: (context, state) => NudgeFeedSheet(
+          feedType: nudgeFeedTypeFromJson(
+            state.uri.queryParameters['feed_type'],
+          ),
+          targetId: state.uri.queryParameters['target_id'] ?? '',
+          title: state.uri.queryParameters['title'] ?? 'Nudges',
+        ),
       ),
       GoRoute(
         path: PublicProfilePage.routePath,

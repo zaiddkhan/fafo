@@ -108,58 +108,17 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     );
   }
 
-  Future<List<String>?> _negativeAnswers(String title) async {
-    final controllers = List.generate(3, (_) => TextEditingController());
-    final result = await showDialog<List<String>>(
+  Future<List<String>?> _negativeAnswers(String title) {
+    // The dialog owns its TextEditingControllers so they are disposed on
+    // unmount — i.e. after the route's exit transition finishes. Disposing them
+    // synchronously here (right after showDialog returns, while the route is
+    // still animating out and the TextFields still depend on inherited widgets)
+    // trips the `InheritedElement.debugDeactivated` `_dependents.isEmpty`
+    // assertion and crashes the app. See groups_page.dart for the same pattern.
+    return showDialog<List<String>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Answer these quick questions to confirm.'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controllers[0],
-              decoration: const InputDecoration(labelText: 'What happened?'),
-            ),
-            TextField(
-              controller: controllers[1],
-              decoration: const InputDecoration(
-                labelText: 'Was this accidental?',
-              ),
-            ),
-            TextField(
-              controller: controllers[2],
-              decoration: const InputDecoration(
-                labelText: 'Anything we should know?',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final answers = controllers
-                  .map((c) => c.text.trim())
-                  .where((text) => text.isNotEmpty)
-                  .toList();
-              if (answers.length < 3) return;
-              Navigator.of(context).pop(answers);
-            },
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
+      builder: (context) => _NegativeAnswersDialog(title: title),
     );
-    for (final controller in controllers) {
-      controller.dispose();
-    }
-    return result;
   }
 
   Future<void> _createInvite() async {
@@ -398,41 +357,45 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
                               .toList(),
                         ),
                 ),
-              const SizedBox(height: 24),
-              blocked.when(
-                loading: () => const SizedBox.shrink(),
-                error: (_, _) => const SizedBox.shrink(),
-                data: (items) => items.isEmpty
-                    ? const SizedBox.shrink()
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _ListHeader('Blocked Users'),
-                          ...items.map(
-                            (blockedUser) => _RequestCard(
-                              user: blockedUser.user,
-                              primaryLabel: 'Unblock',
-                              onPrimary: _busy
-                                  ? null
-                                  : () async {
-                                      final answers = await _negativeAnswers(
-                                        'Unblock ${blockedUser.user.displayName}?',
-                                      );
-                                      if (answers == null) return;
-                                      await _runAction(
-                                        () => ref
-                                            .read(friendsRepositoryProvider)
-                                            .unblockUser(
-                                              blockedUser.user.uid,
-                                              answers: answers,
-                                            ),
-                                      );
-                                    },
+              // Blocked Users belongs only under the Friends tab — it is not a
+              // request/sent state, so keep it out of those tabs.
+              if (_tab == _FriendsTab.all) ...[
+                const SizedBox(height: 24),
+                blocked.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
+                  data: (items) => items.isEmpty
+                      ? const SizedBox.shrink()
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _ListHeader('Blocked Users'),
+                            ...items.map(
+                              (blockedUser) => _RequestCard(
+                                user: blockedUser.user,
+                                primaryLabel: 'Unblock',
+                                onPrimary: _busy
+                                    ? null
+                                    : () async {
+                                        final answers = await _negativeAnswers(
+                                          'Unblock ${blockedUser.user.displayName}?',
+                                        );
+                                        if (answers == null) return;
+                                        await _runAction(
+                                          () => ref
+                                              .read(friendsRepositoryProvider)
+                                              .unblockUser(
+                                                blockedUser.user.uid,
+                                                answers: answers,
+                                              ),
+                                        );
+                                      },
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-              ),
+                          ],
+                        ),
+                ),
+              ],
             ],
           ),
         ),
@@ -449,8 +412,9 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
             ? 'Nudged you • $ago'
             : 'Nudge sent • $ago';
       }
-      final verb =
-          nudge.direction == NudgeDirection.received ? 'Nudged you' : 'You nudged';
+      final verb = nudge.direction == NudgeDirection.received
+          ? 'Nudged you'
+          : 'You nudged';
       return nudge.status == 'expired'
           ? 'Nudge expired • $ago'
           : '$verb • $ago';
@@ -487,6 +451,77 @@ String _relativeSince(DateTime time) {
   if (diff.inHours < 24) return '${diff.inHours}h ago';
   if (diff.inDays < 7) return '${diff.inDays}d ago';
   return '${(diff.inDays / 7).floor()}w ago';
+}
+
+/// Confirmation dialog for negative actions (block, unblock, unfriend). Owns
+/// its controllers in State so they are torn down safely after the route's exit
+/// transition — see [_FriendsPageState._negativeAnswers] for why.
+class _NegativeAnswersDialog extends StatefulWidget {
+  const _NegativeAnswersDialog({required this.title});
+
+  final String title;
+
+  @override
+  State<_NegativeAnswersDialog> createState() => _NegativeAnswersDialogState();
+}
+
+class _NegativeAnswersDialogState extends State<_NegativeAnswersDialog> {
+  final List<TextEditingController> _controllers =
+      List.generate(3, (_) => TextEditingController());
+
+  @override
+  void dispose() {
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Answer these quick questions to confirm.'),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controllers[0],
+            decoration: const InputDecoration(labelText: 'What happened?'),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controllers[1],
+            decoration: const InputDecoration(labelText: 'Was this accidental?'),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controllers[2],
+            decoration:
+                const InputDecoration(labelText: 'Anything we should know?'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final answers = _controllers
+                .map((c) => c.text.trim())
+                .where((text) => text.isNotEmpty)
+                .toList();
+            if (answers.length < 3) return;
+            Navigator.of(context).pop(answers);
+          },
+          child: const Text('Confirm'),
+        ),
+      ],
+    );
+  }
 }
 
 class _SearchBox extends StatelessWidget {

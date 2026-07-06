@@ -35,14 +35,16 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="getfafo.app"
-                    android:pathPrefix="/event" />
-                <data
-                    android:scheme="https"
-                    android:host="www.getfafo.app"
-                    android:pathPrefix="/event" />
+                <!-- Scheme + hosts. Paths below are matched against these hosts. -->
+                <data android:scheme="https" />
+                <data android:host="getfafo.app" />
+                <data android:host="www.getfafo.app" />
+                <!-- Exact site root opens the app to home; the rest of the
+                     marketing site (/blog, /privacy, …) stays in the browser. -->
+                <data android:path="/" />
+                <!-- Shareable content deep links. -->
+                <data android:pathPrefix="/event" />
+                <data android:pathPrefix="/invite" />
             </intent-filter>
         </activity>
         <!-- Background/tray FCM notifications use this channel (matches the one
