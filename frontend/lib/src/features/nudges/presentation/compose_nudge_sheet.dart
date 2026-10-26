@@ -277,7 +277,7 @@ class _InviteChips extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('+', style: AppTypography.display(22, color: AppColors.textSecondary)),
+            Text('+', style: AppTypography.display(28, color: AppColors.textSecondary)),
             const SizedBox(height: 4),
             Text(
               'New group',

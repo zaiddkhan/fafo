@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/services/shared_preferences_provider.dart';
@@ -81,12 +80,13 @@ class _BrandSplashPageState extends ConsumerState<BrandSplashPage>
               // Wordmark in the Display face (Anton) with a hard ink offset,
               // per the V3 design system. No soft shadows.
               FafoWordmark(
-                style: GoogleFonts.anton(
+                style: const TextStyle(
+                  fontFamily: 'Anton',
                   fontSize: 84,
                   color: Colors.white,
                   letterSpacing: 1,
                   height: 1,
-                  shadows: const [
+                  shadows: [
                     Shadow(
                       color: AppColors.ink,
                       offset: Offset(4, 4),
@@ -98,7 +98,8 @@ class _BrandSplashPageState extends ConsumerState<BrandSplashPage>
               const SizedBox(height: 14),
               Text(
                 'F*ck Around & Find Out',
-                style: GoogleFonts.ibmPlexMono(
+                style: const TextStyle(
+                  fontFamily: 'IBMPlexMono',
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,

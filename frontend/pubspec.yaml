@@ -48,7 +48,6 @@ dependencies:
   flutter_timezone: ^4.1.1
   logger: ^2.7.0
   intl: ^0.20.2
-  google_fonts: ^8.0.2
   freezed_annotation: ^3.1.0
   json_annotation: ^4.11.0
   maplibre: 0.3.4+1
@@ -112,6 +111,26 @@ flutter:
     - assets/gifs/Confetti.lottie
     # V3 sounds (brief 7.4); see assets/sounds/README.md.
     - assets/sounds/
+    # Font licences (OFL), registered with LicenseRegistry at startup.
+    - assets/fonts/Anton-OFL.txt
+    - assets/fonts/Archivo-OFL.txt
+    - assets/fonts/IBMPlexMono-OFL.txt
+
+  # V3 type roles (brief 2.2), bundled so they work offline and on first
+  # launch. Archivo is the variable font: the timer uses its wide axis.
+  fonts:
+    - family: Anton
+      fonts:
+        - asset: assets/fonts/Anton-Regular.ttf
+    - family: Archivo
+      fonts:
+        - asset: assets/fonts/Archivo-Variable.ttf
+    - family: IBMPlexMono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
+          weight: 600
 
   # To add assets to your application, add an assets section, like this:
   # assets:

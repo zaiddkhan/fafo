@@ -1,0 +1,6 @@
+tags:
+  # V3 screen renders for visual review (test/screenshots). Skipped in normal
+  # runs; regenerate with:
+  #   flutter test test/screenshots --update-goldens --run-skipped
+  screenshots:
+    skip: "Visual review renders; run with --update-goldens --run-skipped"

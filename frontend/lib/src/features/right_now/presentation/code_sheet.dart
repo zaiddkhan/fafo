@@ -123,9 +123,15 @@ class _CodeSheetState extends ConsumerState<CodeSheet> {
                   textAlign: TextAlign.center,
                   style: AppTypography.ui(13, color: AppColors.signalRed),
                 ),
-                data: (c) => SelectableText(
-                  c.code,
-                  style: AppTypography.timer(46).copyWith(letterSpacing: 46 * 0.04),
+                // One line, centred; long codes scale down rather than wrap.
+                data: (c) => FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    c.code,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.timer(46).copyWith(letterSpacing: 46 * 0.04),
+                  ),
                 ),
               ),
             ],
@@ -166,7 +172,7 @@ class _CodeSheetState extends ConsumerState<CodeSheet> {
                 style: AppTypography.ui(17, fontWeight: FontWeight.w700),
                 onSubmitted: (_) => _submitRedeem(),
                 decoration: const InputDecoration(
-                  hintText: 'MAYA-7K2',
+                  hintText: 'MAYA-7K2QX',
                   isDense: true,
                   contentPadding: EdgeInsets.symmetric(vertical: 12),
                 ),

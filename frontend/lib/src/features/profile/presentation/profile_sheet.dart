@@ -127,10 +127,6 @@ class _QuickDefaultsState extends ConsumerState<_QuickDefaults> {
   late bool _quests = widget.profile.sideQuestInvites;
   bool _saving = false;
 
-  bool get _dirty =>
-      _countdown != widget.profile.defaultCountdownMinutes ||
-      _quests != widget.profile.sideQuestInvites;
-
   Future<void> _save() async {
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
@@ -181,7 +177,8 @@ class _QuickDefaultsState extends ConsumerState<_QuickDefaults> {
           small: true,
           height: 44,
           busy: _saving,
-          onPressed: _dirty ? _save : null,
+          // Always enabled, as in the prototype; saving unchanged values is harmless.
+          onPressed: _save,
         ),
       ],
     );

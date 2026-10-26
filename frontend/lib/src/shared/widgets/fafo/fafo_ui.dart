@@ -530,7 +530,7 @@ class FafoListRow extends StatelessWidget {
               ),
             ),
             if (showChevron)
-              Icon(Icons.chevron_right, size: 20, color: AppColors.textPrimary),
+              Icon(Icons.arrow_forward, size: 16, color: AppColors.textPrimary),
           ],
         ),
       ),
@@ -709,7 +709,7 @@ class FafoCountdown extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(fafoMmss(left), style: AppTypography.timer(fontSize, color: color)),
+            _TimerDigits(text: fafoMmss(left), fontSize: fontSize, color: color),
             const SizedBox(height: 6),
             Text(
               label,
@@ -718,6 +718,36 @@ class FafoCountdown extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// "09 : 58": the colon gets a little air and sits slightly high, as in the
+/// prototype.
+class _TimerDigits extends StatelessWidget {
+  const _TimerDigits({required this.text, required this.fontSize, this.color});
+
+  final String text;
+  final double fontSize;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppTypography.timer(fontSize, color: color);
+    final parts = text.split(':');
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(parts.first, style: style),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: fontSize * 0.07),
+          child: Transform.translate(
+            offset: Offset(0, -fontSize * 0.05),
+            child: Text(':', style: style),
+          ),
+        ),
+        Text(parts.last, style: style),
+      ],
     );
   }
 }

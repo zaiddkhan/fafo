@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +33,17 @@ Future<void> bootstrap() async {
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
+
+  // Bundled fonts are OFL: list their licences in the app's licence page.
+  LicenseRegistry.addLicense(() async* {
+    for (final (family, file) in const [
+      ('Anton', 'Anton-OFL.txt'),
+      ('Archivo', 'Archivo-OFL.txt'),
+      ('IBM Plex Mono', 'IBMPlexMono-OFL.txt'),
+    ]) {
+      yield LicenseEntryWithLineBreaks([family], await rootBundle.loadString('assets/fonts/$file'));
+    }
+  });
 
   final prefs = await SharedPreferences.getInstance();
 

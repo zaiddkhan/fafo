@@ -434,7 +434,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                         autocorrect: false,
                         decoration: const InputDecoration(
                           labelText: 'Friend’s code (optional)',
-                          hintText: 'MAYA-7K2',
+                          hintText: 'MAYA-7K2QX',
                           helperText: 'You’ll show up in each other’s invites.',
                         ),
                       ),

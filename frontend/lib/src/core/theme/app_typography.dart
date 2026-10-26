@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'package:fafu/src/core/theme/app_colors.dart';
 
-/// The four type roles from the V3 brief:
+/// The four type roles from the V3 brief, bundled in assets/fonts:
 /// - Display: Anton, ultra-condensed, always uppercase (uppercase the string at
 ///   the call site; keep it sentence case in code so screen readers read it).
-/// - Timer: Archivo extra-bold with tabular figures, so digits don't jitter.
+/// - Timer: Archivo extra-bold at its widest (wdth 125), tabular figures so
+///   digits don't jitter.
 /// - UI text: Archivo, semibold to bold for buttons and row titles.
 /// - Label: IBM Plex Mono, uppercase, tracked. Eyebrows and card header strips.
 class AppTypography {
   const AppTypography._();
+
+  static const _display = 'Anton';
+  static const _sans = 'Archivo';
+  static const _mono = 'IBMPlexMono';
 
   static TextTheme textTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
@@ -38,7 +42,8 @@ class AppTypography {
 
   /// Display role. Headlines, plan titles, profile name, section titles.
   static TextStyle display(double fontSize, {Color? color}) {
-    return GoogleFonts.anton(
+    return TextStyle(
+      fontFamily: _display,
       fontSize: fontSize,
       height: 0.92,
       letterSpacing: fontSize * 0.003,
@@ -49,19 +54,22 @@ class AppTypography {
 
   /// Timer role. Always mm:ss with a short label under it.
   static TextStyle timer(double fontSize, {Color? color}) {
-    return GoogleFonts.archivo(
+    return _archivo(
       fontSize: fontSize,
       height: 1,
+      weight: FontWeight.w800,
+      width: 125,
+      color: color,
+    ).copyWith(
       letterSpacing: -fontSize * 0.01,
-      fontWeight: FontWeight.w800,
-      color: color ?? AppColors.textPrimary,
       fontFeatures: const [FontFeature.tabularFigures()],
     );
   }
 
   /// Label role. Uppercase the string at the call site.
   static TextStyle label({double fontSize = 11, Color? color}) {
-    return GoogleFonts.ibmPlexMono(
+    return TextStyle(
+      fontFamily: _mono,
       fontSize: fontSize,
       height: 1.2,
       letterSpacing: fontSize * 0.12,
@@ -85,10 +93,31 @@ class AppTypography {
     FontWeight fontWeight,
     Color? color,
   ) {
-    return GoogleFonts.archivo(
+    return _archivo(
       fontSize: fontSize,
       height: height / fontSize,
-      fontWeight: fontWeight,
+      weight: fontWeight,
+      color: color,
+    );
+  }
+
+  /// Archivo is one variable font file, so weight and width are set as axes.
+  static TextStyle _archivo({
+    required double fontSize,
+    required double height,
+    required FontWeight weight,
+    double width = 100,
+    Color? color,
+  }) {
+    return TextStyle(
+      fontFamily: _sans,
+      fontSize: fontSize,
+      height: height,
+      fontWeight: weight,
+      fontVariations: [
+        FontVariation('wght', weight.value.toDouble()),
+        FontVariation('wdth', width),
+      ],
       color: color ?? AppColors.textPrimary,
     );
   }
