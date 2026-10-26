@@ -13,7 +13,16 @@ import 'package:fafu/src/features/home/presentation/home_page.dart';
 import 'package:fafu/src/features/profile/presentation/profile_page.dart';
 import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/quests/presentation/quests_page.dart';
+import 'package:fafu/src/features/friends/domain/friend.dart';
+import 'package:fafu/src/features/friends/presentation/friends_tab.dart';
+import 'package:fafu/src/features/nudges/domain/nudge.dart';
+import 'package:fafu/src/features/nudges/presentation/compose_nudge_sheet.dart';
+import 'package:fafu/src/features/profile/presentation/profile_sheet.dart';
+import 'package:fafu/src/features/quests/domain/quest.dart';
+import 'package:fafu/src/features/right_now/data/home_focus.dart';
+import 'package:fafu/src/features/right_now/data/right_now_providers.dart';
 import 'package:fafu/src/features/right_now/presentation/right_now_page.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 
 final mainShellTabProvider =
@@ -162,9 +171,8 @@ class _MainShellState extends ConsumerState<MainShell> {
     ref.watch(currentProfileProvider);
     _maybeStartFirstLaunchTooltips();
 
-    // V3 (brief 1.1): no tab bar. Home is the only screen; Profile, Code and
-    // the preview open as sheets. The tabbed shell below is parked with the map.
-    if (!FeatureFlags.map) return const RightNowPage();
+    // V3: Home, Friends, Profile. The six-tab shell below is parked with the map.
+    if (!FeatureFlags.map) return const _V3Shell();
 
     return Scaffold(
       extendBody: true,
@@ -627,6 +635,87 @@ class _SampleNudgeCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// After a nudge goes out from any tab: show it on home right away, draw the
+/// sender's waiting bar, and land on Home where the live card is.
+void handleNudgeSent(WidgetRef ref, NudgeResponse nudge) {
+  ref.read(myNudgesProvider.notifier).upsert(nudge);
+  ref.read(pushServiceProvider).liveNudges.showSenderWaiting(nudge);
+  ref.read(mainShellTabProvider.notifier).setTab(0);
+}
+
+/// The V3 shell: Home ("Right now"), Friends, Profile.
+class _V3Shell extends ConsumerStatefulWidget {
+  const _V3Shell();
+
+  @override
+  ConsumerState<_V3Shell> createState() => _V3ShellState();
+}
+
+class _V3ShellState extends ConsumerState<_V3Shell> {
+  static const _items = [
+    FafoNavItem(icon: Icons.bolt_rounded, label: 'Home'),
+    FafoNavItem(icon: Icons.people_alt_outlined, label: 'Friends'),
+    FafoNavItem(icon: Icons.person_outline, label: 'Profile'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // A notification tap always lands on Home, which shows the card or sheet.
+    HomeFocus.request.addListener(_toHome);
+  }
+
+  @override
+  void dispose() {
+    HomeFocus.request.removeListener(_toHome);
+    super.dispose();
+  }
+
+  void _toHome() {
+    if (HomeFocus.request.value != null) ref.read(mainShellTabProvider.notifier).setTab(0);
+  }
+
+  Future<void> _nudge({PublicUserResponse? friend, QuestResponse? quest}) async {
+    final nudge = await showComposeNudgeSheet(context, friend: friend, quest: quest);
+    if (nudge != null && mounted) handleNudgeSent(ref, nudge);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final index = ref.watch(mainShellTabProvider).clamp(0, _items.length - 1);
+    return PopScope(
+      // Back from Friends or Profile goes Home; from Home it leaves the app.
+      canPop: index == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) ref.read(mainShellTabProvider.notifier).setTab(0);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        body: IndexedStack(
+          index: index,
+          children: [
+            const RightNowPage(),
+            FriendsTab(onNudge: (friend) => _nudge(friend: friend)),
+            Scaffold(
+              backgroundColor: AppColors.bgPrimary,
+              body: SafeArea(
+                bottom: false,
+                child: ProfileSheet(asTab: true, onInvite: (quest) => _nudge(quest: quest)),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: FafoBottomNav(
+          items: _items,
+          currentIndex: index,
+          onTap: (i) => ref.read(mainShellTabProvider.notifier).setTab(i),
+        ),
       ),
     );
   }

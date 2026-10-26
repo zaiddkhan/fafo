@@ -29,7 +29,11 @@ import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 /// who are also free, the live nudge card (or the empty state), Recent, and a
 /// sticky "Send an invite". Everything else opens as a sheet.
 class RightNowPage extends ConsumerStatefulWidget {
-  const RightNowPage({super.key});
+  const RightNowPage({super.key, this.showProfileLink = false});
+
+  /// The prototype's header "Profile" link. Off when the bottom nav carries a
+  /// Profile tab.
+  final bool showProfileLink;
 
   @override
   ConsumerState<RightNowPage> createState() => _RightNowPageState();
@@ -240,7 +244,7 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
                     children: [
                       _Header(
                         onCode: () => showCodeSheet(context),
-                        onProfile: _openProfile,
+                        onProfile: widget.showProfileLink ? _openProfile : null,
                       ),
                       _FreeBox(
                         free: free,
@@ -306,10 +310,10 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onCode, required this.onProfile});
+  const _Header({required this.onCode, this.onProfile});
 
   final VoidCallback onCode;
-  final VoidCallback onProfile;
+  final VoidCallback? onProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -330,14 +334,16 @@ class _Header extends StatelessWidget {
               child: Text('Code', style: linkStyle),
             ),
           ),
-          const SizedBox(width: 18),
-          InkWell(
-            onTap: onProfile,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Text('Profile', style: linkStyle),
+          if (onProfile != null) ...[
+            const SizedBox(width: 18),
+            InkWell(
+              onTap: onProfile,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Text('Profile', style: linkStyle),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

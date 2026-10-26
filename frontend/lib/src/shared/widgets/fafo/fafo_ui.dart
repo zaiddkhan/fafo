@@ -1088,3 +1088,98 @@ class FafoInlineLink extends StatelessWidget {
     );
   }
 }
+
+class FafoNavItem {
+  const FafoNavItem({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+}
+
+/// Bottom nav: paper bar under a 2px rule. The current tab takes the selected
+/// chip treatment (blue, white text, ink border, 3px offset); the rest are
+/// muted. FaFo blue stays the only "live" colour.
+class FafoBottomNav extends StatelessWidget {
+  const FafoBottomNav({
+    super.key,
+    required this.items,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  final List<FafoNavItem> items;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgPrimary,
+        border: Border(top: BorderSide(color: AppColors.rule, width: 2)),
+      ),
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.paddingOf(context).bottom),
+      child: Row(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(child: _NavTab(item: items[i], selected: i == currentIndex, onTap: () => onTap(i))),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _NavTab extends StatelessWidget {
+  const _NavTab({required this.item, required this.selected, required this.onTap});
+
+  final FafoNavItem item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = selected ? AppColors.onAccent : AppColors.textSecondary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: item.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          height: 48,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.accentPrimary : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppChrome.pillRadius),
+            border: Border.all(
+              color: selected ? AppColors.ink : Colors.transparent,
+              width: AppChrome.outlineWidth,
+            ),
+            boxShadow: selected ? AppChrome.cardShadowSoft : null,
+          ),
+          child: ExcludeSemantics(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(item.icon, size: 19, color: fg),
+                const SizedBox(width: 7),
+                Flexible(
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.ui(14, fontWeight: FontWeight.w700, color: fg).copyWith(height: 1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

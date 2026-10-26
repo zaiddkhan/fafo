@@ -20,22 +20,25 @@ import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
 /// Opens the composer. Pass [quest] to share a side quest as a tagged nudge.
 /// Resolves with the created nudge, or null if dismissed.
+/// [friend] preselects who it's for (the Friends tab's "Nudge").
 Future<NudgeResponse?> showComposeNudgeSheet(
   BuildContext context, {
   QuestResponse? quest,
+  PublicUserResponse? friend,
 }) {
   return showFafoSheet<NudgeResponse>(
     context,
-    builder: (_) => ComposeNudgeSheet(quest: quest),
+    builder: (_) => ComposeNudgeSheet(quest: quest, friend: friend),
   );
 }
 
 /// "What's the plan?" One title, one friend or one group, a countdown after
 /// yes (V3 brief 4.1). No location, no description; only quests carry one.
 class ComposeNudgeSheet extends ConsumerStatefulWidget {
-  const ComposeNudgeSheet({super.key, this.quest});
+  const ComposeNudgeSheet({super.key, this.quest, this.friend});
 
   final QuestResponse? quest;
+  final PublicUserResponse? friend;
 
   @override
   ConsumerState<ComposeNudgeSheet> createState() => _ComposeNudgeSheetState();
@@ -66,6 +69,8 @@ class _ComposeNudgeSheetState extends ConsumerState<ComposeNudgeSheet> {
   void initState() {
     super.initState();
     _title.addListener(() => setState(() {}));
+    final friend = widget.friend;
+    if (friend != null) _target = _Target.friend(friend.uid, _firstName(friend.displayName));
   }
 
   @override

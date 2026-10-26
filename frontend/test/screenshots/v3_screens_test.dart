@@ -21,6 +21,7 @@ import 'package:fafu/src/core/theme/app_theme.dart';
 import 'package:fafu/src/features/auth/presentation/login_page.dart';
 import 'package:fafu/src/features/auth/presentation/otp_page.dart';
 import 'package:fafu/src/features/auth/presentation/signup_page.dart';
+import 'package:fafu/src/features/friends/presentation/friends_tab.dart';
 import 'package:fafu/src/features/friends/presentation/invite_landing_page.dart';
 import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
 import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
@@ -43,6 +44,7 @@ import 'package:fafu/src/features/right_now/presentation/preview_sheet.dart';
 import 'package:fafu/src/features/right_now/presentation/right_now_page.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
 // --- Fonts ----------------------------------------------------------------------
 
@@ -262,6 +264,23 @@ Widget _asSheet(Widget body) => Builder(
   ),
 );
 
+/// A tab body with the V3 bottom nav, as the shell lays it out.
+Widget _withNav(int index, Widget body) => Builder(
+  builder: (context) => Scaffold(
+    backgroundColor: AppColors.bgPrimary,
+    body: body,
+    bottomNavigationBar: FafoBottomNav(
+      items: const [
+        FafoNavItem(icon: Icons.bolt_rounded, label: 'Home'),
+        FafoNavItem(icon: Icons.people_alt_outlined, label: 'Friends'),
+        FafoNavItem(icon: Icons.person_outline, label: 'Profile'),
+      ],
+      currentIndex: index,
+      onTap: (_) {},
+    ),
+  ),
+);
+
 Future<void> _shoot(
   WidgetTester tester,
   String name,
@@ -363,7 +382,7 @@ void main() {
     // Sheets
     '20_composer': (screen: _asSheet(const ComposeNudgeSheet()), overrides: _overrides(), height: 1100),
     '21_composer_quest': (screen: _asSheet(ComposeNudgeSheet(quest: _quests.first)), overrides: _overrides(), height: 1150),
-    '22_profile': (screen: _asSheet(const ProfileSheet()), overrides: _overrides(), height: 2000),
+    '22_profile': (screen: _asSheet(ProfileSheet(onInvite: (_) {})), overrides: _overrides(), height: 2000),
     '23_group_new': (screen: _asSheet(const GroupSheet()), overrides: _overrides(), height: 1000),
     '24_group_edit': (screen: _asSheet(GroupSheet(group: _flatmates)), overrides: _overrides(), height: 1100),
     '25_code': (screen: _asSheet(const CodeSheet()), overrides: _overrides(), height: 950),
@@ -380,6 +399,29 @@ void main() {
     '34_onboarding': (screen: const ProfileSetupPage(), overrides: _overrides(), height: 1000),
     '35_settings': (screen: const SettingsPage(), overrides: _overrides(), height: 1100),
     '36_edit_profile': (screen: EditProfilePage(profile: _profile()), overrides: _overrides(), height: 844),
+    // V3 shell: Home / Friends / Profile with the bottom nav.
+    '40_shell_home': (screen: _withNav(0, const RightNowPage()), overrides: _overrides(nudges: _recent, free: true), height: 1000),
+    '41_shell_friends': (
+      screen: _withNav(1, FriendsTab(onNudge: (_) {})),
+      overrides: [
+        ..._overrides(),
+        incomingFriendRequestsProvider.overrideWith((ref) async => [
+          FriendRequestResponse(
+            id: 'req1',
+            requester: _user('tara', 'Tara Singh'),
+            recipient: _user(_me, 'Liloorx'),
+            status: FriendRequestStatus.pending,
+            createdAt: _now,
+          ),
+        ]),
+      ],
+      height: 1000,
+    ),
+    '42_shell_profile': (
+      screen: _withNav(2, Scaffold(backgroundColor: AppColors.bgPrimary, body: SafeArea(bottom: false, child: ProfileSheet(asTab: true, onInvite: (_) {})))),
+      overrides: _overrides(),
+      height: 1000,
+    ),
     '37_invite_link': (screen: const InviteLandingPage(token: 'MAYA7K2QX'), overrides: _overrides(), height: 844),
   };
 
@@ -391,7 +433,7 @@ void main() {
   }
 
   // Dark theme
-  for (final name in ['02_home_free_recent', '04_receiver_answering', '07_sender_said_yes', '20_composer', '22_profile', '30_landing', '33_otp', '35_settings']) {
+  for (final name in ['02_home_free_recent', '04_receiver_answering', '07_sender_said_yes', '20_composer', '22_profile', '30_landing', '33_otp', '35_settings', '40_shell_home', '41_shell_friends']) {
     testWidgets('dark_$name', (tester) async {
       final s = scenes[name]!;
       await _shoot(tester, 'dark_$name', s.screen, overrides: s.overrides, height: s.height, brightness: Brightness.dark);
@@ -399,7 +441,7 @@ void main() {
   }
 
   // Small phone (320pt wide, e.g. iPhone SE 1st gen)
-  for (final name in ['02_home_free_recent', '04_receiver_answering', '11_group_sender_tally', '20_composer', '22_profile', '30_landing', '33_otp', '34_onboarding']) {
+  for (final name in ['02_home_free_recent', '04_receiver_answering', '11_group_sender_tally', '20_composer', '22_profile', '30_landing', '33_otp', '34_onboarding', '40_shell_home', '41_shell_friends']) {
     testWidgets('small_$name', (tester) async {
       final s = scenes[name]!;
       await _shoot(tester, 'small_$name', s.screen, overrides: s.overrides, height: s.height, width: 320);

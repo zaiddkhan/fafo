@@ -17,14 +17,23 @@ import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
 /// Opens the profile sheet. Resolves with a quest when the user taps Invite,
 /// so home can open the composer in its place (as the prototype does).
-Future<QuestResponse?> showProfileSheet(BuildContext context) =>
-    showFafoSheet<QuestResponse>(context, builder: (_) => const ProfileSheet());
+Future<QuestResponse?> showProfileSheet(BuildContext context) => showFafoSheet<QuestResponse>(
+  context,
+  builder: (sheetContext) => ProfileSheet(onInvite: (q) => Navigator.of(sheetContext).pop(q)),
+);
 
 /// Profile, from the home header (V3 brief 6.1-6.4, 5.1): header, Quick
 /// defaults, Groups, then the admin-curated side quests. Stats, streaks, area
 /// and events stay parked.
 class ProfileSheet extends ConsumerWidget {
-  const ProfileSheet({super.key});
+  const ProfileSheet({super.key, required this.onInvite, this.asTab = false});
+
+  /// Invite on a side quest: the sheet closes and hands the quest back; the
+  /// Profile tab opens the composer directly.
+  final ValueChanged<QuestResponse> onInvite;
+
+  /// Shown as the Profile tab rather than a sheet (no × to clear).
+  final bool asTab;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,17 +48,17 @@ class ProfileSheet extends ConsumerWidget {
       ),
       data: (p) => FafoSheetBody(
         children: [
-          _Header(profile: p),
+          _Header(profile: p, clearClose: !asTab),
           _QuickDefaults(profile: p),
           const _Section(
             eyebrow: 'Your groups',
             title: 'Groups',
             child: _GroupsList(),
           ),
-          const _Section(
+          _Section(
             eyebrow: '15 minutes, no excuses',
             title: 'Side quests',
-            child: _QuestList(),
+            child: _QuestList(onInvite: onInvite),
           ),
           // Inferred: sign-out, account deletion and legal links have to live
           // somewhere; the prototype has no other route to them.
@@ -72,14 +81,17 @@ class ProfileSheet extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.profile});
+  const _Header({required this.profile, this.clearClose = true});
 
   final ProfileResponse profile;
+
+  /// Leave room for the sheet's round × in the top right.
+  final bool clearClose;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(right: 44, bottom: 20),
+      padding: EdgeInsets.only(right: clearClose ? 44 : 0, bottom: 20),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.rule, width: 2)),
       ),
@@ -268,7 +280,9 @@ class _GroupsList extends ConsumerWidget {
 /// Admin-curated quests grouped Easy, Medium, Hard (brief 5.1). Read-only;
 /// Invite shares one as a tagged nudge (5.3).
 class _QuestList extends ConsumerWidget {
-  const _QuestList();
+  const _QuestList({required this.onInvite});
+
+  final ValueChanged<QuestResponse> onInvite;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -297,7 +311,7 @@ class _QuestList extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
                 for (final q in items.where((q) => q.difficulty == level)) ...[
-                  _QuestRow(quest: q),
+                  _QuestRow(quest: q, onInvite: onInvite),
                   const SizedBox(height: 10),
                 ],
                 const SizedBox(height: 4),
@@ -310,9 +324,10 @@ class _QuestList extends ConsumerWidget {
 }
 
 class _QuestRow extends StatelessWidget {
-  const _QuestRow({required this.quest});
+  const _QuestRow({required this.quest, required this.onInvite});
 
   final QuestResponse quest;
+  final ValueChanged<QuestResponse> onInvite;
 
   @override
   Widget build(BuildContext context) {
@@ -345,7 +360,7 @@ class _QuestRow extends StatelessWidget {
             label: 'Invite',
             height: 40,
             small: true,
-            onPressed: () => Navigator.of(context).pop(quest),
+            onPressed: () => onInvite(quest),
           ),
         ],
       ),
