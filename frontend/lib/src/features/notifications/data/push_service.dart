@@ -8,7 +8,9 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/services/logger_provider.dart';
+import 'package:fafu/src/features/notifications/data/live_nudge_notifications.dart';
 import 'package:fafu/src/features/notifications/data/notification_navigation.dart';
+import 'package:fafu/src/features/right_now/data/home_focus.dart';
 import 'package:fafu/src/features/notifications/data/push_repository.dart';
 
 final pushServiceProvider = Provider<PushService>((ref) => PushService(ref));
@@ -28,8 +30,22 @@ const _androidChannel = AndroidNotificationChannel(
 /// bootstrap before runApp.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // No work needed yet — taps are handled by onMessageOpenedApp /
-  // getInitialMessage once the app is in the foreground.
+  // V3 nudge pushes arrive data-only on Android so the app can draw the live
+  // countdown bar; render it here when the app is backgrounded or closed.
+  // Taps are handled by onMessageOpenedApp / launch details once it opens.
+  if (!LiveNudgeNotifications.isNudgePush(message.data)) return;
+  final plugin = FlutterLocalNotificationsPlugin();
+  await plugin.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    ),
+  );
+  final android = plugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  for (final channel in nudgeChannels) {
+    await android?.createNotificationChannel(channel);
+  }
+  await LiveNudgeNotifications(plugin).show(message.data);
 }
 
 /// Owns the device's push lifecycle: permission, FCM token registration, token
@@ -125,14 +141,35 @@ class PushService {
         }
       },
     );
-    await _local
+    final android = _local
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(_androidChannel);
+        >();
+    await android?.createNotificationChannel(_androidChannel);
+    for (final channel in nudgeChannels) {
+      await android?.createNotificationChannel(channel);
+    }
+
+    // A tap on an app-drawn (local) notification that launched the app.
+    final launch = await _local.getNotificationAppLaunchDetails();
+    final payload = launch?.notificationResponse?.payload;
+    if ((launch?.didNotificationLaunchApp ?? false) && payload != null && payload.isNotEmpty) {
+      try {
+        _routeFromMessage((jsonDecode(payload) as Map).cast<String, dynamic>());
+      } catch (_) {}
+    }
   }
 
+  /// Draws and clears live nudge notifications (Android).
+  LiveNudgeNotifications get liveNudges => LiveNudgeNotifications(_local);
+
   void _onForegroundMessage(RemoteMessage message) {
+    // A nudge changed: refresh home now rather than on the next poll.
+    if (message.data['nudge_id'] != null) HomeFocus.ping();
+    if (LiveNudgeNotifications.isNudgePush(message.data)) {
+      liveNudges.show(message.data);
+      return;
+    }
     final notification = message.notification;
     if (notification == null) return;
     _local.show(

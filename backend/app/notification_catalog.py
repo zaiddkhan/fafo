@@ -9,6 +9,34 @@ Document id convention: f"{type}.{subtype}".
 """
 
 NOTIFICATION_CATALOG = [
+    # V3 nudges (brief 7.1, 7.2): plan title first, short and flat. Real time,
+    # never batched. {tag} is "Side quest · Easy. " on quest nudges, else "".
+    # Sound ids match the V3 sound set (7.4): n = arrives, exp = timer hits zero.
+    {"type": "nudge", "subtype": "received", "sound": "n",
+     "title": "{sender_name}: {title}", "body": "{tag}You have 10 minutes.",
+     "variables": ["sender_name", "title", "tag"], "params": {}},
+    {"type": "nudge", "subtype": "group_received", "sound": "n",
+     "title": "{sender_name} in {group_name}: {title}", "body": "{tag}You have 10 minutes.",
+     "variables": ["sender_name", "group_name", "title", "tag"], "params": {}},
+    {"type": "nudge", "subtype": "said_yes", "sound": "n",
+     "title": "{name} said yes: {title}", "body": "Countdown to go time.",
+     "variables": ["name", "title"], "params": {}},
+    {"type": "nudge", "subtype": "said_no", "sound": "n",
+     "title": "{name} said no: {title}", "body": "A clear no.",
+     "variables": ["name", "title"], "params": {}},
+    {"type": "nudge", "subtype": "group_first_yes", "sound": "n",
+     "title": "{name} is in: {title}", "body": "Countdown to go time.",
+     "variables": ["name", "title"], "params": {}},
+    {"type": "nudge", "subtype": "group_final", "sound": "n",
+     "title": "{tally}: {title}", "body": "Answers are in.",
+     "variables": ["tally", "title"], "params": {}},
+    {"type": "nudge", "subtype": "expired", "sound": "exp",
+     "title": "Expired: {title}", "body": "No answer in 10 minutes.",
+     "variables": ["title"], "params": {}},
+    {"type": "nudge", "subtype": "go_time", "sound": "exp",
+     "title": "Go time. {title}", "body": "{who}",
+     "variables": ["title", "who"], "params": {}},
+
     # Social Pull — real time, never batched.
     {"type": "social_pull", "subtype": "nudge_received", "sound": "nudge",
      "body": "Plans are forming. Are you in or not?", "variables": ["sender_name"], "params": {}},
@@ -20,6 +48,8 @@ NOTIFICATION_CATALOG = [
      "body": "{inviter_name} invited you to {group_name}.", "variables": ["inviter_name", "group_name"], "params": {}},
     {"type": "groups", "subtype": "invite_accepted", "sound": "group",
      "body": "{member_name} joined {group_name}.", "variables": ["member_name", "group_name"], "params": {}},
+    {"type": "groups", "subtype": "member_added", "sound": "group",
+     "body": "You were added to {group_name}.", "variables": ["group_name", "adder_name"], "params": {}},
     {"type": "groups", "subtype": "member_left", "sound": "group",
      "body": "{member_name} left {group_name}.", "variables": ["member_name", "group_name"], "params": {}},
     {"type": "groups", "subtype": "member_removed", "sound": "group",

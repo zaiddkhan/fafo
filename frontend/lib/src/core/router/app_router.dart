@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:fafu/src/core/config/feature_flags.dart';
 import 'package:fafu/src/core/network/session_expired_provider.dart';
 import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/services/shared_preferences_provider.dart';
@@ -30,6 +31,20 @@ import 'package:fafu/src/features/splash/presentation/brand_splash_page.dart';
 import 'package:fafu/src/features/splash/presentation/splash_page.dart';
 
 const onboardingCompleteKey = 'onboarding_complete';
+
+/// Screens parked in V3 (brief 1.1): a deep link or stale notification aimed at
+/// one lands on home instead. Routes stay registered so un-parking is a flag flip.
+bool _isParkedPath(String path) {
+  if (!FeatureFlags.events &&
+      (path.startsWith('/event/') ||
+          path == SearchPage.routePath ||
+          path.startsWith('/creator'))) {
+    return true;
+  }
+  if (!FeatureFlags.chat && path == ChatPage.routePath) return true;
+  if (!FeatureFlags.publicProfiles && path == PublicProfilePage.routePath) return true;
+  return false;
+}
 
 // Fallback search centre (Bengaluru) used only if the search route is opened
 // without a resolved location; callers normally pass the map's current area.
@@ -73,6 +88,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       final isOnboarded = prefs?.getBool(onboardingCompleteKey) ?? false;
+
+      if (_isParkedPath(path)) {
+        return isOnboarded ? MainShell.routePath : SplashPage.routePath;
+      }
 
       // If onboarded and on splash, skip straight to main
       if (isOnboarded && path == SplashPage.routePath) {

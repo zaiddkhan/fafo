@@ -49,6 +49,10 @@ _ProfileResponse _$ProfileResponseFromJson(Map<String, dynamic> json) =>
       firstLaunchTooltipComplete:
           json['first_launch_tooltip_complete'] as bool? ?? false,
       isCreator: json['is_creator'] as bool? ?? false,
+      freeNow: json['free_now'] as bool? ?? false,
+      defaultCountdownMinutes:
+          (json['default_countdown_minutes'] as num?)?.toInt() ?? 10,
+      sideQuestInvites: json['side_quest_invites'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$ProfileResponseToJson(_ProfileResponse instance) =>
@@ -62,6 +66,9 @@ Map<String, dynamic> _$ProfileResponseToJson(_ProfileResponse instance) =>
       'onboarding_complete': instance.onboardingComplete,
       'first_launch_tooltip_complete': instance.firstLaunchTooltipComplete,
       'is_creator': instance.isCreator,
+      'free_now': instance.freeNow,
+      'default_countdown_minutes': instance.defaultCountdownMinutes,
+      'side_quest_invites': instance.sideQuestInvites,
     };
 
 _UsernameCheckResponse _$UsernameCheckResponseFromJson(

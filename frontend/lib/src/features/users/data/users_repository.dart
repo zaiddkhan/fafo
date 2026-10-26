@@ -54,6 +54,32 @@ class UsersRepository {
     }
   }
 
+  /// "I'm free rn". Stays on until turned off.
+  Future<ProfileResponse> setFree(bool free) async {
+    try {
+      final response = await _dio.put('/users/me/free', data: {'free': free});
+      return ProfileResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// Quick defaults: default countdown and side quest invites.
+  Future<ProfileResponse> setQuickDefaults({
+    required int defaultCountdownMinutes,
+    required bool sideQuestInvites,
+  }) async {
+    try {
+      final response = await _dio.put('/users/me/defaults', data: {
+        'default_countdown_minutes': defaultCountdownMinutes,
+        'side_quest_invites': sideQuestInvites,
+      });
+      return ProfileResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<ProfileStatsResponse> getMyStats() async {
     try {
       final response = await _dio.get('/users/me/stats');

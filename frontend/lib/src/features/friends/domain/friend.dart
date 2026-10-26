@@ -36,6 +36,8 @@ class PublicUserResponse {
     required this.online,
     required this.friendshipStatus,
     this.photoUrl,
+    this.freeNow = false,
+    this.sideQuestInvites = true,
   });
 
   final String uid;
@@ -44,6 +46,8 @@ class PublicUserResponse {
   final String? photoUrl;
   final bool online;
   final FriendshipStatus friendshipStatus;
+  final bool freeNow;
+  final bool sideQuestInvites;
 
   factory PublicUserResponse.fromJson(Map<String, dynamic> json) {
     return PublicUserResponse(
@@ -55,6 +59,8 @@ class PublicUserResponse {
       friendshipStatus: friendshipStatusFromJson(
         json['friendship_status'] as String?,
       ),
+      freeNow: json['free_now'] as bool? ?? false,
+      sideQuestInvites: json['side_quest_invites'] as bool? ?? true,
     );
   }
 }
@@ -228,4 +234,29 @@ class FriendInviteCreateResponse {
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
+}
+
+/// The user's referral code (V3 brief 3.8): the only way to add friends.
+class ReferralCode {
+  const ReferralCode({required this.code, required this.shareUrl});
+
+  final String code;
+  final String shareUrl;
+
+  factory ReferralCode.fromJson(Map<String, dynamic> json) => ReferralCode(
+    code: json['code'] as String,
+    shareUrl: json['share_url'] as String,
+  );
+}
+
+class ReferralRedeemResponse {
+  const ReferralRedeemResponse({required this.friend, required this.alreadyFriends});
+
+  final PublicUserResponse friend;
+  final bool alreadyFriends;
+
+  factory ReferralRedeemResponse.fromJson(Map<String, dynamic> json) => ReferralRedeemResponse(
+    friend: PublicUserResponse.fromJson(json['friend'] as Map<String, dynamic>),
+    alreadyFriends: json['already_friends'] as bool? ?? false,
+  );
 }

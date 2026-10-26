@@ -2,6 +2,8 @@ from datetime import date, datetime, timedelta, timezone
 
 from google.cloud.firestore import SERVER_TIMESTAMP
 
+from app.config import STREAKS_ENABLED
+
 
 def parse_activity_date(value) -> date | None:
     """Best-effort parse of a stored ``last_activity_date``.
@@ -42,13 +44,16 @@ def record_meaningful_action(db, uid: str, action_type: str, metadata: dict | No
         yesterday = (now.date() - timedelta(days=1)).isoformat()
         new_streak = streak + 1 if last_date == yesterday else 1
 
-    user_ref.update({
-        "last_activity_date": today,
-        "current_streak": new_streak,
-        "activity_stats.current_streak": new_streak,
-        "activity_stats.last_activity_date": today,
-        "updated_at": SERVER_TIMESTAMP,
-    })
+    update = {"last_activity_date": today, "updated_at": SERVER_TIMESTAMP}
+    # Streaks are parked (V3 brief 1.6): stored counts are left as they were so
+    # they can return; only the last-activity date keeps moving.
+    if STREAKS_ENABLED:
+        update.update({
+            "current_streak": new_streak,
+            "activity_stats.current_streak": new_streak,
+            "activity_stats.last_activity_date": today,
+        })
+    user_ref.update(update)
     db.collection("users").document(uid).collection("activity_log").document().set({
         "action_type": action_type,
         "metadata": metadata or {},

@@ -14,6 +14,7 @@ from app.schemas import (
     GroupInviteCreateRequest,
     GroupInviteResponse,
     GroupInviteStatus,
+    GroupMembersAddRequest,
     GroupMemberResponse,
     GroupResponse,
     GroupTransferRequest,
@@ -25,6 +26,8 @@ router = APIRouter(prefix="/groups", tags=["groups"])
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 100
+# V3 brief 6.5: groups are capped at a fixed size, creator included.
+MAX_GROUP_SIZE = 15
 
 
 def _now() -> datetime:
@@ -192,10 +195,46 @@ def _promote_next_or_dissolve(db, group_ref, group_id: str, leaving_uid: str):
     return next_uid
 
 
+def _add_members_direct(db, group_ref, group_id: str, adder_uid: str, member_uids: list[str], background_tasks, group_name: str) -> None:
+    """Add the adder's friends straight in (V3 brief 6.5). Already-members are
+    skipped; anyone who isn't a friend is rejected."""
+    wanted = []
+    for member_uid in dict.fromkeys(member_uids):
+        validate_document_id(member_uid)
+        if member_uid == adder_uid or _is_member(db, group_id, member_uid):
+            continue
+        if not db.collection("users").document(adder_uid).collection("friends").document(member_uid).get().exists:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Groups can only contain your friends")
+        wanted.append(member_uid)
+    if not wanted:
+        return
+    if len(_member_ids(db, group_id)) + len(wanted) > MAX_GROUP_SIZE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Groups max out at {MAX_GROUP_SIZE} people")
+    now = _now()
+    batch = db.batch()
+    for member_uid in wanted:
+        batch.set(group_ref.collection("members").document(member_uid), {"uid": member_uid, "joined_at": now, "is_admin": False})
+    batch.update(group_ref, {"updated_at": now})
+    batch.commit()
+    triggers.group_member_added(
+        background_tasks, group_id=group_id, recipient_uids=wanted,
+        group_name=group_name, adder_name=_display_name(db, adder_uid),
+    )
+
+
 @router.post("", response_model=GroupResponse, status_code=status.HTTP_201_CREATED)
-def create_group(body: GroupCreateRequest, current_user: dict = Depends(get_current_user)):
+def create_group(body: GroupCreateRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     uid = current_user["uid"]
     db = get_firestore()
+    # Validate members before creating anything, so a bad pick can't leave an
+    # empty group behind.
+    members = [m for m in dict.fromkeys(body.member_uids) if m != uid]
+    if len(members) + 1 > MAX_GROUP_SIZE:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Groups max out at {MAX_GROUP_SIZE} people")
+    for member_uid in members:
+        validate_document_id(member_uid)
+        if not db.collection("users").document(uid).collection("friends").document(member_uid).get().exists:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Groups can only contain your friends")
     group_ref = db.collection("groups").document()
     now = _now()
     group_ref.set({
@@ -206,7 +245,19 @@ def create_group(body: GroupCreateRequest, current_user: dict = Depends(get_curr
         "dissolved": False,
     })
     group_ref.collection("members").document(uid).set({"uid": uid, "joined_at": now, "is_admin": True})
+    if body.member_uids:
+        _add_members_direct(db, group_ref, group_ref.id, uid, body.member_uids, background_tasks, body.name)
     return _group_response(group_ref.id, group_ref.get().to_dict(), uid)
+
+
+@router.post("/{group_id}/members", response_model=GroupResponse)
+def add_members(group_id: str, body: GroupMembersAddRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    """Creator adds friends directly; no accept step (V3 brief 6.5)."""
+    uid = current_user["uid"]
+    db = get_firestore()
+    group_ref, data = _require_admin(db, group_id, uid)
+    _add_members_direct(db, group_ref, group_id, uid, body.member_uids, background_tasks, data.get("name", "your group"))
+    return _group_response(group_id, group_ref.get().to_dict(), uid)
 
 
 @router.get("", response_model=list[GroupResponse])

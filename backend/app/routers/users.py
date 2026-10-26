@@ -10,17 +10,19 @@ from app.dependencies import get_current_user
 from app.firebase import get_firestore
 from app.schemas import (
     Area,
+    FreeStatusRequest,
     NegativeActionAnswers,
     PhotoUploadResponse,
     ProfileResponse,
     ProfileSetupRequest,
     ProfileStatsResponse,
     PublicUserResponse,
+    QuickDefaultsRequest,
     TimezoneUpdateRequest,
     TooltipCompleteResponse,
     UsernameCheckResponse,
 )
-from app.config import FIREBASE_STORAGE_BUCKET
+from app.config import EVENTS_ENABLED, FIREBASE_STORAGE_BUCKET
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -47,6 +49,9 @@ def _profile_from_doc(uid: str, data: dict) -> ProfileResponse:
             "first_launch_tooltip_complete", False
         ),
         is_creator=data.get("is_creator", False),
+        free_now=data.get("free_now", False),
+        default_countdown_minutes=data.get("default_countdown_minutes", 10),
+        side_quest_invites=data.get("side_quest_invites", True),
     )
 
 
@@ -132,6 +137,30 @@ def setup_profile(
     return _profile_from_doc(uid, updated)
 
 
+@router.put("/me/free", response_model=ProfileResponse)
+def set_free_status(body: FreeStatusRequest, current_user: dict = Depends(get_current_user)):
+    """"I'm free rn". Stays on until the user turns it off; friends see it."""
+    uid = current_user["uid"]
+    db = get_firestore()
+    ref = db.collection("users").document(uid)
+    ref.update({"free_now": body.free, "free_since": datetime.now(timezone.utc) if body.free else None})
+    return _profile_from_doc(uid, ref.get().to_dict())
+
+
+@router.put("/me/defaults", response_model=ProfileResponse)
+def set_quick_defaults(body: QuickDefaultsRequest, current_user: dict = Depends(get_current_user)):
+    """Quick defaults: default countdown (preselected in the composer) and
+    whether friends may send this user side quests."""
+    uid = current_user["uid"]
+    db = get_firestore()
+    ref = db.collection("users").document(uid)
+    ref.update({
+        "default_countdown_minutes": body.default_countdown_minutes,
+        "side_quest_invites": body.side_quest_invites,
+    })
+    return _profile_from_doc(uid, ref.get().to_dict())
+
+
 @router.put("/me/timezone", status_code=status.HTTP_200_OK)
 def update_timezone(body: TimezoneUpdateRequest, current_user: dict = Depends(get_current_user)):
     """Store the user's IANA timezone for notification quiet-hours calculations.
@@ -179,11 +208,13 @@ def get_my_stats(current_user: dict = Depends(get_current_user)):
     user_data = user_doc.to_dict() if user_doc.exists else {}
     friends_count = len(list(db.collection("users").document(uid).collection("friends").stream()))
     # Avoid collection-group uid index dependency while Firestore indexes build.
-    events_joined = sum(
-        1
-        for event_doc in db.collection("events").limit(500).stream()
-        if event_doc.reference.collection("joinees").document(uid).get().exists
-    )
+    events_joined = 0
+    if EVENTS_ENABLED:
+        events_joined = sum(
+            1
+            for event_doc in db.collection("events").limit(500).stream()
+            if event_doc.reference.collection("joinees").document(uid).get().exists
+        )
     side_quests_activated = len(list(db.collection("users").document(uid).collection("quest_activations").stream()))
     current_streak = int(user_data.get("current_streak", 0) or 0)
     last_date = parse_activity_date(user_data.get("last_activity_date"))
@@ -222,11 +253,14 @@ def delete_account(body: NegativeActionAnswers, current_user: dict = Depends(get
                     group_ref.update({"dissolved": True, "dissolved_at": datetime.now(timezone.utc), "updated_at": datetime.now(timezone.utc)})
         else:
             member_doc.reference.delete()
-    for event_doc in db.collection("events").limit(500).stream():
-        joinee_ref = event_doc.reference.collection("joinees").document(uid)
-        if joinee_ref.get().exists:
-            joinee_ref.delete()
-            event_doc.reference.update({"joinee_count": max(0, (event_doc.to_dict() or {}).get("joinee_count", 1) - 1)})
+    # Event steps only while events are live (V3 brief 1.3); archived event data
+    # is left untouched.
+    if EVENTS_ENABLED:
+        for event_doc in db.collection("events").limit(500).stream():
+            joinee_ref = event_doc.reference.collection("joinees").document(uid)
+            if joinee_ref.get().exists:
+                joinee_ref.delete()
+                event_doc.reference.update({"joinee_count": max(0, (event_doc.to_dict() or {}).get("joinee_count", 1) - 1)})
     for nudge_doc in db.collection("nudges").where("participant_uids", "array_contains", uid).stream():
         nudge_doc.reference.update({"status": "expired", "resolved_at": datetime.now(timezone.utc)})
     db.collection("negative_action_responses").document(str(uuid4())).set({

@@ -190,4 +190,23 @@ class FriendsRepository {
       throw ApiException.fromDioError(e);
     }
   }
+
+  Future<ReferralCode> getReferralCode() async {
+    try {
+      final response = await _dio.get('/friends/referral');
+      return ReferralCode.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// Redeeming a code makes both people friends straight away.
+  Future<ReferralRedeemResponse> redeemReferralCode(String code) async {
+    try {
+      final response = await _dio.post('/friends/referral/redeem', data: {'code': code});
+      return ReferralRedeemResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
 }

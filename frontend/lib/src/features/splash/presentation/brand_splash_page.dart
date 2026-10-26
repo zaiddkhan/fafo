@@ -78,26 +78,19 @@ class _BrandSplashPageState extends ConsumerState<BrandSplashPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Wordmark. The squared "tomorrow" face echoes the blocky logo;
-              // the hard offset shadow gives the extruded 3D look of the
-              // original artwork.
+              // Wordmark in the Display face (Anton) with a hard ink offset,
+              // per the V3 design system. No soft shadows.
               FafoWordmark(
-                style: GoogleFonts.tomorrow(
-                  fontSize: 72,
-                  fontWeight: FontWeight.w900,
+                style: GoogleFonts.anton(
+                  fontSize: 84,
                   color: Colors.white,
-                  letterSpacing: 2,
+                  letterSpacing: 1,
                   height: 1,
                   shadows: const [
                     Shadow(
-                      color: Color(0x66000000),
-                      offset: Offset(4, 5),
+                      color: AppColors.ink,
+                      offset: Offset(4, 4),
                       blurRadius: 0,
-                    ),
-                    Shadow(
-                      color: Color(0x33000000),
-                      offset: Offset(0, 6),
-                      blurRadius: 10,
                     ),
                   ],
                 ),
@@ -105,18 +98,11 @@ class _BrandSplashPageState extends ConsumerState<BrandSplashPage>
               const SizedBox(height: 14),
               Text(
                 'F*ck Around & Find Out',
-                style: GoogleFonts.tomorrow(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                style: GoogleFonts.ibmPlexMono(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                   color: Colors.white,
-                  letterSpacing: 0.2,
-                  shadows: const [
-                    Shadow(
-                      color: Color(0x40000000),
-                      offset: Offset(0, 2),
-                      blurRadius: 4,
-                    ),
-                  ],
+                  letterSpacing: 1.6,
                 ),
               ),
             ],

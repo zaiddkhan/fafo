@@ -11,66 +11,66 @@ from datetime import datetime, timezone
 
 from app.firebase import init_firebase, get_firestore
 
-# difficulty: easy = under 30 mins, medium = a few hours, hard = full day / group effort.
-# city = None means citywide (shown to everyone). area = None means not geo-targeted.
+# V3 brief (SB-125): six admin-curated 15-minute quests, grouped by difficulty.
+# Each prompt is written as an invite, because sharing a quest sends it as a
+# nudge (title -> nudge title, description -> nudge description).
+# `order` sets the position within a difficulty group.
 QUESTS = [
-    # --- Easy (under 30 mins) ---
     {
-        "slug": "first-sip-mystery-order",
-        "title": "Order something you can't pronounce",
-        "description": "Walk into the nearest café and order a drink you've never tried. No Googling it first.",
+        "slug": "walk-one-block",
+        "title": "Walk one block",
+        "description": "Meet outside and walk one block with me?",
         "difficulty": "easy",
+        "order": 1,
     },
     {
-        "slug": "say-hi-to-a-stranger",
-        "title": "Make one stranger smile",
-        "description": "Pay a genuine compliment to someone you don't know. A barista, a shopkeeper, anyone.",
+        "slug": "snack-run",
+        "title": "Snack run",
+        "description": "Pick a snack spot and meet me there?",
         "difficulty": "easy",
+        "order": 2,
     },
     {
-        "slug": "oldest-thing-on-your-street",
-        "title": "Find the oldest building on your street",
-        "description": "Take a 10-minute walk and spot the oldest building near you. Snap a photo for yourself.",
-        "difficulty": "easy",
-    },
-    # --- Medium (a few hours) ---
-    {
-        "slug": "rooftop-sunset",
-        "title": "Catch a rooftop sunset",
-        "description": "Find a rooftop café or terrace and watch the sun go down. Phone in your pocket for the last 10 minutes.",
+        "slug": "photo-hunt",
+        "title": "Photo hunt",
+        "description": "Find the weirdest thing nearby and take a photo together?",
         "difficulty": "medium",
+        "order": 1,
     },
     {
-        "slug": "solo-movie-date",
-        "title": "Take yourself on a solo movie date",
-        "description": "Book one ticket, buy the popcorn, and enjoy a film entirely on your own terms.",
+        "slug": "take-a-new-route",
+        "title": "Take a new route",
+        "description": "Meet me and take a route neither of us usually walks?",
         "difficulty": "medium",
+        "order": 2,
     },
     {
-        "slug": "wander-a-new-neighbourhood",
-        "title": "Get lost in a new neighbourhood",
-        "description": "Pick an area of your city you've never walked and explore it on foot for an afternoon.",
-        "difficulty": "medium",
-    },
-    # --- Hard (full day or group effort) ---
-    {
-        "slug": "day-trip-nearest-escape",
-        "title": "Day trip to the nearest escape",
-        "description": "Round up a friend or two and head to the closest hill, lake, or beach for the day.",
+        "slug": "phone-free-lap",
+        "title": "Phone-free lap",
+        "description": "Leave our phones away and take a 15-minute lap?",
         "difficulty": "hard",
+        "order": 1,
     },
     {
-        "slug": "reunion-potluck",
-        "title": "Host a tiny reunion",
-        "description": "Throw a potluck with three people you haven't seen in months. Everyone brings one dish.",
+        "slug": "tiny-performance",
+        "title": "Tiny performance",
+        "description": "Meet me outside and perform a 30-second made-up song?",
         "difficulty": "hard",
+        "order": 2,
     },
-    {
-        "slug": "morning-of-giving-back",
-        "title": "Give back for a morning",
-        "description": "Volunteer a half-day at a local shelter, kitchen, or clean-up drive near you.",
-        "difficulty": "hard",
-    },
+]
+
+# Pre-V3 quests. Retired (published=False), not deleted, so they can come back.
+RETIRED_SLUGS = [
+    "first-sip-mystery-order",
+    "say-hi-to-a-stranger",
+    "oldest-thing-on-your-street",
+    "rooftop-sunset",
+    "solo-movie-date",
+    "wander-a-new-neighbourhood",
+    "day-trip-nearest-escape",
+    "reunion-potluck",
+    "morning-of-giving-back",
 ]
 
 
@@ -89,6 +89,7 @@ def main():
                 "title": quest["title"],
                 "description": quest["description"],
                 "difficulty": quest["difficulty"],
+                "order": quest["order"],
                 "city": None,  # citywide
                 "area": None,  # not geo-targeted
                 "published": True,
@@ -98,6 +99,12 @@ def main():
         )
         written += 1
         print(f"  ✓ {quest['difficulty']:<6} {quest['title']}")
+
+    for slug in RETIRED_SLUGS:
+        ref = db.collection("quests").document(slug)
+        if ref.get().exists:
+            ref.update({"published": False, "updated_at": now})
+            print(f"  - retired {slug}")
 
     print(f"\nSeeded {written} side quests into the 'quests' collection.")
 

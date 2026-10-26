@@ -6,6 +6,8 @@ Consumed by the standalone React admin panel. Organised as one module per concer
 
 from fastapi import APIRouter
 
+from app.config import EVENTS_ENABLED
+
 from app.routers.admin import (
     core,
     creators,
@@ -18,9 +20,11 @@ from app.routers.admin import (
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 router.include_router(core.router)
-router.include_router(creators.router)
 router.include_router(quests.router)
-router.include_router(events.router)
-router.include_router(density.router)
 router.include_router(users.router)
+# Event admin (creators, events, density) is parked with events.
+if EVENTS_ENABLED:
+    router.include_router(creators.router)
+    router.include_router(events.router)
+    router.include_router(density.router)
 router.include_router(notifications.router)

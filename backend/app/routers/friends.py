@@ -12,6 +12,9 @@ from app.config import FRIEND_INVITE_BASE_URL
 from app.dependencies import get_current_user, validate_document_id
 from app.firebase import get_firestore
 from app.schemas import (
+    ReferralCodeResponse,
+    ReferralRedeemRequest,
+    ReferralRedeemResponse,
     BlockedUserResponse,
     ContactMatchResponse,
     ContactSyncRequest,
@@ -97,6 +100,8 @@ def public_user_from_doc(uid: str, data: dict, viewer_uid: str | None = None) ->
         photo_url=data.get("photo_url") or None,
         online=_is_online(data),
         friendship_status=_friendship_status(viewer_uid, uid) if viewer_uid else FriendshipStatus.none,
+        free_now=data.get("free_now", False),
+        side_quest_invites=data.get("side_quest_invites", True),
     )
 
 
@@ -542,3 +547,76 @@ def request_from_invite(token: str, current_user: dict = Depends(get_current_use
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found")
     inviter_uid = invite_doc.to_dict()["creator_uid"]
     return send_friend_request(FriendRequestCreateRequest(recipient_uid=inviter_uid), current_user)
+
+
+# --- Referral codes (V3 brief 3.8) ---
+# The only way to add friends in the V3 build. A code is stable per user, and
+# redeeming one makes both people friends straight away, no accept step.
+
+_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def _normalize_code(code: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", code.upper())
+
+
+def _new_code(seed: str) -> str:
+    prefix = re.sub(r"[^A-Z]", "", seed.upper())[:4] or "FAFO"
+    suffix = "".join(secrets.choice(_CODE_ALPHABET) for _ in range(3))
+    return f"{prefix}-{suffix}"
+
+
+@router.get("/referral", response_model=ReferralCodeResponse)
+def get_referral_code(current_user: dict = Depends(get_current_user)):
+    uid = current_user["uid"]
+    db = get_firestore()
+    user_ref = db.collection("users").document(uid)
+    data = user_ref.get().to_dict() or {}
+    code = data.get("referral_code")
+    if not code:
+        seed = data.get("username") or data.get("display_name") or ""
+        for _ in range(10):
+            candidate = _new_code(seed)
+            code_ref = db.collection("referral_codes").document(_normalize_code(candidate))
+            # create() fails if the code is taken, so two users can't share one.
+            try:
+                code_ref.create({"uid": uid, "code": candidate, "created_at": _now()})
+            except Exception:
+                continue
+            code = candidate
+            user_ref.update({"referral_code": code})
+            break
+        else:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Couldn't make a code. Try again.")
+    return ReferralCodeResponse(code=code, share_url=f"{FRIEND_INVITE_BASE_URL}/{_normalize_code(code)}")
+
+
+@router.post("/referral/redeem", response_model=ReferralRedeemResponse)
+def redeem_referral_code(body: ReferralRedeemRequest, current_user: dict = Depends(get_current_user)):
+    uid = current_user["uid"]
+    db = get_firestore()
+    key = _normalize_code(body.code)
+    if not key:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="That code doesn't exist")
+    code_doc = db.collection("referral_codes").document(key).get()
+    if not code_doc.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="That code doesn't exist")
+    owner_uid = code_doc.to_dict()["uid"]
+    if owner_uid == uid:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="That's your own code")
+    friendship = _friendship_status(uid, owner_uid)
+    if friendship in (FriendshipStatus.blocked, FriendshipStatus.blocked_by):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="That code doesn't work for you")
+    owner_doc = _get_user_or_404(owner_uid)
+    already = friendship == FriendshipStatus.friends
+    if not already:
+        now = _now()
+        batch = db.batch()
+        batch.set(db.collection("users").document(uid).collection("friends").document(owner_uid), {"uid": owner_uid, "friends_since": now, "via_referral": True})
+        batch.set(db.collection("users").document(owner_uid).collection("friends").document(uid), {"uid": uid, "friends_since": now, "via_referral": True})
+        # Close out any pending request between the two.
+        request_ref = db.collection("friend_requests").document(_pair_request_id(uid, owner_uid))
+        if request_ref.get().exists:
+            batch.update(request_ref, {"status": FriendRequestStatus.accepted.value, "responded_at": now})
+        batch.commit()
+    return ReferralRedeemResponse(friend=public_user_from_doc(owner_uid, owner_doc.to_dict(), uid), already_friends=already)

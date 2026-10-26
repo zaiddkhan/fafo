@@ -7,7 +7,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from app.config import CORS_ORIGINS, RATE_LIMIT_DEFAULT
+from app.config import CORS_ORIGINS, EVENTS_ENABLED, RATE_LIMIT_DEFAULT
 from app.firebase import init_firebase
 from app.routers import admin, auth, blogs, categories, creators, devices, events, friends, groups, internal_cron, notifications, nudges, quests, users
 
@@ -34,11 +34,13 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(users.router)
-app.include_router(creators.router)
 app.include_router(admin.router)
-app.include_router(categories.router)
-app.include_router(blogs.router)
-app.include_router(events.router)
+# Parked with events (V3 brief 1.4): no client call can reach an event path.
+if EVENTS_ENABLED:
+    app.include_router(creators.router)
+    app.include_router(categories.router)
+    app.include_router(blogs.router)
+    app.include_router(events.router)
 app.include_router(friends.router)
 app.include_router(groups.router)
 app.include_router(quests.router)

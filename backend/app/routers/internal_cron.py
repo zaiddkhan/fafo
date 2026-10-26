@@ -6,16 +6,18 @@ functions so the same jobs can also be invoked directly in tests or a local loop
 
 Suggested Cloud Scheduler jobs:
   * dispatch    — POST /internal/cron/dispatch   every 1 minute
-  * inactivity  — POST /internal/cron/inactivity every 1 hour
+  * inactivity  — POST /internal/cron/inactivity every 1 hour (parked in V3)
+  * nudges      — POST /internal/cron/nudges     every 1 minute
 """
 
 import hmac
 
 from fastapi import APIRouter, Header, HTTPException, status
 
-from app.config import CRON_SHARED_SECRET
+from app.config import CRON_SHARED_SECRET, INACTIVITY_NOTIFICATIONS_ENABLED
 from app.notifications.scheduler import inactivity_sweep
 from app.notifications.service import notifications
+from app.routers.nudges import sweep_nudges
 from app.schemas import CronRunResponse
 
 router = APIRouter(prefix="/internal/cron", tags=["internal"])
@@ -41,5 +43,15 @@ def cron_dispatch(x_cron_secret: str | None = Header(default=None)):
 @router.post("/inactivity", response_model=CronRunResponse)
 def cron_inactivity(x_cron_secret: str | None = Header(default=None)):
     _authorize(x_cron_secret)
+    # V3 brief 7.1: inactivity nudges are parked, not deleted.
+    if not INACTIVITY_NOTIFICATIONS_ENABLED:
+        return CronRunResponse(job="inactivity", summary={"skipped": "parked"})
     summary = inactivity_sweep()
     return CronRunResponse(job="inactivity", summary=summary)
+
+
+@router.post("/nudges", response_model=CronRunResponse)
+def cron_nudges(x_cron_secret: str | None = Header(default=None)):
+    """Settle expired nudges and send expiry / group tally pushes."""
+    _authorize(x_cron_secret)
+    return CronRunResponse(job="nudges", summary=sweep_nudges())

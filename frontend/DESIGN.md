@@ -1,215 +1,104 @@
 # Fafo Design System
 
-This document is the design source of truth for Fafo.
+This document is the design source of truth for Fafo. It follows the V3 brief (Linear SB-125, "Nudge, Side Quests, Profile") and the client prototype ("Adarsh's design"). Where the prototype's source and this file disagree, the prototype wins and this file gets updated.
 
-The product is an event discovery and social coordination app. The UI should feel lively, local, tactile, and a little playful, not sterile. The current visual language already points in the right direction: clean cool-toned surfaces, bold blue highlights, dark outlines, chunky geometry, and compact futuristic typography.
-
-## Brand Direction
-
-Fafo should feel like:
-
-- A city flyer wall cleaned up into an app
-- Social and energetic, not luxury or corporate
-- Tactile and slightly comic-book, not glassy or soft
-- High-contrast and fast to scan
-
-Fafo should not feel like:
-
-- Generic SaaS
-- Premium-black nightlife branding
-- Pastel lifestyle UI
-- Ultra-minimal monochrome product design
+The product is now three things: send one clear plan, get one clear answer, and have a few 15-minute ideas ready when nobody has one. Map and events are switched off behind `FeatureFlags` ([feature_flags.dart](lib/src/core/config/feature_flags.dart)); sections further down that describe map markers, discovery screens, categories or event badges document parked surfaces, not the current build.
 
 ## Core Aesthetic
 
-The system is built on four visual moves:
-
-1. Clean cool-toned surfaces
-2. Bold blue action color
-3. Dark outline chrome
-4. Offset shadows that make controls feel pressable
-
-This gives the app a poster-like feel. The user should feel like they are tapping physical stickers, cards, and buttons pinned onto a board.
+- **One accent.** FaFo blue is the only "live" colour. It means selected, free, or "this is for you". Red and amber only appear on avatars and difficulty badges.
+- **Offset shadow means raised or selected.** Cards (6px) and selected chips / the "I'm free rn" pill (3px) get a hard ink offset. Buttons never do.
+- **Rules do the structuring.** 2px ink rules separate sections and card zones; hairlines separate list rows. No grey panels, no soft shadows, no gradients.
+- **Sheets, not pages.** Profile, side quests, Code and the preview open as bottom sheets over a dimmed home with a round × top right.
+- **Lots of air.** One idea per screen. Home has a single primary action.
+- **Tokens, not hex.** Every colour is a named token in [app_colors.dart](lib/src/core/theme/app_colors.dart) so the parked weekly palettes can return by swapping values.
 
 ## Color System
 
-### Primary Light Theme
+### Light
 
-These values are defined in [app_colors.dart](lib/src/core/theme/app_colors.dart).
+| Token | Hex | Use |
+| --- | --- | --- |
+| Paper (`lightBgPrimary`) | `#EDEBE3` | App background, sheets |
+| Card (`lightBgSecondary`, `lightSurface`) | `#FDFDFD` | Sender card, list rows, chips |
+| Ink (`lightBorder`, `lightTextPrimary`, `ink`) | `#171714` | Text, borders, shadows, primary buttons |
+| Soft line (`lightSoftLine`) | `#C9C7BF` | Unselected chip border |
+| Hairline (`lightBgTertiary`) | `#D5D3CB` | Row dividers |
+| Muted (`lightTextSecondary`) | `#5F5E58` | Helper text, "Expired", handles |
 
-- `lightBgPrimary`: `#F8FBFD`
-- `lightBgSecondary`: `#FCFDFE`
-- `lightBgTertiary`: `#D6EAFB`
-- `lightSurface`: `#FCFDFE`
-- `lightBorder`: `#171717`
-- `lightTextPrimary`: `#0A2540`
-- `lightTextSecondary`: `#3D6B8E`
-- `lightTextTertiary`: `#7BA3C2`
+### Dark
 
-### Primary Dark Theme
+Follows the phone's system setting; there is no in-app switch (parked as `FeatureFlags.inAppThemeSwitch`). Cards sit close to the background with a visible edge and no offset shadow.
 
-- `darkBgPrimary`: `#1A1A1E`
-- `darkBgSecondary`: `#2A2A2F`
-- `darkBgTertiary`: `#3A3A40`
-- `darkSurface`: `#2A2A2F`
-- `darkBorder`: `#34353D`
-- `darkTextPrimary`: `#F5F5F7`
-- `darkTextSecondary`: `#A0A0A8`
-- `darkTextTertiary`: `#6B6B73`
+| Token | Hex | Use |
+| --- | --- | --- |
+| Paper (`darkBgPrimary`) | `#151513` | Background, sheets |
+| Card (`darkBgSecondary`) | `#1F1F1C` | Sender card, rows, chips |
+| Text (`darkTextPrimary`) | `#EDEBE3` | Text, rules, primary button fill |
+| Edge (`darkBorder`) | `#45464E` | Card and chip borders |
+| Hairline (`darkBgTertiary`) | `#33332F` | Row dividers |
+| Muted (`darkTextSecondary`) | `#A3A198` | Helper text, handles |
 
-### Accent Palette
+### Accents (same in both themes)
 
-- `accentPrimary`: `#1A87DA`
-- `accentSecondary`: `#1472B8`
-- `accentWarm`: `#0E5C96`
-- `accentLight1`: `#5EAEE8`
-- `accentLight2`: `#A3D4F4`
-- `accentLightest`: `#EBF5FC`
+| Token | Hex | Use |
+| --- | --- | --- |
+| FaFo blue (`accentPrimary`) | `#1A6FD0` | Selected, free, receiver card, Easy badge. Always white text (`onAccent`) |
+| Signal red (`signalRed`) | `#EB5147` | Avatars, Hard badge |
+| Amber (`amber`) | `#F2C350` | Medium badge only |
+| State green (`stateGreen`) | `#4ED164` | The live notification's post-yes bar only |
 
-### Category and Event-Type Colors
+FaFo blue is `#1A6FD0`, deep enough that white text passes AA (5:1) at every size. The older blues `#1A87DA` and `#1C7CF0` are retired, as is the prototype's lime `#CFF04E`.
 
-The blue family is the brand, but discovery surfaces (map markers, category tags, event-type badges) intentionally use a wider hue set so categories are scannable at a glance. This mapping lives in [home_page.dart](lib/src/features/home/presentation/home_page.dart) (`colorForCategory` / `colorForEventType`).
+### Light text on blue
 
-Categories that stay within the blue family use accent tokens:
-
-- `Live Music`: `accentPrimary`
-- `Comedy`: `accentWarm`
-- `Nightlife`: `accentSecondary`
-- `Art & Culture`: `accentLight1`
-- `Workshops`: `accentLight2`
-
-Categories that step outside the blue family use these dedicated hues:
-
-- `Food & Drinks`: `#FF8C42` (warm orange)
-- `Wellness`: `#4ADE80` (green)
-- `Sports`: `#38BDF8` (sky)
-- `Tech`: `#818CF8` (indigo)
-
-Event-type accents:
-
-- `spotlight`: `accentWarm`
-- `volunteering`: `#4ADE80` (green)
-- default: `accentPrimary`
-
-Status colors:
-
-- success / live dot: `#4ED164` (green)
-- verified badge: `#FFDA37` (gold)
-
-These are a closed, named set, not free-for-all decoration. Adding a new category color means adding it to the mapping above and to `colorForCategory`, never inventing a one-off hue inline.
-
-### Quest Gradient Palette
-
-The Quests / gamification surface ([quests_page.dart](lib/src/features/quests/presentation/quests_page.dart)) is the one place the app intentionally uses gradients. Each quest card carries a two-stop `LinearGradient`. Most stay in the blue family; a few "fun" categories use warm gradients to feel rewarding:
-
-- Blue-family quests: pairs drawn from `accentPrimary`, `accentSecondary`, `accentWarm`, `accentLight1`, plus deep navy stops like `#0A2540`, `#0F2027`, `#2C5364`.
-- Foodie: `#FF8A00 → #FFC837`
-- Culture Vulture: `#5B7C00 → #B8E04A`
-- Weekend Warrior: `#FFB703 → #FB8500`
-- Host with the Most: `#FFB000 → #FFE066`
-
-Gradients are reserved for this gamification context (and for image-overlay scrims, below). They are not a general surface treatment.
-
-### Color Rules
-
-- Blue is for action, selection, active state, and emphasis.
-- Light cool-tone surfaces are the default backgrounds.
-- Borders stay dark and visible. Avoid low-contrast gray outlines in light mode.
-- Use tertiary backgrounds for disabled or muted surfaces, not for primary calls to action.
-- Non-blue hues are allowed only through the named Category, Event-Type, Status, and Quest palettes above. Do not introduce other warm accents inline.
-- Gradients are allowed for quest cards and for image-overlay scrims (dark fade over posters and map markers for text legibility). Do not use gradients as a default surface fill.
+Anything on FaFo blue uses white text: the receiver card (title, timer, labels, header strip), selected chips, the "I'm free rn" pill and its dot, the Easy badge and side quest tags. Inner rules on a blue card turn white; its outer border and offset shadow stay ink. On the receiver card "Yes, I'm in" stays a solid ink pill and "No" becomes a white outline with white text.
 
 ## Typography
 
-Typography is defined in [app_typography.dart](lib/src/core/theme/app_typography.dart).
+Four roles, defined in [app_typography.dart](lib/src/core/theme/app_typography.dart). Tomorrow is retired.
 
-Primary font:
+| Role | Face | Use |
+| --- | --- | --- |
+| Display (`AppTypography.display`) | Anton, always uppercase, line height 0.92 | Headlines, plan titles, profile name, section titles |
+| Timer (`AppTypography.timer`) | Archivo 800, tabular figures | `mm:ss` with a short label under it ("left to answer", "until go time") |
+| UI text (`AppTypography.ui`, `textTheme`) | Archivo, 600-700 for buttons and row titles, 400 for helper lines | Sentence case |
+| Label (`AppTypography.label`) | IBM Plex Mono 600, uppercase, tracked 0.12em | Eyebrows, card header strips ("@maya / receiver") |
 
-- `Tomorrow` via Google Fonts
-
-Why it works:
-
-- It gives the app a future-city personality.
-- It feels more ownable than default system sans fonts.
-- It supports the poster-and-sticker tone created by the color and chrome system.
-
-### Type Scale
-
-- `displayLarge`: 28/36, weight 800
-- `displayMedium`: 18/24, weight 700
-- `titleLarge`: 16/22, weight 600
-- `bodyLarge`: 14/20, weight 500
-- `bodyMedium`: 14/20, weight 500
-- `labelLarge`: 12/16, weight 500
-- `labelMedium`: 12/16, weight 500
-- `labelSmall`: 12/16, weight 500
-
-### Typography Rules
-
-- Big headlines should break across lines when it improves rhythm. Current onboarding screens do this well.
-- Keep body copy short and plain. This product should read fast.
-- Use `displayMedium` for button labels and section headers.
-- Avoid tiny microcopy below 12px.
-- Avoid mixing too many font weights in a single screen.
+Display and Label strings stay sentence case in code and are uppercased at the call site, so screen readers read them normally.
 
 ## Spacing System
 
-Spacing is defined in [app_spacing.dart](lib/src/core/constants/app_spacing.dart).
-
-- `xs`: 4
-- `sm`: 8
-- `md`: 16
-- `lg`: 24
-- `xl`: 32
-- `xxl`: 48
-
-### Spacing Rules
-
-- Most screen padding should use `lg`.
-- Use `xl` and `xxl` to create breathing room between headline blocks and body content.
-- Keep controls aligned to the spacing scale. Avoid custom values unless a component truly needs optical adjustment.
-- Bottom safe-area padding should be additive, not a replacement for the base spacing.
+Spacing tokens live in [app_spacing.dart](lib/src/core/constants/app_spacing.dart): `xs 4`, `sm 8`, `md 16`, `lg 24`, `xl 32`, `xxl 48`. Screens use a 20px side gutter, as in the prototype.
 
 ## Shape, Borders, and Shadows
 
 Chrome tokens are defined in [app_chrome.dart](lib/src/core/theme/app_chrome.dart).
 
-- `controlRadius`: 10
-- `cardRadius`: 14
-- `cardRadiusLg`: 16
-- `chipRadius`: 8
-- `outlineWidth`: 1.5
-
-### Surface Language
-
-- Controls have medium rounding, not pills.
-- Borders are always deliberate and visible.
-- Shadows are mostly hard-offset, not blurred ambient shadows.
-- Raised elements should feel stacked, almost like cut paper.
+- `cardRadius`: 22 (nudge cards, 2px border, 6px hard offset)
+- `rowRadius`: 16 (side quest rows)
+- `chipRadius` / `controlRadius`: 11
+- `pillRadius`: 99 (buttons, free pill, badges)
+- `outlineWidth`: 2; `softOutlineWidth`: 1.5 (unselected chips)
 
 ### Shadow Rules
 
-- Use offset shadows to imply pressability or layering.
-- Keep blur near zero.
-- Favor dark offset shadows in light mode.
-- Do not use soft floating mobile-OS shadows as the default pattern.
+- Cards: `cardShadow`, a 6px hard ink offset.
+- Selected chips and the "I'm free rn" pill: `cardShadowSoft`, a 3px hard ink offset.
+- Buttons never get a shadow. (This replaces the old rule that put an offset block behind raised buttons.)
+- Dark mode: every offset shadow drops to none (`AppColors.shadow` is transparent).
+- Blur is always zero.
 
 ## Component System
 
 ### Buttons
 
-The primary button pattern is defined in [app_button.dart](lib/src/shared/widgets/app_button.dart).
+Pill buttons, defined in [app_button.dart](lib/src/shared/widgets/app_button.dart) and the Material button themes in [app_theme.dart](lib/src/core/theme/app_theme.dart).
 
-There are three variants: `primary`, `featured` (both blue fill, white text), and `secondary` (tertiary fill, primary text).
-
-Rules:
-
-- Primary and featured buttons use blue fill with white text.
-- Active raised buttons (primary / featured) sit on a hard offset block: a solid dark (or white in dark mode) shape translated `(6, 6)` behind the button, so it reads as cut paper, not a soft shadow. Secondary and disabled buttons are flat with the lighter `cardShadowSoft`.
-- Buttons press in via `AppPressable` (see Pressable Interaction) rather than rippling.
-- Default button height is 54.
-- Full-width CTA buttons are the default pattern on forms and onboarding.
-- Disabled buttons should remain legible but visibly muted.
+- Primary: solid ink fill (`primaryFill`), card-coloured text. Inverts in dark mode (light fill, ink text).
+- Secondary: 2px ink outline, transparent fill.
+- Full radius, no shadows, 50-56 tall. Disabled drops to 35% opacity.
+- `featured` is kept for older callers and renders as primary.
 
 ### Pressable Interaction
 
@@ -228,9 +117,8 @@ Inputs are configured in [app_theme.dart](lib/src/core/theme/app_theme.dart).
 
 Rules:
 
-- Filled paper surface
-- Rounded rectangular shape using `controlRadius`
-- Strong outline
+- One underline (2px ink, blue when focused), no fill, as in the composer
+- Placeholder in Muted
 - Labels styled with the body scale
 - Input layouts must account for keyboard insets cleanly
 

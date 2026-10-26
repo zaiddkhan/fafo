@@ -54,6 +54,9 @@ def _quest_response(doc_id: str, data: dict) -> QuestResponse:
     )
 
 
+_DIFFICULTY_RANK = {QuestDifficulty.easy: 0, QuestDifficulty.medium: 1, QuestDifficulty.hard: 2}
+
+
 @router.get("", response_model=list[QuestResponse])
 def list_quests(
     city: str | None = Query(default=None),
@@ -70,9 +73,10 @@ def list_quests(
             continue
         if difficulty and data.get("difficulty") != difficulty.value:
             continue
-        results.append(_quest_response(doc.id, data))
-    results.sort(key=lambda q: (q.difficulty.value, q.created_at), reverse=False)
-    return results[:limit]
+        results.append((data.get("order", 0), _quest_response(doc.id, data)))
+    # Grouped Easy, Medium, Hard, then in the order the admin set.
+    results.sort(key=lambda r: (_DIFFICULTY_RANK[r[1].difficulty], r[0], r[1].created_at))
+    return [q for _, q in results][:limit]
 
 
 def _activation_response(quest_data: dict, quest_id: str, activation: dict) -> QuestActivationResponse:

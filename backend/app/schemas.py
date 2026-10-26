@@ -70,6 +70,26 @@ class ProfileResponse(BaseModel):
     onboarding_complete: bool
     first_launch_tooltip_complete: bool = False
     is_creator: bool = False
+    # V3: "I'm free rn" (stays on until turned off) and Quick defaults.
+    free_now: bool = False
+    default_countdown_minutes: int = 10
+    side_quest_invites: bool = True
+
+
+class FreeStatusRequest(BaseModel):
+    free: bool
+
+
+class QuickDefaultsRequest(BaseModel):
+    default_countdown_minutes: int
+    side_quest_invites: bool
+
+    @field_validator("default_countdown_minutes")
+    @classmethod
+    def valid_countdown(cls, v: int) -> int:
+        if v not in (5, 10, 15):
+            raise ValueError("Default countdown must be 5, 10, or 15 minutes")
+        return v
 
 
 class PhotoUploadResponse(BaseModel):
@@ -88,6 +108,8 @@ class PublicUserResponse(BaseModel):
     photo_url: Optional[str]
     online: bool = False
     friendship_status: FriendshipStatus = FriendshipStatus.none
+    free_now: bool = False
+    side_quest_invites: bool = True
 
 
 # --- Friends ---
@@ -162,8 +184,24 @@ class FriendInviteResolveResponse(BaseModel):
     token: str
 
 
+class ReferralCodeResponse(BaseModel):
+    code: str
+    share_url: str
+
+
+class ReferralRedeemRequest(BaseModel):
+    code: str = Field(min_length=3, max_length=20)
+
+
+class ReferralRedeemResponse(BaseModel):
+    friend: PublicUserResponse
+    already_friends: bool = False
+
+
 class NegativeActionAnswers(BaseModel):
-    answers: list[str] = Field(min_length=3, max_length=5)
+    # Exit-survey answers. Optional since V3: the prototype's leave/delete flows
+    # have no survey (parked behind FeatureFlags.exitSurveys in the app).
+    answers: list[str] = Field(default_factory=list, max_length=5)
 
 
 class BlockedUserResponse(BaseModel):
@@ -182,6 +220,12 @@ class GroupInviteStatus(str, Enum):
 
 class GroupCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=60)
+    # V3: friends added straight away, no invite step.
+    member_uids: list[str] = Field(default_factory=list, max_length=14)
+
+
+class GroupMembersAddRequest(BaseModel):
+    member_uids: list[str] = Field(min_length=1, max_length=14)
 
 
 class GroupUpdateRequest(BaseModel):
@@ -512,13 +556,19 @@ class NudgeCreateRequest(BaseModel):
     target_id: str
     title: str = Field(min_length=1, max_length=100)
     location: Optional[str] = Field(default=None, max_length=500)
+    # V3: the sender's "countdown after yes". The answer window is a fixed 10
+    # minutes. 20 is still accepted from pre-V3 clients.
     response_window_minutes: int
+    # Set only when sharing a side quest: the quest's prompt and id. The quest's
+    # difficulty is looked up server-side and stored as a tag.
+    description: Optional[str] = Field(default=None, max_length=500)
+    quest_id: Optional[str] = Field(default=None, max_length=128)
 
     @field_validator("response_window_minutes")
     @classmethod
     def valid_window(cls, v: int) -> int:
         if v not in (5, 10, 15, 20):
-            raise ValueError("Response window must be 5, 10, 15, or 20 minutes")
+            raise ValueError("Countdown must be 5, 10, or 15 minutes")
         return v
 
 
@@ -546,6 +596,20 @@ class NudgeResponse(BaseModel):
     expected_voter_count: int = 0
     created_at: datetime
     resolved_at: Optional[datetime] = None
+    # V3 timing: answer_by = created + 10 min; go_at = first yes + countdown.
+    answer_by: Optional[datetime] = None
+    go_at: Optional[datetime] = None
+    # "yes" | "no" | "expired" once resolved, else None.
+    outcome: Optional[str] = None
+    description: Optional[str] = None
+    quest_id: Optional[str] = None
+    quest_difficulty: Optional[str] = None
+    target_id: Optional[str] = None
+    # Filled on /nudges/mine so home can render without extra lookups.
+    sender_name: Optional[str] = None
+    target_name: Optional[str] = None
+    # Group nudges: display names of members who said yes (the live tally).
+    yes_names: list[str] = Field(default_factory=list)
 
 
 class ProfileStatsResponse(BaseModel):

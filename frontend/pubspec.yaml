@@ -60,6 +60,7 @@ dependencies:
   share_plus: ^13.1.0
   webview_flutter: ^4.10.0
   app_links: ^7.0.0
+  audioplayers: ^6.7.1
 
 dev_dependencies:
   flutter_test:
@@ -109,6 +110,8 @@ flutter:
   assets:
     - assets/env/.env
     - assets/gifs/Confetti.lottie
+    # V3 sounds (brief 7.4); see assets/sounds/README.md.
+    - assets/sounds/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

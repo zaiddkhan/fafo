@@ -577,7 +577,8 @@ $AreaCopyWith<$Res>? get area {
 /// @nodoc
 mixin _$ProfileResponse {
 
- String get uid; String get phone;@JsonKey(name: 'display_name') String get displayName; String get username;@JsonKey(name: 'photo_url') String? get photoUrl; Area? get area;@JsonKey(name: 'onboarding_complete') bool get onboardingComplete;@JsonKey(name: 'first_launch_tooltip_complete') bool get firstLaunchTooltipComplete;@JsonKey(name: 'is_creator') bool get isCreator;
+ String get uid; String get phone;@JsonKey(name: 'display_name') String get displayName; String get username;@JsonKey(name: 'photo_url') String? get photoUrl; Area? get area;@JsonKey(name: 'onboarding_complete') bool get onboardingComplete;@JsonKey(name: 'first_launch_tooltip_complete') bool get firstLaunchTooltipComplete;@JsonKey(name: 'is_creator') bool get isCreator;// V3: "I'm free rn" and Quick defaults.
+@JsonKey(name: 'free_now') bool get freeNow;@JsonKey(name: 'default_countdown_minutes') int get defaultCountdownMinutes;@JsonKey(name: 'side_quest_invites') bool get sideQuestInvites;
 /// Create a copy of ProfileResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -590,16 +591,16 @@ $ProfileResponseCopyWith<ProfileResponse> get copyWith => _$ProfileResponseCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProfileResponse&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.username, username) || other.username == username)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.area, area) || other.area == area)&&(identical(other.onboardingComplete, onboardingComplete) || other.onboardingComplete == onboardingComplete)&&(identical(other.firstLaunchTooltipComplete, firstLaunchTooltipComplete) || other.firstLaunchTooltipComplete == firstLaunchTooltipComplete)&&(identical(other.isCreator, isCreator) || other.isCreator == isCreator));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProfileResponse&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.username, username) || other.username == username)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.area, area) || other.area == area)&&(identical(other.onboardingComplete, onboardingComplete) || other.onboardingComplete == onboardingComplete)&&(identical(other.firstLaunchTooltipComplete, firstLaunchTooltipComplete) || other.firstLaunchTooltipComplete == firstLaunchTooltipComplete)&&(identical(other.isCreator, isCreator) || other.isCreator == isCreator)&&(identical(other.freeNow, freeNow) || other.freeNow == freeNow)&&(identical(other.defaultCountdownMinutes, defaultCountdownMinutes) || other.defaultCountdownMinutes == defaultCountdownMinutes)&&(identical(other.sideQuestInvites, sideQuestInvites) || other.sideQuestInvites == sideQuestInvites));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,uid,phone,displayName,username,photoUrl,area,onboardingComplete,firstLaunchTooltipComplete,isCreator);
+int get hashCode => Object.hash(runtimeType,uid,phone,displayName,username,photoUrl,area,onboardingComplete,firstLaunchTooltipComplete,isCreator,freeNow,defaultCountdownMinutes,sideQuestInvites);
 
 @override
 String toString() {
-  return 'ProfileResponse(uid: $uid, phone: $phone, displayName: $displayName, username: $username, photoUrl: $photoUrl, area: $area, onboardingComplete: $onboardingComplete, firstLaunchTooltipComplete: $firstLaunchTooltipComplete, isCreator: $isCreator)';
+  return 'ProfileResponse(uid: $uid, phone: $phone, displayName: $displayName, username: $username, photoUrl: $photoUrl, area: $area, onboardingComplete: $onboardingComplete, firstLaunchTooltipComplete: $firstLaunchTooltipComplete, isCreator: $isCreator, freeNow: $freeNow, defaultCountdownMinutes: $defaultCountdownMinutes, sideQuestInvites: $sideQuestInvites)';
 }
 
 
@@ -610,7 +611,7 @@ abstract mixin class $ProfileResponseCopyWith<$Res>  {
   factory $ProfileResponseCopyWith(ProfileResponse value, $Res Function(ProfileResponse) _then) = _$ProfileResponseCopyWithImpl;
 @useResult
 $Res call({
- String uid, String phone,@JsonKey(name: 'display_name') String displayName, String username,@JsonKey(name: 'photo_url') String? photoUrl, Area? area,@JsonKey(name: 'onboarding_complete') bool onboardingComplete,@JsonKey(name: 'first_launch_tooltip_complete') bool firstLaunchTooltipComplete,@JsonKey(name: 'is_creator') bool isCreator
+ String uid, String phone,@JsonKey(name: 'display_name') String displayName, String username,@JsonKey(name: 'photo_url') String? photoUrl, Area? area,@JsonKey(name: 'onboarding_complete') bool onboardingComplete,@JsonKey(name: 'first_launch_tooltip_complete') bool firstLaunchTooltipComplete,@JsonKey(name: 'is_creator') bool isCreator,@JsonKey(name: 'free_now') bool freeNow,@JsonKey(name: 'default_countdown_minutes') int defaultCountdownMinutes,@JsonKey(name: 'side_quest_invites') bool sideQuestInvites
 });
 
 
@@ -627,7 +628,7 @@ class _$ProfileResponseCopyWithImpl<$Res>
 
 /// Create a copy of ProfileResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? uid = null,Object? phone = null,Object? displayName = null,Object? username = null,Object? photoUrl = freezed,Object? area = freezed,Object? onboardingComplete = null,Object? firstLaunchTooltipComplete = null,Object? isCreator = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? uid = null,Object? phone = null,Object? displayName = null,Object? username = null,Object? photoUrl = freezed,Object? area = freezed,Object? onboardingComplete = null,Object? firstLaunchTooltipComplete = null,Object? isCreator = null,Object? freeNow = null,Object? defaultCountdownMinutes = null,Object? sideQuestInvites = null,}) {
   return _then(_self.copyWith(
 uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
 as String,phone: null == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
@@ -638,6 +639,9 @@ as String?,area: freezed == area ? _self.area : area // ignore: cast_nullable_to
 as Area?,onboardingComplete: null == onboardingComplete ? _self.onboardingComplete : onboardingComplete // ignore: cast_nullable_to_non_nullable
 as bool,firstLaunchTooltipComplete: null == firstLaunchTooltipComplete ? _self.firstLaunchTooltipComplete : firstLaunchTooltipComplete // ignore: cast_nullable_to_non_nullable
 as bool,isCreator: null == isCreator ? _self.isCreator : isCreator // ignore: cast_nullable_to_non_nullable
+as bool,freeNow: null == freeNow ? _self.freeNow : freeNow // ignore: cast_nullable_to_non_nullable
+as bool,defaultCountdownMinutes: null == defaultCountdownMinutes ? _self.defaultCountdownMinutes : defaultCountdownMinutes // ignore: cast_nullable_to_non_nullable
+as int,sideQuestInvites: null == sideQuestInvites ? _self.sideQuestInvites : sideQuestInvites // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -735,10 +739,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String uid,  String phone, @JsonKey(name: 'display_name')  String displayName,  String username, @JsonKey(name: 'photo_url')  String? photoUrl,  Area? area, @JsonKey(name: 'onboarding_complete')  bool onboardingComplete, @JsonKey(name: 'first_launch_tooltip_complete')  bool firstLaunchTooltipComplete, @JsonKey(name: 'is_creator')  bool isCreator)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String uid,  String phone, @JsonKey(name: 'display_name')  String displayName,  String username, @JsonKey(name: 'photo_url')  String? photoUrl,  Area? area, @JsonKey(name: 'onboarding_complete')  bool onboardingComplete, @JsonKey(name: 'first_launch_tooltip_complete')  bool firstLaunchTooltipComplete, @JsonKey(name: 'is_creator')  bool isCreator, @JsonKey(name: 'free_now')  bool freeNow, @JsonKey(name: 'default_countdown_minutes')  int defaultCountdownMinutes, @JsonKey(name: 'side_quest_invites')  bool sideQuestInvites)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ProfileResponse() when $default != null:
-return $default(_that.uid,_that.phone,_that.displayName,_that.username,_that.photoUrl,_that.area,_that.onboardingComplete,_that.firstLaunchTooltipComplete,_that.isCreator);case _:
+return $default(_that.uid,_that.phone,_that.displayName,_that.username,_that.photoUrl,_that.area,_that.onboardingComplete,_that.firstLaunchTooltipComplete,_that.isCreator,_that.freeNow,_that.defaultCountdownMinutes,_that.sideQuestInvites);case _:
   return orElse();
 
 }
@@ -756,10 +760,10 @@ return $default(_that.uid,_that.phone,_that.displayName,_that.username,_that.pho
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String uid,  String phone, @JsonKey(name: 'display_name')  String displayName,  String username, @JsonKey(name: 'photo_url')  String? photoUrl,  Area? area, @JsonKey(name: 'onboarding_complete')  bool onboardingComplete, @JsonKey(name: 'first_launch_tooltip_complete')  bool firstLaunchTooltipComplete, @JsonKey(name: 'is_creator')  bool isCreator)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String uid,  String phone, @JsonKey(name: 'display_name')  String displayName,  String username, @JsonKey(name: 'photo_url')  String? photoUrl,  Area? area, @JsonKey(name: 'onboarding_complete')  bool onboardingComplete, @JsonKey(name: 'first_launch_tooltip_complete')  bool firstLaunchTooltipComplete, @JsonKey(name: 'is_creator')  bool isCreator, @JsonKey(name: 'free_now')  bool freeNow, @JsonKey(name: 'default_countdown_minutes')  int defaultCountdownMinutes, @JsonKey(name: 'side_quest_invites')  bool sideQuestInvites)  $default,) {final _that = this;
 switch (_that) {
 case _ProfileResponse():
-return $default(_that.uid,_that.phone,_that.displayName,_that.username,_that.photoUrl,_that.area,_that.onboardingComplete,_that.firstLaunchTooltipComplete,_that.isCreator);case _:
+return $default(_that.uid,_that.phone,_that.displayName,_that.username,_that.photoUrl,_that.area,_that.onboardingComplete,_that.firstLaunchTooltipComplete,_that.isCreator,_that.freeNow,_that.defaultCountdownMinutes,_that.sideQuestInvites);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -776,10 +780,10 @@ return $default(_that.uid,_that.phone,_that.displayName,_that.username,_that.pho
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String uid,  String phone, @JsonKey(name: 'display_name')  String displayName,  String username, @JsonKey(name: 'photo_url')  String? photoUrl,  Area? area, @JsonKey(name: 'onboarding_complete')  bool onboardingComplete, @JsonKey(name: 'first_launch_tooltip_complete')  bool firstLaunchTooltipComplete, @JsonKey(name: 'is_creator')  bool isCreator)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String uid,  String phone, @JsonKey(name: 'display_name')  String displayName,  String username, @JsonKey(name: 'photo_url')  String? photoUrl,  Area? area, @JsonKey(name: 'onboarding_complete')  bool onboardingComplete, @JsonKey(name: 'first_launch_tooltip_complete')  bool firstLaunchTooltipComplete, @JsonKey(name: 'is_creator')  bool isCreator, @JsonKey(name: 'free_now')  bool freeNow, @JsonKey(name: 'default_countdown_minutes')  int defaultCountdownMinutes, @JsonKey(name: 'side_quest_invites')  bool sideQuestInvites)?  $default,) {final _that = this;
 switch (_that) {
 case _ProfileResponse() when $default != null:
-return $default(_that.uid,_that.phone,_that.displayName,_that.username,_that.photoUrl,_that.area,_that.onboardingComplete,_that.firstLaunchTooltipComplete,_that.isCreator);case _:
+return $default(_that.uid,_that.phone,_that.displayName,_that.username,_that.photoUrl,_that.area,_that.onboardingComplete,_that.firstLaunchTooltipComplete,_that.isCreator,_that.freeNow,_that.defaultCountdownMinutes,_that.sideQuestInvites);case _:
   return null;
 
 }
@@ -791,7 +795,7 @@ return $default(_that.uid,_that.phone,_that.displayName,_that.username,_that.pho
 @JsonSerializable()
 
 class _ProfileResponse implements ProfileResponse {
-  const _ProfileResponse({required this.uid, required this.phone, @JsonKey(name: 'display_name') required this.displayName, required this.username, @JsonKey(name: 'photo_url') this.photoUrl, this.area, @JsonKey(name: 'onboarding_complete') required this.onboardingComplete, @JsonKey(name: 'first_launch_tooltip_complete') this.firstLaunchTooltipComplete = false, @JsonKey(name: 'is_creator') this.isCreator = false});
+  const _ProfileResponse({required this.uid, required this.phone, @JsonKey(name: 'display_name') required this.displayName, required this.username, @JsonKey(name: 'photo_url') this.photoUrl, this.area, @JsonKey(name: 'onboarding_complete') required this.onboardingComplete, @JsonKey(name: 'first_launch_tooltip_complete') this.firstLaunchTooltipComplete = false, @JsonKey(name: 'is_creator') this.isCreator = false, @JsonKey(name: 'free_now') this.freeNow = false, @JsonKey(name: 'default_countdown_minutes') this.defaultCountdownMinutes = 10, @JsonKey(name: 'side_quest_invites') this.sideQuestInvites = true});
   factory _ProfileResponse.fromJson(Map<String, dynamic> json) => _$ProfileResponseFromJson(json);
 
 @override final  String uid;
@@ -803,6 +807,10 @@ class _ProfileResponse implements ProfileResponse {
 @override@JsonKey(name: 'onboarding_complete') final  bool onboardingComplete;
 @override@JsonKey(name: 'first_launch_tooltip_complete') final  bool firstLaunchTooltipComplete;
 @override@JsonKey(name: 'is_creator') final  bool isCreator;
+// V3: "I'm free rn" and Quick defaults.
+@override@JsonKey(name: 'free_now') final  bool freeNow;
+@override@JsonKey(name: 'default_countdown_minutes') final  int defaultCountdownMinutes;
+@override@JsonKey(name: 'side_quest_invites') final  bool sideQuestInvites;
 
 /// Create a copy of ProfileResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -817,16 +825,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProfileResponse&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.username, username) || other.username == username)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.area, area) || other.area == area)&&(identical(other.onboardingComplete, onboardingComplete) || other.onboardingComplete == onboardingComplete)&&(identical(other.firstLaunchTooltipComplete, firstLaunchTooltipComplete) || other.firstLaunchTooltipComplete == firstLaunchTooltipComplete)&&(identical(other.isCreator, isCreator) || other.isCreator == isCreator));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProfileResponse&&(identical(other.uid, uid) || other.uid == uid)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.username, username) || other.username == username)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.area, area) || other.area == area)&&(identical(other.onboardingComplete, onboardingComplete) || other.onboardingComplete == onboardingComplete)&&(identical(other.firstLaunchTooltipComplete, firstLaunchTooltipComplete) || other.firstLaunchTooltipComplete == firstLaunchTooltipComplete)&&(identical(other.isCreator, isCreator) || other.isCreator == isCreator)&&(identical(other.freeNow, freeNow) || other.freeNow == freeNow)&&(identical(other.defaultCountdownMinutes, defaultCountdownMinutes) || other.defaultCountdownMinutes == defaultCountdownMinutes)&&(identical(other.sideQuestInvites, sideQuestInvites) || other.sideQuestInvites == sideQuestInvites));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,uid,phone,displayName,username,photoUrl,area,onboardingComplete,firstLaunchTooltipComplete,isCreator);
+int get hashCode => Object.hash(runtimeType,uid,phone,displayName,username,photoUrl,area,onboardingComplete,firstLaunchTooltipComplete,isCreator,freeNow,defaultCountdownMinutes,sideQuestInvites);
 
 @override
 String toString() {
-  return 'ProfileResponse(uid: $uid, phone: $phone, displayName: $displayName, username: $username, photoUrl: $photoUrl, area: $area, onboardingComplete: $onboardingComplete, firstLaunchTooltipComplete: $firstLaunchTooltipComplete, isCreator: $isCreator)';
+  return 'ProfileResponse(uid: $uid, phone: $phone, displayName: $displayName, username: $username, photoUrl: $photoUrl, area: $area, onboardingComplete: $onboardingComplete, firstLaunchTooltipComplete: $firstLaunchTooltipComplete, isCreator: $isCreator, freeNow: $freeNow, defaultCountdownMinutes: $defaultCountdownMinutes, sideQuestInvites: $sideQuestInvites)';
 }
 
 
@@ -837,7 +845,7 @@ abstract mixin class _$ProfileResponseCopyWith<$Res> implements $ProfileResponse
   factory _$ProfileResponseCopyWith(_ProfileResponse value, $Res Function(_ProfileResponse) _then) = __$ProfileResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String uid, String phone,@JsonKey(name: 'display_name') String displayName, String username,@JsonKey(name: 'photo_url') String? photoUrl, Area? area,@JsonKey(name: 'onboarding_complete') bool onboardingComplete,@JsonKey(name: 'first_launch_tooltip_complete') bool firstLaunchTooltipComplete,@JsonKey(name: 'is_creator') bool isCreator
+ String uid, String phone,@JsonKey(name: 'display_name') String displayName, String username,@JsonKey(name: 'photo_url') String? photoUrl, Area? area,@JsonKey(name: 'onboarding_complete') bool onboardingComplete,@JsonKey(name: 'first_launch_tooltip_complete') bool firstLaunchTooltipComplete,@JsonKey(name: 'is_creator') bool isCreator,@JsonKey(name: 'free_now') bool freeNow,@JsonKey(name: 'default_countdown_minutes') int defaultCountdownMinutes,@JsonKey(name: 'side_quest_invites') bool sideQuestInvites
 });
 
 
@@ -854,7 +862,7 @@ class __$ProfileResponseCopyWithImpl<$Res>
 
 /// Create a copy of ProfileResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? uid = null,Object? phone = null,Object? displayName = null,Object? username = null,Object? photoUrl = freezed,Object? area = freezed,Object? onboardingComplete = null,Object? firstLaunchTooltipComplete = null,Object? isCreator = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? uid = null,Object? phone = null,Object? displayName = null,Object? username = null,Object? photoUrl = freezed,Object? area = freezed,Object? onboardingComplete = null,Object? firstLaunchTooltipComplete = null,Object? isCreator = null,Object? freeNow = null,Object? defaultCountdownMinutes = null,Object? sideQuestInvites = null,}) {
   return _then(_ProfileResponse(
 uid: null == uid ? _self.uid : uid // ignore: cast_nullable_to_non_nullable
 as String,phone: null == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
@@ -865,6 +873,9 @@ as String?,area: freezed == area ? _self.area : area // ignore: cast_nullable_to
 as Area?,onboardingComplete: null == onboardingComplete ? _self.onboardingComplete : onboardingComplete // ignore: cast_nullable_to_non_nullable
 as bool,firstLaunchTooltipComplete: null == firstLaunchTooltipComplete ? _self.firstLaunchTooltipComplete : firstLaunchTooltipComplete // ignore: cast_nullable_to_non_nullable
 as bool,isCreator: null == isCreator ? _self.isCreator : isCreator // ignore: cast_nullable_to_non_nullable
+as bool,freeNow: null == freeNow ? _self.freeNow : freeNow // ignore: cast_nullable_to_non_nullable
+as bool,defaultCountdownMinutes: null == defaultCountdownMinutes ? _self.defaultCountdownMinutes : defaultCountdownMinutes // ignore: cast_nullable_to_non_nullable
+as int,sideQuestInvites: null == sideQuestInvites ? _self.sideQuestInvites : sideQuestInvites // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

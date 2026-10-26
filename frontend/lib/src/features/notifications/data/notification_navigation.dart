@@ -1,5 +1,9 @@
 import 'package:go_router/go_router.dart';
 
+import 'package:fafu/src/core/config/feature_flags.dart';
+import 'package:fafu/src/features/home/presentation/main_shell.dart';
+import 'package:fafu/src/features/right_now/data/home_focus.dart';
+
 import 'package:fafu/src/features/friends/presentation/friends_page.dart';
 import 'package:fafu/src/features/groups/presentation/groups_page.dart';
 import 'package:fafu/src/features/notifications/presentation/notifications_page.dart';
@@ -13,6 +17,23 @@ import 'package:fafu/src/features/nudges/presentation/nudge_feed_sheet.dart';
 /// FOMO, reminders), `group_id` (group lifecycle), `nudge_id` (friend/group
 /// nudges) — plus `template_id`/`type`.
 void routeFromNotificationData(GoRouter router, Map<String, dynamic> data) {
+  // V3 (single home): nudge and group notifications open home, which shows the
+  // card or the group sheet. The routes below are the parked tabbed app's.
+  if (!FeatureFlags.map) {
+    final nudgeId = _str(data['nudge_id']);
+    final groupId = _str(data['group_id']);
+    if (nudgeId != null) {
+      HomeFocus.request.value = FocusNudge(nudgeId);
+      router.go(MainShell.routePath);
+      return;
+    }
+    if (groupId != null) {
+      HomeFocus.request.value = FocusGroup(groupId);
+      router.go(MainShell.routePath);
+      return;
+    }
+  }
+
   final eventId = _str(data['event_id']);
   if (eventId != null) {
     router.push('/event/$eventId');

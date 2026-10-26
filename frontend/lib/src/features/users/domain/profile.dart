@@ -40,6 +40,12 @@ abstract class ProfileResponse with _$ProfileResponse {
     @Default(false)
     bool firstLaunchTooltipComplete,
     @JsonKey(name: 'is_creator') @Default(false) bool isCreator,
+    // V3: "I'm free rn" and Quick defaults.
+    @JsonKey(name: 'free_now') @Default(false) bool freeNow,
+    @JsonKey(name: 'default_countdown_minutes')
+    @Default(10)
+    int defaultCountdownMinutes,
+    @JsonKey(name: 'side_quest_invites') @Default(true) bool sideQuestInvites,
   }) = _ProfileResponse;
 
   factory ProfileResponse.fromJson(Map<String, dynamic> json) =>

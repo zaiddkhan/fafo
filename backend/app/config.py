@@ -39,7 +39,19 @@ NOTIFICATION_PER_TYPE_DAILY_CAP = {"map_fomo": 3, "inactivity": 1}
 
 # Notification types that bypass quiet hours and per-type/global caps. These are
 # the real-time, user-anticipated notifications where silence would feel broken.
-NOTIFICATION_URGENT_TYPES = {"social_pull", "time_pressure", "groups", "event_updates"}
+NOTIFICATION_URGENT_TYPES = {"nudge", "social_pull", "time_pressure", "groups", "event_updates"}
+# V3 brief 1.4: events, blogs, categories, creators and their notifications are
+# switched off (data archived in place, not deleted). Set to "1" to bring back.
+EVENTS_ENABLED = os.getenv("EVENTS_ENABLED", "0") == "1"
+# Notification types that only exist for events; skipped while events are off.
+EVENT_NOTIFICATION_TYPES = {"map_fomo", "time_pressure", "event_updates"}
+# V3 brief 1.6: the streak engine is parked; stored streaks are kept.
+STREAKS_ENABLED = os.getenv("STREAKS_ENABLED", "0") == "1"
+# V3 brief 7.4: custom nudge sounds (n, exp) bundled in the app. Leave off until
+# the files ship in a build, or iOS falls back to silence-then-default.
+NUDGE_CUSTOM_SOUNDS = os.getenv("NUDGE_CUSTOM_SOUNDS", "0") == "1"
+# V3 brief 7.1: inactivity nudges are parked. Set to "1" to bring them back.
+INACTIVITY_NOTIFICATIONS_ENABLED = os.getenv("INACTIVITY_NOTIFICATIONS_ENABLED", "0") == "1"
 
 # Quiet hours window in the user's local time (start_hour inclusive .. end_hour exclusive).
 # Non-urgent notifications during this window are deferred to end_hour, not dropped.

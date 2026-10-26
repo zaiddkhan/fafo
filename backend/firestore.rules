@@ -4,9 +4,8 @@ rules_version = '2';
 //
 // The backend (FastAPI) uses the Firebase Admin SDK, which bypasses these rules
 // entirely — so ALL writes and almost all reads happen server-side and stay
-// locked down here. The Flutter client only talks to Firestore directly for one
-// thing: the live event stream that powers real-time map updates. That is the
-// only client-side allowance below; everything else is denied by default.
+// locked down here. The Flutter client used to read the live event stream for
+// the map; events are parked in V3 (brief 1.4), so that read is now denied too.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -14,7 +13,9 @@ service cloud.firestore {
     // client for the real-time map. All writes go through the verified-creator
     // backend endpoints only.
     match /events/{eventId} {
-      allow read: if request.auth != null;
+      // Parked (V3 brief 1.4): archived in place. To restore the map's live
+      // stream, change this back to `if request.auth != null`.
+      allow read: if false;
       allow write: if false;
 
       // Joinee lists are managed server-side; never exposed to the client directly.

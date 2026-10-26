@@ -89,6 +89,14 @@
       ]
     },
     {
+      "collectionGroup": "nudges",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "participant_uids", "arrayConfig": "CONTAINS"},
+        {"fieldPath": "created_at", "order": "DESCENDING"}
+      ]
+    },
+    {
       "collectionGroup": "blogs",
       "queryScope": "COLLECTION",
       "fields": [

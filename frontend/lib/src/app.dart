@@ -39,7 +39,13 @@ class _FafoAppState extends ConsumerState<FafoApp> {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeControllerProvider);
 
-    AppColors.setThemeMode(themeMode);
+    // Static tokens need the effective brightness before the themes are built.
+    // System mode reads the platform setting (MediaQuery from the root View).
+    AppColors.setBrightness(switch (themeMode) {
+      ThemeMode.dark => Brightness.dark,
+      ThemeMode.light => Brightness.light,
+      ThemeMode.system => MediaQuery.platformBrightnessOf(context),
+    });
 
     return MaterialApp.router(
       title: 'FaFo',

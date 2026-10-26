@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:fafu/src/core/config/feature_flags.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/router/app_router.dart';
@@ -48,7 +49,10 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _useCurrentLocation());
+    // Nothing in V3 needs location, so the app never asks (brief 1.2).
+    if (FeatureFlags.map) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _useCurrentLocation());
+    }
   }
 
   String _fallbackAreaLabel(Area area) {
@@ -212,7 +216,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     return _nameController.text.trim().isNotEmpty &&
         _isUsernameShapeValid(_usernameController.text.trim()) &&
         _usernameAvailable == true &&
-        _selectedArea != null &&
+        (!FeatureFlags.map || _selectedArea != null) &&
         !_saving;
   }
 
@@ -383,6 +387,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                           ),
                         ),
                       ),
+                      if (FeatureFlags.map) ...[
                       const SizedBox(height: AppSpacing.lg),
                       _AreaSetupCard(
                         label: _areaLabel,
@@ -392,6 +397,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                         onUseCurrentLocation: _useCurrentLocation,
                         onSearchLocation: _openLocationSearchSheet,
                       ),
+                      ],
                       if (_error != null) ...[
                         const SizedBox(height: AppSpacing.md),
                         Text(

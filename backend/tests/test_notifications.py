@@ -98,7 +98,9 @@ def test_global_cap_enforced(db, monkeypatch):
 # --- Dispatch happy path -------------------------------------------------------
 
 
-def test_dispatch_sends_and_counts(db, captured_fcm):
+def test_dispatch_sends_and_counts(db, captured_fcm, monkeypatch):
+    # map_fomo stands in for any non-urgent type; run with events switched on.
+    monkeypatch.setattr("app.notifications.service.EVENTS_ENABLED", True)
     _register_device(db, "u1")
     key = notifications.enqueue(
         template_id="map_fomo.new_event_nearby",
@@ -117,7 +119,9 @@ def test_dispatch_sends_and_counts(db, captured_fcm):
     assert counters.document(today).get().to_dict()["by_type"]["map_fomo"] == 1
 
 
-def test_dispatch_skips_when_no_devices(db, captured_fcm):
+def test_dispatch_skips_when_no_devices(db, captured_fcm, monkeypatch):
+    # map_fomo stands in for any non-urgent type; run with events switched on.
+    monkeypatch.setattr("app.notifications.service.EVENTS_ENABLED", True)
     key = notifications.enqueue(
         template_id="map_fomo.new_event_nearby",
         recipient_uids=["u1"],

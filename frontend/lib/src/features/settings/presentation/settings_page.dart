@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:fafu/src/core/config/map_config.dart';
+import 'package:fafu/src/core/config/feature_flags.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/network/auth_token_provider.dart';
@@ -229,7 +230,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final isCreator = ref.watch(currentProfileProvider).value?.isCreator ?? false;
     // A submitted-but-unreviewed application means the user already filled the
     // form — offer a "pending" tile instead of inviting them to apply again.
-    final creatorApplicationPending = ref
+    final creatorApplicationPending = FeatureFlags.events && ref
         .watch(creatorApplicationProvider)
         .maybeWhen(
           data: (a) {
@@ -266,24 +267,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
-                  Text(
-                    'Appearance',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      letterSpacing: 1,
+                  // Parked (V3 brief 2.4): the app follows the system theme.
+                  if (FeatureFlags.inAppThemeSwitch) ...[
+                    Text(
+                      'Appearance',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        letterSpacing: 1,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _SettingsToggle(
-                    icon: isDarkMode
-                        ? Icons.dark_mode_outlined
-                        : Icons.light_mode_outlined,
-                    title: 'Dark Mode',
-                    value: isDarkMode,
-                    onChanged: (value) => ref
-                        .read(themeModeControllerProvider.notifier)
-                        .setThemeMode(value ? ThemeMode.dark : ThemeMode.light),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.sm),
+                    _SettingsToggle(
+                      icon: isDarkMode
+                          ? Icons.dark_mode_outlined
+                          : Icons.light_mode_outlined,
+                      title: 'Dark Mode',
+                      value: isDarkMode,
+                      onChanged: (value) => ref
+                          .read(themeModeControllerProvider.notifier)
+                          .setThemeMode(value ? ThemeMode.dark : ThemeMode.light),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
 
                   // Account section
                   Text(
@@ -309,6 +313,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       );
                     },
                   ),
+                  // Parked with the map (V3 brief 1.2): area re-centring.
+                  if (FeatureFlags.map)
                   _SettingsTile(
                     icon: Icons.place_outlined,
                     title: 'Change Area',
@@ -331,7 +337,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     onTap: _changeArea,
                   ),
-                  if (!isCreator)
+                  // Creators publish events; parked with events (V3 brief 1.3).
+                  if (FeatureFlags.events && !isCreator)
                     creatorApplicationPending
                         ? _SettingsTile(
                             icon: Icons.hourglass_top_outlined,
@@ -404,6 +411,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     trailing: Text('1.0.0', style: theme.textTheme.labelMedium),
                     onTap: () {},
                   ),
+                  if (FeatureFlags.map)
                   _SettingsTile(
                     icon: Icons.map_outlined,
                     title: MapConfig.attributionTitle,

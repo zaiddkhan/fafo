@@ -25,9 +25,20 @@ class GroupsRepository {
     }
   }
 
-  Future<GroupResponse> createGroup(String name) async {
+  /// [memberUids] are the creator's friends, added straight away (V3 6.5).
+  Future<GroupResponse> createGroup(String name, {List<String> memberUids = const []}) async {
     try {
-      final response = await _dio.post('/groups', data: {'name': name});
+      final response = await _dio.post('/groups', data: {'name': name, 'member_uids': memberUids});
+      return GroupResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  /// Creator adds friends directly; no accept step.
+  Future<GroupResponse> addMembers(String groupId, List<String> memberUids) async {
+    try {
+      final response = await _dio.post('/groups/$groupId/members', data: {'member_uids': memberUids});
       return GroupResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);

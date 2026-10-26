@@ -10,9 +10,9 @@ QuestDifficulty questDifficultyFromJson(String? value) {
 
 extension QuestDifficultyLabel on QuestDifficulty {
   String get label => switch (this) {
-        QuestDifficulty.easy => 'Easy • under 30 min',
-        QuestDifficulty.medium => 'Medium • a few hours',
-        QuestDifficulty.hard => 'Hard • full day or group effort',
+        QuestDifficulty.easy => 'Easy',
+        QuestDifficulty.medium => 'Medium',
+        QuestDifficulty.hard => 'Hard',
       };
 
   /// Short badge text shown top-right of a quest card.
@@ -22,12 +22,8 @@ extension QuestDifficultyLabel on QuestDifficulty {
         QuestDifficulty.hard => 'Hard',
       };
 
-  /// Rough time-to-complete estimate shown under the badge.
-  String get timeEstimate => switch (this) {
-        QuestDifficulty.easy => '< 30 min',
-        QuestDifficulty.medium => '1-3 hrs',
-        QuestDifficulty.hard => 'Full Day',
-      };
+  /// Every V3 side quest is a 15-minute plan ("15 minutes, no excuses").
+  String get timeEstimate => '15 min';
 }
 
 class QuestResponse {

@@ -236,7 +236,6 @@ class _ChatPageState extends State<ChatPage> {
                       child: Text(
                         '✦',
                         style: TextStyle(
-                          fontFamily: 'Tomorrow',
                           fontSize: 20,
                           color: Colors.white,
                         ),

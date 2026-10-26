@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:fafu/src/core/config/feature_flags.dart';
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/events/data/events_repository.dart';
@@ -23,6 +24,7 @@ import 'package:fafu/src/features/settings/presentation/settings_page.dart';
 import 'package:fafu/src/features/users/data/users_providers.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
+import 'package:fafu/src/features/users/domain/profile_stats.dart';
 import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -71,9 +73,16 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final joinedEvents = ref.watch(_joinedEventsProvider);
-    final savedBackendEvents = ref.watch(savedEventsProvider);
-    final stats = ref.watch(profileStatsProvider);
+    // Events and stats are parked (V3 brief 1.3, 1.6): don't fetch them.
+    final joinedEvents = FeatureFlags.events
+        ? ref.watch(_joinedEventsProvider)
+        : const AsyncValue<List<EventResponse>>.data([]);
+    final savedBackendEvents = FeatureFlags.events
+        ? ref.watch(savedEventsProvider)
+        : const AsyncValue<List<EventResponse>>.data([]);
+    final stats = FeatureFlags.streaksAndStats
+        ? ref.watch(profileStatsProvider)
+        : const AsyncValue<ProfileStatsResponse>.loading();
     final profile = ref.watch(currentProfileProvider);
     final quests = ref.watch(questsListProvider);
     final activations = ref.watch(questActivationsProvider);
@@ -158,6 +167,7 @@ class ProfilePage extends ConsumerWidget {
                 data: (p) => _IdentityHeader(profile: p, isDark: isDark),
               ),
               const SizedBox(height: 18),
+              if (FeatureFlags.streaksAndStats)
               stats.when(
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const SizedBox.shrink(),
@@ -201,6 +211,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 18),
+              if (FeatureFlags.events) ...[
               _SectionHeader(
                 title: 'Joined events',
                 actionLabel: 'View All',
@@ -309,6 +320,7 @@ class ProfilePage extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: 12),
+              ],
               _SectionHeader(
                 title: 'Side Quests',
                 actionLabel: 'View All',
@@ -360,9 +372,13 @@ class ProfilePage extends ConsumerWidget {
                   );
                 },
               ),
+              // Quest history is activity stats; past experiences are events.
+              if (FeatureFlags.streaksAndStats) ...[
+                const SizedBox(height: 6),
+                _QuestHistorySection(activations: activations, isDark: isDark),
+              ],
               const SizedBox(height: 6),
-              _QuestHistorySection(activations: activations, isDark: isDark),
-              const SizedBox(height: 6),
+              if (FeatureFlags.events) ...[
               _SectionHeader(
                 title: 'Past Experiences',
                 actionLabel: 'See History',
@@ -381,6 +397,7 @@ class ProfilePage extends ConsumerWidget {
                       child: _PastExperienceCard(experience: experience),
                     ),
                   ),
+              ],
             ],
           ),
         ),

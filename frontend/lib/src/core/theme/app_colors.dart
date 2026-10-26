@@ -1,60 +1,102 @@
 import 'package:flutter/material.dart';
 
+/// Colour tokens from the V3 brief (SB-125) and the client prototype.
+/// Components read tokens only, never raw hex, so the parked weekly palettes
+/// can come back later by swapping values here.
 class AppColors {
   const AppColors._();
 
-  static ThemeMode _themeMode = ThemeMode.light;
+  static Brightness _brightness = Brightness.light;
 
-  static void setThemeMode(ThemeMode mode) {
-    _themeMode = mode;
+  /// Set once per frame from the app root with the effective brightness
+  /// (the app follows the system setting, see [FeatureFlags.inAppThemeSwitch]).
+  static void setBrightness(Brightness brightness) {
+    _brightness = brightness;
   }
 
-  static bool get _isDark => _themeMode == ThemeMode.dark;
+  /// Kept for the parked in-app theme switch.
+  static void setThemeMode(ThemeMode mode) {
+    if (mode == ThemeMode.system) return;
+    _brightness = mode == ThemeMode.dark ? Brightness.dark : Brightness.light;
+  }
+
+  static bool get _isDark => _brightness == Brightness.dark;
 
   /// Whether the app is currently in dark mode. Exposed so non-widget code
   /// (e.g. building a themed WebView URL) can match the active theme.
   static bool get isDark => _isDark;
 
-  static const Color lightBgPrimary = Color(0xFFF8FBFD);
-  static const Color lightBgSecondary = Color(0xFFFCFDFE);
-  static const Color lightBgTertiary = Color(0xFFD6EAFB);
-  static const Color lightSurface = Color(0xFFFCFDFE);
-  static const Color lightBorder = Color(0xFF171717);
-  static const Color lightTextPrimary = Color(0xFF0A2540);
-  static const Color lightTextSecondary = Color(0xFF3D6B8E);
-  static const Color lightTextTertiary = Color(0xFF7BA3C2);
+  // Light set: paper, card, ink, soft line, muted.
+  static const Color lightBgPrimary = Color(0xFFEDEBE3); // Paper
+  static const Color lightBgSecondary = Color(0xFFFDFDFD); // Card
+  static const Color lightBgTertiary = Color(0xFFD5D3CB); // Hairline
+  static const Color lightSurface = lightBgSecondary;
+  static const Color lightBorder = Color(0xFF171714); // Ink
+  static const Color lightSoftLine = Color(0xFFC9C7BF);
+  static const Color lightTextPrimary = Color(0xFF171714);
+  static const Color lightTextSecondary = Color(0xFF5F5E58); // Muted
+  static const Color lightTextTertiary = Color(0xFF8C8A82);
 
-  static const Color darkBgPrimary = Color(0xFF1A1A1E);
-  static const Color darkBgSecondary = Color(0xFF2A2A2F);
-  static const Color darkBgTertiary = Color(0xFF3A3A40);
+  // Dark set: cards sit close to the background with a visible edge and no
+  // offset shadow.
+  static const Color darkBgPrimary = Color(0xFF151513); // Paper
+  static const Color darkBgSecondary = Color(0xFF1F1F1C); // Card
+  static const Color darkBgTertiary = Color(0xFF33332F); // Hairline
   static const Color darkSurface = darkBgSecondary;
-  static const Color darkBorder = Color(0xFF34353D);
-  static const Color darkTextPrimary = Color(0xFFF5F5F7);
-  static const Color darkTextSecondary = Color(0xFFA0A0A8);
-  static const Color darkTextTertiary = Color(0xFF6B6B73);
+  static const Color darkBorder = Color(0xFF45464E); // Edge
+  static const Color darkSoftLine = darkBorder;
+  static const Color darkTextPrimary = Color(0xFFEDEBE3);
+  static const Color darkTextSecondary = Color(0xFFA3A198); // Muted
+  static const Color darkTextTertiary = Color(0xFF6F6E67);
 
-  static const Color accentPrimary = Color(0xFF1A87DA);
-  static const Color accentSecondary = Color(0xFF1472B8);
-  static const Color accentWarm = Color(0xFF0E5C96);
-  static const Color accentLight1 = Color(0xFF5EAEE8);
-  static const Color accentLight2 = Color(0xFFA3D4F4);
-  static const Color accentLightest = Color(0xFFEBF5FC);
+  /// FaFo blue. The only "live" colour: selected, free, "this is for you".
+  /// Deep enough that white text on it passes AA at every size. Same in both
+  /// themes, always with [onAccent] text.
+  static const Color accentPrimary = Color(0xFF1A6FD0);
+  static const Color onAccent = Color(0xFFFFFFFF);
+  static const Color accentSecondary = Color(0xFF1559A8);
+  static const Color accentWarm = Color(0xFF0F4785);
+  static const Color accentLight1 = Color(0xFF5E9BE0);
+  static const Color accentLight2 = Color(0xFFA9C9EE);
+  static const Color accentLightest = Color(0xFFE8F0FA);
 
-  /// Use instead of pure black for borders, outlines, and high-contrast text —
-  /// a soft dark grey reads better than #000 on the app's light surfaces.
-  static const Color ink = Color(0xFF24252B);
+  /// Avatars and the Hard badge only.
+  static const Color signalRed = Color(0xFFEB5147);
+
+  /// Medium badge only.
+  static const Color amber = Color(0xFFF2C350);
+
+  /// The live notification's post-yes bar. The only green in the app.
+  static const Color stateGreen = Color(0xFF4ED164);
+
+  /// Fixed ink: borders and shadows that stay ink in both themes (blue cards,
+  /// badges, avatars).
+  static const Color ink = Color(0xFF171714);
 
   static Color get bgPrimary => _isDark ? darkBgPrimary : lightBgPrimary;
   static Color get bgSecondary => _isDark ? darkBgSecondary : lightBgSecondary;
   static Color get bgTertiary => _isDark ? darkBgTertiary : lightBgTertiary;
   static Color get surface => _isDark ? darkSurface : lightSurface;
   static Color get border => _isDark ? darkBorder : lightBorder;
+  static Color get softLine => _isDark ? darkSoftLine : lightSoftLine;
+  static Color get hairline => bgTertiary;
   static Color get textPrimary => _isDark ? darkTextPrimary : lightTextPrimary;
   static Color get textSecondary =>
       _isDark ? darkTextSecondary : lightTextSecondary;
   static Color get textTertiary =>
       _isDark ? darkTextTertiary : lightTextTertiary;
 
+  /// 2px section rules: ink in light, light text colour in dark.
+  static Color get rule => textPrimary;
+
+  /// Offset shadows drop to none in dark mode.
+  static Color get shadow => _isDark ? Colors.transparent : ink;
+
+  /// Primary pill fill and its text. Inverts in dark mode.
+  static Color get primaryFill => _isDark ? darkTextPrimary : ink;
+  static Color get onPrimaryFill => _isDark ? ink : lightBgSecondary;
+
+  /// No gradients in V3; kept as a flat fill so existing callers still build.
   static LinearGradient get primaryGradient =>
-      const LinearGradient(colors: [accentPrimary, accentSecondary]);
+      const LinearGradient(colors: [accentPrimary, accentPrimary]);
 }

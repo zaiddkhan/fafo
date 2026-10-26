@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:fafu/src/core/config/feature_flags.dart';
 import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/theme/app_chrome.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
@@ -12,6 +13,7 @@ import 'package:fafu/src/features/home/presentation/home_page.dart';
 import 'package:fafu/src/features/profile/presentation/profile_page.dart';
 import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/quests/presentation/quests_page.dart';
+import 'package:fafu/src/features/right_now/presentation/right_now_page.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 
 final mainShellTabProvider =
@@ -62,6 +64,9 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   void _maybeStartFirstLaunchTooltips() {
+    // The tips walk through the map, Quests and Friends tabs, none of which
+    // exist in the single-home V3 build.
+    if (!FeatureFlags.map) return;
     if (_tooltipStarted || _tooltipCompleting) return;
 
     // Only show the tooltip sequence to users who haven't completed it. While
@@ -157,6 +162,10 @@ class _MainShellState extends ConsumerState<MainShell> {
     ref.watch(currentProfileProvider);
     _maybeStartFirstLaunchTooltips();
 
+    // V3 (brief 1.1): no tab bar. Home is the only screen; Profile, Code and
+    // the preview open as sheets. The tabbed shell below is parked with the map.
+    if (!FeatureFlags.map) return const RightNowPage();
+
     return Scaffold(
       extendBody: true,
       body: Stack(
@@ -165,9 +174,13 @@ class _MainShellState extends ConsumerState<MainShell> {
             index: _stackIndex,
             children: [
               const HomePage(),
-              const EventsListPage(events: []),
+              // Events are parked (V3 brief 1.3); keep the slots so tab
+              // indices stay stable, but don't build or fetch anything.
+              FeatureFlags.events
+                  ? const EventsListPage(events: [])
+                  : const SizedBox.shrink(),
               const QuestsPage(),
-              const CreateTab(),
+              FeatureFlags.events ? const CreateTab() : const SizedBox.shrink(),
               const FriendsPage(showBackButton: false),
               const ProfilePage(savedEvents: []),
             ],
@@ -248,6 +261,7 @@ class _BottomNav extends StatelessWidget {
                 isActive: currentIndex == 0,
                 onTap: () => onTap(0),
               ),
+              if (FeatureFlags.events)
               _NavItem(
                 icon: Icons.list_outlined,
                 activeIcon: Icons.list,
@@ -263,6 +277,7 @@ class _BottomNav extends StatelessWidget {
                 isActive: currentIndex == 2,
                 onTap: () => onTap(2),
               ),
+              if (FeatureFlags.events)
               _NavItem(
                 icon: Icons.add_circle_outline,
                 activeIcon: Icons.add_circle,

@@ -12,6 +12,11 @@ from dataclasses import dataclass, field
 
 from firebase_admin import messaging
 
+from app.config import NUDGE_CUSTOM_SOUNDS
+
+# Sound ids bundled in the app as .caf for iOS push (brief 7.4).
+_CUSTOM_NUDGE_SOUNDS = {"n", "exp"}
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,6 +37,13 @@ _INVALID_TOKEN_ERRORS = (
 )
 
 
+def _ios_nudge_sound(sound: str | None) -> str:
+    """iOS plays bundled push sounds by file name (brief 7.4: N, EXP as .caf)."""
+    if NUDGE_CUSTOM_SOUNDS and sound in _CUSTOM_NUDGE_SOUNDS:
+        return f"{sound}.caf"
+    return "default"
+
+
 def build_message(
     token: str,
     *,
@@ -39,10 +51,30 @@ def build_message(
     body: str,
     data: dict | None = None,
     sound: str | None = None,
+    android_data_only: bool = False,
 ) -> messaging.Message:
-    """Build a single-token message with sane iOS + Android defaults."""
+    """Build a single-token message with sane iOS + Android defaults.
+
+    `android_data_only` (V3 live nudge notifications, brief 7.3): Android gets a
+    data-only message and the app draws the notification itself (countdown bar);
+    the copy travels as `n_title`/`n_body`. iOS still gets a normal alert.
+    """
     # FCM data payload values must be strings.
     str_data = {k: str(v) for k, v in (data or {}).items()}
+    if android_data_only:
+        return messaging.Message(
+            token=token,
+            data={**str_data, "n_title": title or "", "n_body": body},
+            android=messaging.AndroidConfig(priority="high"),
+            apns=messaging.APNSConfig(
+                payload=messaging.APNSPayload(
+                    aps=messaging.Aps(
+                        alert=messaging.ApsAlert(title=title, body=body),
+                        sound=_ios_nudge_sound(sound),
+                    ),
+                ),
+            ),
+        )
     return messaging.Message(
         token=token,
         notification=messaging.Notification(title=title, body=body),
@@ -66,6 +98,7 @@ def send_to_tokens(
     body: str,
     data: dict | None = None,
     sound: str | None = None,
+    android_data_only: bool = False,
 ) -> SendResult:
     """Send the same notification to many tokens, classifying per-token outcomes.
 
@@ -79,7 +112,7 @@ def send_to_tokens(
         return result
 
     messages = [
-        build_message(t, title=title, body=body, data=data, sound=sound)
+        build_message(t, title=title, body=body, data=data, sound=sound, android_data_only=android_data_only)
         for t in tokens
     ]
     try:

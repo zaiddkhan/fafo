@@ -17,6 +17,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from app.config import (
+    EVENT_NOTIFICATION_TYPES,
+    EVENTS_ENABLED,
     DISPATCH_BATCH_SIZE,
     DISPATCH_MAX_ATTEMPTS,
     NOTIFICATION_URGENT_TYPES,
@@ -142,6 +144,11 @@ class NotificationService:
             type_ = _type_of(template_id)
             urgent = type_ in NOTIFICATION_URGENT_TYPES
 
+            # Events are parked: event reminders already queued must not fire.
+            if not EVENTS_ENABLED and type_ in EVENT_NOTIFICATION_TYPES:
+                outbox.mark_skipped(db, dedupe_key_, "events_parked")
+                return "skipped"
+
             # Admin broadcasts carry inline copy (override) instead of a catalog template.
             override = data.get("override")
             if override:
@@ -173,7 +180,7 @@ class NotificationService:
                     outbox.mark_skipped(db, dedupe_key_, "rate_limited")
                     return "skipped"
 
-            title = template.get("title") or "Fafo"
+            title = (template.get("title") or "Fafo").format_map(_SafeDict(data.get("variables", {})))
             body = template.get("body", "").format_map(_SafeDict(data.get("variables", {})))
 
             # Mirror into the user's in-app inbox before the push attempt, so the
@@ -203,6 +210,8 @@ class NotificationService:
                 body=body,
                 data={**data.get("data", {}), "template_id": template_id, "type": type_},
                 sound=template.get("sound"),
+                # V3 nudges: the app draws the live countdown bar on Android.
+                android_data_only=type_ == "nudge",
             )
 
             # Prune dead tokens regardless of overall outcome.
