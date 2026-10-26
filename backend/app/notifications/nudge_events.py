@@ -22,13 +22,25 @@ def _iso(value) -> str | None:
     return value.isoformat() if isinstance(value, datetime) else None
 
 
-def _payload(nudge_id: str, data: dict) -> dict:
-    """Push data: enough for the app to open the card and drive a live bar."""
+def _payload(nudge_id: str, data: dict, *, for_receiver: bool = False) -> dict:
+    """Push data: enough for the app to open the card and drive a live bar.
+
+    `target_id`/`title` keep the pre-V3 meaning (the feed to open and its
+    header) from the recipient's side: a receiver's friend feed is keyed on the
+    sender, the sender's on the friend. Groups use the group either way.
+    """
+    is_group = data.get("feed_type") == "group"
+    if is_group or not for_receiver:
+        target_id = data.get("target_id", "")
+        header = data.get("target_name") or data.get("title", "")
+    else:
+        target_id = data.get("sender_uid", "")
+        header = data.get("sender_name") or data.get("title", "")
     payload = {
         "nudge_id": nudge_id,
         "feed_type": data.get("feed_type", "friend"),
-        "target_id": data.get("target_id", ""),
-        "title": data.get("title", ""),
+        "target_id": target_id,
+        "title": header,
     }
     if data.get("feed_type") == "group":
         payload["group_id"] = data.get("target_id", "")
@@ -62,7 +74,7 @@ def received(background_tasks, *, nudge_id: str, data: dict, recipient_uids: lis
             "title": data.get("title", ""),
             "tag": _tag(data),
         },
-        data=_payload(nudge_id, data),
+        data=_payload(nudge_id, data, for_receiver=True),
         dedupe_base=f"nudge.received:{nudge_id}",
     )
 
@@ -100,7 +112,9 @@ def group_final(background_tasks, *, nudge_id: str, data: dict, yes_count: int, 
         template_id="nudge.group_final",
         recipient_uids=[sender],
         variables={"tally": tally, "title": data.get("title", "")},
-        data=_payload(nudge_id, data),
+        # The app keeps a running green countdown beside a "2/5 in" tally, but
+        # lets "No one's in" replace the sender's red bar.
+        data={**_payload(nudge_id, data), "yes_count": yes_count},
         dedupe_base=f"nudge.group_final:{nudge_id}",
     )
 
@@ -113,26 +127,35 @@ def expired(background_tasks, *, nudge_id: str, data: dict) -> None:
         return
     votes = data.get("votes") or {}
     unanswered = [u for u in data.get("participant_uids", []) if u != sender and u not in votes]
-    _send(
-        background_tasks,
-        template_id="nudge.expired",
-        recipient_uids=[sender, *unanswered],
-        variables={"title": data.get("title", "")},
-        data=_payload(nudge_id, data),
-        dedupe_base=f"nudge.expired:{nudge_id}",
-    )
+    for recipients, for_receiver in (([sender], False), (unanswered, True)):
+        if recipients:
+            _send(
+                background_tasks,
+                template_id="nudge.expired",
+                recipient_uids=recipients,
+                variables={"title": data.get("title", "")},
+                data=_payload(nudge_id, data, for_receiver=for_receiver),
+                dedupe_base=f"nudge.expired:{nudge_id}",
+            )
 
 
 def schedule_go_time(*, nudge_id: str, data: dict, recipient_uids: list[str], go_at: datetime) -> None:
     """Queue the go-time push for the moment the countdown ends. Delivered by the
     dispatch cron. Re-calling for a later yes in a group only adds that member
     (dedupe is per recipient)."""
-    _send(
-        None,
-        template_id="nudge.go_time",
-        recipient_uids=recipient_uids,
-        variables={"title": data.get("title", ""), "who": "Your plan starts now."},
-        data=_payload(nudge_id, {**data, "go_at": go_at}),
-        dedupe_base=f"nudge.go_time:{nudge_id}",
-        scheduled_for=go_at,
+    sender = data.get("sender_uid")
+    sides = (
+        ([u for u in recipient_uids if u == sender], False),
+        ([u for u in recipient_uids if u != sender], True),
     )
+    for recipients, for_receiver in sides:
+        if recipients:
+            _send(
+                None,
+                template_id="nudge.go_time",
+                recipient_uids=recipients,
+                variables={"title": data.get("title", ""), "who": "Your plan starts now."},
+                data=_payload(nudge_id, {**data, "go_at": go_at}, for_receiver=for_receiver),
+                dedupe_base=f"nudge.go_time:{nudge_id}",
+                scheduled_for=go_at,
+            )

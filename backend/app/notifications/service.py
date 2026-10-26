@@ -34,6 +34,15 @@ logger = logging.getLogger(__name__)
 _CATALOG_BY_ID = {f'{e["type"]}.{e["subtype"]}': e for e in NOTIFICATION_CATALOG}
 
 
+def _fill(text: str, variables: dict) -> str:
+    """Interpolate {placeholders}; malformed copy (a stray brace) is sent as-is
+    rather than failing the send after the outbox doc was claimed."""
+    try:
+        return text.format_map(_SafeDict(variables))
+    except (ValueError, IndexError, KeyError, AttributeError):
+        return text
+
+
 class _SafeDict(dict):
     """str.format_map helper: leave unknown {placeholders} blank rather than raising."""
 
@@ -180,8 +189,13 @@ class NotificationService:
                     outbox.mark_skipped(db, dedupe_key_, "rate_limited")
                     return "skipped"
 
-            title = (template.get("title") or "Fafo").format_map(_SafeDict(data.get("variables", {})))
-            body = template.get("body", "").format_map(_SafeDict(data.get("variables", {})))
+            # Broadcast overrides are literal admin text; only catalog copy has
+            # {placeholders}.
+            variables = data.get("variables", {})
+            title = template.get("title") or "Fafo"
+            body = template.get("body", "")
+            if not override:
+                title, body = _fill(title, variables), _fill(body, variables)
 
             # Mirror into the user's in-app inbox before the push attempt, so the
             # notification is visible in the app even when the user has no device
@@ -204,15 +218,27 @@ class NotificationService:
                 outbox.mark_skipped(db, dedupe_key_, "no_devices")
                 return "skipped"
 
-            result = fcm.send_to_tokens(
-                tokens,
-                title=title,
-                body=body,
-                data={**data.get("data", {}), "template_id": template_id, "type": type_},
-                sound=template.get("sound"),
-                # V3 nudges: the app draws the live countdown bar on Android.
-                android_data_only=type_ == "nudge",
-            )
+            push_data = {**data.get("data", {}), "template_id": template_id, "type": type_}
+            # V3 nudges go data-only (the app draws the live bar) only to builds
+            # that said they can; older builds get a normal notification.
+            live = set(self._live_nudge_tokens(db, uid)) if type_ == "nudge" else set()
+            groups = [(t, [x for x in tokens if (x in live) == t]) for t in (True, False)]
+            result = fcm.SendResult()
+            for data_only, group in groups:
+                if not group:
+                    continue
+                part = fcm.send_to_tokens(
+                    group,
+                    title=title,
+                    body=body,
+                    data=push_data,
+                    sound=template.get("sound"),
+                    android_data_only=data_only,
+                )
+                result.success_count += part.success_count
+                result.failure_count += part.failure_count
+                result.invalid_tokens.extend(part.invalid_tokens)
+                result.retryable = result.retryable or part.retryable
 
             # Prune dead tokens regardless of overall outcome.
             for bad in result.invalid_tokens:
@@ -254,6 +280,13 @@ class NotificationService:
     def _load_user(self, db, uid: str) -> dict:
         doc = db.collection("users").document(uid).get()
         return doc.to_dict() or {} if doc.exists else {}
+
+    def _live_nudge_tokens(self, db, uid: str) -> list[str]:
+        return [
+            d.to_dict().get("token", d.id)
+            for d in db.collection("users").document(uid).collection("devices").stream()
+            if "live_nudges" in (d.to_dict().get("capabilities") or [])
+        ]
 
     def _device_tokens(self, db, uid: str) -> list[str]:
         return [

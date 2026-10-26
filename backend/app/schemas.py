@@ -819,6 +819,10 @@ class DevicePlatform(str, Enum):
 class DeviceRegisterRequest(BaseModel):
     token: str = Field(min_length=1, max_length=512)
     platform: DevicePlatform
+    # What this build can render. "live_nudges": the app draws nudge pushes
+    # itself (V3 live bars), so Android can get them data-only. Older builds
+    # send nothing and keep getting normal notifications.
+    capabilities: list[str] = Field(default_factory=list, max_length=10)
 
 
 class DeviceRegisterResponse(BaseModel):

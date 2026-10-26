@@ -44,16 +44,18 @@ def record_meaningful_action(db, uid: str, action_type: str, metadata: dict | No
         yesterday = (now.date() - timedelta(days=1)).isoformat()
         new_streak = streak + 1 if last_date == yesterday else 1
 
-    update = {"last_activity_date": today, "updated_at": SERVER_TIMESTAMP}
-    # Streaks are parked (V3 brief 1.6): stored counts are left as they were so
-    # they can return; only the last-activity date keeps moving.
+    # Streaks are parked (V3 brief 1.6): the engine is frozen whole, date and
+    # count together, so turning it back on sees a stale date and starts the
+    # streak again instead of resuming a count that silently broke. The
+    # activity log below keeps recording.
     if STREAKS_ENABLED:
-        update.update({
+        user_ref.update({
+            "last_activity_date": today,
             "current_streak": new_streak,
             "activity_stats.current_streak": new_streak,
             "activity_stats.last_activity_date": today,
+            "updated_at": SERVER_TIMESTAMP,
         })
-    user_ref.update(update)
     db.collection("users").document(uid).collection("activity_log").document().set({
         "action_type": action_type,
         "metadata": metadata or {},

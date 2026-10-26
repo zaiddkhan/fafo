@@ -22,6 +22,10 @@ final myNudgesProvider =
 class MyNudgesNotifier extends AsyncNotifier<List<NudgeResponse>> {
   Timer? _timer;
 
+  /// Bumped by [upsert]. A poll that started before a local change and lands
+  /// after it would put the old card back, so its result is dropped.
+  int _generation = 0;
+
   @override
   Future<List<NudgeResponse>> build() {
     _timer?.cancel();
@@ -31,8 +35,10 @@ class MyNudgesNotifier extends AsyncNotifier<List<NudgeResponse>> {
   }
 
   Future<void> refresh() async {
+    final startedAt = _generation;
     try {
       final next = await ref.read(nudgesRepositoryProvider).listMine();
+      if (startedAt != _generation) return;
       state = AsyncData(next);
     } catch (_) {
       // Keep showing the last good list; the next poll retries.
@@ -42,6 +48,7 @@ class MyNudgesNotifier extends AsyncNotifier<List<NudgeResponse>> {
   /// Swap in a nudge the server just returned (send / answer) so the card
   /// updates without waiting for the next poll.
   void upsert(NudgeResponse nudge) {
+    _generation++;
     final current = state.value ?? const <NudgeResponse>[];
     final others = current.where((n) => n.id != nudge.id);
     state = AsyncData([nudge, ...others]..sort((a, b) => b.createdAt.compareTo(a.createdAt)));

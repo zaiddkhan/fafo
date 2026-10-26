@@ -6,12 +6,13 @@ import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/app_typography.dart';
 import 'package:fafu/src/features/friends/data/friends_repository.dart';
+import 'package:fafu/src/features/friends/domain/friend.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
 /// Landing screen for a `/invite/<code>` link, the link shared from the Code
-/// sheet. Redeems the referral code, which makes both people friends straight
-/// away (V3 brief 3.8).
+/// sheet. Shows whose code it is and asks first: redeeming makes both people
+/// friends straight away (V3 brief 3.8), so a tap on a link alone must not.
 class InviteLandingPage extends ConsumerStatefulWidget {
   const InviteLandingPage({required this.token, super.key});
 
@@ -26,35 +27,66 @@ class InviteLandingPage extends ConsumerStatefulWidget {
 }
 
 class _InviteLandingPageState extends ConsumerState<InviteLandingPage> {
-  String? _friendName;
+  PublicUserResponse? _owner;
   String? _error;
   bool _loading = true;
+  bool _adding = false;
+  bool _added = false;
 
   @override
   void initState() {
     super.initState();
-    _redeem();
+    _preview();
   }
 
-  Future<void> _redeem() async {
+  Future<void> _preview() async {
     try {
-      final result = await ref
-          .read(friendsRepositoryProvider)
-          .redeemReferralCode(widget.token);
-      if (mounted) setState(() => _friendName = result.friend.displayName);
+      final owner = await ref.read(friendsRepositoryProvider).previewReferralCode(widget.token);
+      if (mounted) setState(() => _owner = owner);
     } catch (e) {
-      if (mounted) {
-        setState(() => _error = e is ApiException && e.statusCode == 401
-            ? 'Sign in first, then enter ${widget.token} under Code.'
-            : friendlyErrorMessage(e));
-      }
+      if (mounted) setState(() => _error = _describe(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  Future<void> _add() async {
+    setState(() {
+      _adding = true;
+      _error = null;
+    });
+    try {
+      await ref.read(friendsRepositoryProvider).redeemReferralCode(widget.token);
+      if (mounted) setState(() => _added = true);
+    } catch (e) {
+      if (mounted) setState(() => _error = _describe(e));
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
+  String _describe(Object e) => e is ApiException && e.statusCode == 401
+      ? 'Sign in first, then enter ${widget.token} under Code.'
+      : friendlyErrorMessage(e);
+
   @override
   Widget build(BuildContext context) {
+    final owner = _owner;
+    final name = owner?.displayName.split(' ').first ?? '';
+    final alreadyFriends = owner?.friendshipStatus == FriendshipStatus.friends;
+    final String headline;
+    final String line;
+    if (_added || alreadyFriends) {
+      headline = 'You and $name are in.';
+      line = 'You show up in each other’s invites. Send one clear plan.';
+    } else if (owner != null) {
+      headline = 'Add $name?';
+      line = 'You’ll show up in each other’s invites, and either of you can send a plan.';
+    } else {
+      headline = 'That code didn’t work.';
+      line = _error ?? '';
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
@@ -69,24 +101,39 @@ class _InviteLandingPageState extends ConsumerState<InviteLandingPage> {
               if (_loading)
                 const Center(child: CircularProgressIndicator())
               else ...[
-                FafoDisplay(
-                  _friendName != null ? 'You and $_friendName are in.' : 'That code didn’t work.',
-                  fontSize: 52,
-                ),
+                if (owner != null) ...[
+                  FafoAvatar(name: owner.displayName, size: FafoAvatarSize.lg, photoUrl: owner.photoUrl),
+                  const SizedBox(height: 16),
+                ],
+                FafoDisplay(headline, fontSize: 52),
                 const SizedBox(height: 12),
-                Text(
-                  _friendName != null
-                      ? 'You show up in each other’s invites now. Send one clear plan.'
-                      : _error ?? '',
-                  style: AppTypography.ui(15, fontWeight: FontWeight.w400),
-                ),
+                Text(line, style: AppTypography.ui(15, fontWeight: FontWeight.w400)),
+                if (_error != null && owner != null) ...[
+                  const SizedBox(height: 10),
+                  Text(_error!, style: AppTypography.ui(13.5, color: AppColors.signalRed)),
+                ],
               ],
               const Spacer(),
-              FafoPill(
-                label: 'Continue',
-                block: true,
-                onPressed: () => context.go(MainShell.routePath),
-              ),
+              if (owner != null && !_added && !alreadyFriends) ...[
+                FafoPill(
+                  label: 'Add $name',
+                  block: true,
+                  busy: _adding,
+                  onPressed: _add,
+                ),
+                const SizedBox(height: 10),
+                FafoPill(
+                  label: 'Not now',
+                  primary: false,
+                  block: true,
+                  onPressed: _adding ? null : () => context.go(MainShell.routePath),
+                ),
+              ] else
+                FafoPill(
+                  label: 'Continue',
+                  block: true,
+                  onPressed: () => context.go(MainShell.routePath),
+                ),
             ],
           ),
         ),

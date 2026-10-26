@@ -19,7 +19,13 @@ class PushRepository {
     required String platform,
   }) async {
     try {
-      await _dio.post('/devices', data: {'token': token, 'platform': platform});
+      // live_nudges: this build draws V3 nudge pushes itself (live countdown
+      // bars), so the backend may send them data-only on Android.
+      await _dio.post('/devices', data: {
+        'token': token,
+        'platform': platform,
+        'capabilities': ['live_nudges'],
+      });
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }

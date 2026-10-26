@@ -45,7 +45,8 @@ NOTIFICATION_URGENT_TYPES = {"nudge", "social_pull", "time_pressure", "groups", 
 EVENTS_ENABLED = os.getenv("EVENTS_ENABLED", "0") == "1"
 # Notification types that only exist for events; skipped while events are off.
 EVENT_NOTIFICATION_TYPES = {"map_fomo", "time_pressure", "event_updates"}
-# V3 brief 1.6: the streak engine is parked; stored streaks are kept.
+# V3 brief 1.6: the streak engine is parked; stored streaks are kept. The
+# inactivity sweep also reads last_activity_date, so re-enable both together.
 STREAKS_ENABLED = os.getenv("STREAKS_ENABLED", "0") == "1"
 # V3 brief 7.4: custom nudge sounds (n, exp) bundled in the app. Leave off until
 # the files ship in a build, or iOS falls back to silence-then-default.

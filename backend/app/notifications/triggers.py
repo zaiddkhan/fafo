@@ -156,15 +156,16 @@ def group_invite_received(background_tasks, *, invite_id, group_id, recipient_ui
     )
 
 
-def group_member_added(background_tasks, *, group_id, recipient_uids, group_name, adder_name):
-    """V3: friends are added to a group directly, no accept step."""
+def group_member_added(background_tasks, *, group_id, recipient_uids, group_name, adder_name, added_at):
+    """V3: friends are added to a group directly, no accept step. `added_at`
+    scopes the dedupe, so someone removed and added back is told again."""
     _send(
         background_tasks,
         template_id="groups.member_added",
         recipient_uids=recipient_uids,
         variables={"group_name": group_name, "adder_name": adder_name},
         data={"group_id": group_id},
-        dedupe_base=f"groups.member_added:{group_id}",
+        dedupe_base=f"groups.member_added:{group_id}:{added_at.isoformat()}",
     )
 
 

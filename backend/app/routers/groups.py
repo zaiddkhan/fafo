@@ -218,7 +218,7 @@ def _add_members_direct(db, group_ref, group_id: str, adder_uid: str, member_uid
     batch.commit()
     triggers.group_member_added(
         background_tasks, group_id=group_id, recipient_uids=wanted,
-        group_name=group_name, adder_name=_display_name(db, adder_uid),
+        group_name=group_name, adder_name=_display_name(db, adder_uid), added_at=now,
     )
 
 

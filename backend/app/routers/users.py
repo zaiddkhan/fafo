@@ -262,7 +262,16 @@ def delete_account(body: NegativeActionAnswers, current_user: dict = Depends(get
                 joinee_ref.delete()
                 event_doc.reference.update({"joinee_count": max(0, (event_doc.to_dict() or {}).get("joinee_count", 1) - 1)})
     for nudge_doc in db.collection("nudges").where("participant_uids", "array_contains", uid).stream():
-        nudge_doc.reference.update({"status": "expired", "resolved_at": datetime.now(timezone.utc)})
+        # Close only nudges still running; finished ones keep their real outcome.
+        # final_pushed: the account is gone, so the sweep must not announce an
+        # "Expired" that never happened.
+        if (nudge_doc.to_dict() or {}).get("status") in ("active", "accepted_timer"):
+            nudge_doc.reference.update({
+                "status": "expired",
+                "outcome": "expired",
+                "resolved_at": datetime.now(timezone.utc),
+                "final_pushed": True,
+            })
     db.collection("negative_action_responses").document(str(uuid4())).set({
         "actor_uid": uid,
         "action_type": "delete_account",

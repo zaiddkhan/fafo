@@ -66,9 +66,11 @@ class _CodeSheetState extends ConsumerState<CodeSheet> {
     });
     try {
       final result = await ref.read(friendsRepositoryProvider).redeemReferralCode(code);
+      // The sheet may have been closed while the request was in flight.
+      if (!mounted) return;
+      ref.invalidate(liveFriendsProvider);
       final name = result.friend.displayName;
       _redeem.clear();
-      ref.invalidate(liveFriendsProvider);
       setState(() {
         _messageIsError = false;
         _message = result.alreadyFriends
@@ -76,6 +78,7 @@ class _CodeSheetState extends ConsumerState<CodeSheet> {
             : 'You and $name are friends now.';
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _messageIsError = true;
         _message = friendlyErrorMessage(e);

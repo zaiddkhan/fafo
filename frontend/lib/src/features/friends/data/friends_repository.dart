@@ -200,6 +200,16 @@ class FriendsRepository {
     }
   }
 
+  /// Who a code belongs to, so an invite link can ask before adding them.
+  Future<PublicUserResponse> previewReferralCode(String code) async {
+    try {
+      final response = await _dio.get('/friends/referral/${Uri.encodeComponent(code)}/owner');
+      return PublicUserResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   /// Redeeming a code makes both people friends straight away.
   Future<ReferralRedeemResponse> redeemReferralCode(String code) async {
     try {

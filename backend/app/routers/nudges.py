@@ -85,31 +85,56 @@ def _settle(data: dict, expected: list[str], now: datetime) -> dict:
 
     pending (active)        -> expired at answer_by with no yes
                             -> resolved/no once everyone answered no
-    accepted (accepted_timer) -> resolved/yes at go_at
+    accepted (accepted_timer) -> resolved/yes at go_at; a group stays open to
+                               answers until answer_by (or everyone answered),
+                               so a 5-minute go time never cuts the 10 short
+
+    `resolved_at` is the deadline that passed, not when someone happened to
+    look, so a nudge settled late doesn't reappear as "just finished".
     """
     current = data.get("status")
     if current in (NudgeStatus.resolved.value, NudgeStatus.expired.value):
         return {}
     votes = data.get("votes", {}) or {}
+    answer_by = _answer_by(data)
+    all_answered = bool(expected) and all(uid in votes for uid in expected)
     if current == NudgeStatus.accepted_timer.value:
-        if now >= _go_at(data):
-            return {"status": NudgeStatus.resolved.value, "outcome": "yes", "resolved_at": now}
-        return {}
-    if now >= _answer_by(data):
-        return {"status": NudgeStatus.expired.value, "outcome": "expired", "resolved_at": now}
-    if expected and all(uid in votes for uid in expected):
+        go_at = _go_at(data)
+        if now < go_at:
+            return {}
+        if data.get("feed_type") == NudgeFeedType.group.value and now < answer_by and not all_answered:
+            return {}
+        return {"status": NudgeStatus.resolved.value, "outcome": "yes", "resolved_at": max(go_at, min(answer_by, now))}
+    if now >= answer_by:
+        return {"status": NudgeStatus.expired.value, "outcome": "expired", "resolved_at": answer_by}
+    if all_answered:
         # Nobody said yes (a yes moves the nudge to accepted immediately).
         return {"status": NudgeStatus.resolved.value, "outcome": "no", "resolved_at": now}
     return {}
 
 
-def _expire_or_resolve(ref, data: dict) -> dict:
+def _expire_or_resolve(ref, data: dict, update_time=None) -> dict:
+    """Settle a nudge read outside a transaction (polls, the sweep).
+
+    With `update_time` the write only lands if the doc is unchanged since that
+    read, so it can't overwrite an answer that `respond` just committed; on a
+    conflict it re-reads and settles the fresh state instead.
+    """
     db = get_firestore()
     update = _settle(data, _expected_voters(db, data), _now())
-    if update:
+    if not update:
+        return data
+    if update_time is None:
         ref.update(update)
-        data = {**data, **update}
-    return data
+        return {**data, **update}
+    try:
+        ref.update(update, option=db.write_option(last_update_time=update_time))
+    except FailedPrecondition:
+        fresh = ref.get()
+        if not fresh.exists:
+            return data
+        return _expire_or_resolve(ref, fresh.to_dict())
+    return {**data, **update}
 
 
 def _outcome(data: dict) -> str | None:
@@ -198,7 +223,7 @@ def list_feed(feed_type: NudgeFeedType, target_id: str, limit: int = Query(defau
     docs = db.collection("nudges").where("feed_id", "==", feed_id).limit(MAX_LIMIT).stream()
     responses = []
     for doc in docs:
-        data = _expire_or_resolve(doc.reference, doc.to_dict())
+        data = _expire_or_resolve(doc.reference, doc.to_dict(), getattr(doc, "update_time", None))
         if joined_at is not None:
             created = data.get("created_at")
             if created is not None and _ensure_utc(created) < joined_at:
@@ -215,7 +240,7 @@ def create_nudge(body: NudgeCreateRequest, background_tasks: BackgroundTasks, cu
     feed_id, participants = _require_feed_access(db, uid, body.feed_type, body.target_id)
     existing = db.collection("nudges").where("feed_id", "==", feed_id).limit(MAX_LIMIT).stream()
     for doc in existing:
-        data = _expire_or_resolve(doc.reference, doc.to_dict())
+        data = _expire_or_resolve(doc.reference, doc.to_dict(), getattr(doc, "update_time", None))
         if data.get("status") in (NudgeStatus.active.value, NudgeStatus.accepted_timer.value):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Resolve the active nudge before creating another")
     quest_difficulty = None
@@ -309,7 +334,7 @@ def list_mine(limit: int = Query(default=30, le=MAX_LIMIT), current_user: dict =
 
     responses = []
     for doc in docs:
-        data = _expire_or_resolve(doc.reference, doc.to_dict())
+        data = _expire_or_resolve(doc.reference, doc.to_dict(), getattr(doc, "update_time", None))
         sender_name = data.get("sender_name") or name_of(data["sender_uid"])
         target_name = data.get("target_name")
         if not target_name:
@@ -332,7 +357,7 @@ def get_nudge(nudge_id: str, current_user: dict = Depends(get_current_user)):
     doc = ref.get()
     if not doc.exists or uid not in (doc.to_dict().get("participant_uids") or []):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nudge not found")
-    return _to_response(nudge_id, _expire_or_resolve(ref, doc.to_dict()))
+    return _to_response(nudge_id, _expire_or_resolve(ref, doc.to_dict(), getattr(doc, "update_time", None)))
 
 
 @router.post("/{nudge_id}/respond", response_model=NudgeResponse)
@@ -499,7 +524,7 @@ def sweep_nudges(limit: int = 500) -> dict:
     for doc in db.collection("nudges").where("final_pushed", "==", False).limit(limit).stream():
         summary["checked"] += 1
         before = doc.to_dict()
-        data = _expire_or_resolve(doc.reference, before)
+        data = _expire_or_resolve(doc.reference, before, getattr(doc, "update_time", None))
         if data.get("status") != before.get("status"):
             summary["settled"] += 1
         if data.get("feed_type") == NudgeFeedType.group.value:

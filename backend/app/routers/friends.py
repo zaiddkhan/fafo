@@ -93,15 +93,18 @@ def _friendship_status(viewer_uid: str, target_uid: str) -> FriendshipStatus:
 
 
 def public_user_from_doc(uid: str, data: dict, viewer_uid: str | None = None) -> PublicUserResponse:
+    friendship = _friendship_status(viewer_uid, uid) if viewer_uid else FriendshipStatus.none
+    # "I'm free rn" and quest preferences are for friends only (V3 brief 3.2).
+    is_friend = friendship == FriendshipStatus.friends
     return PublicUserResponse(
         uid=uid,
         display_name=data.get("display_name", ""),
         username=data.get("username", ""),
         photo_url=data.get("photo_url") or None,
         online=_is_online(data),
-        friendship_status=_friendship_status(viewer_uid, uid) if viewer_uid else FriendshipStatus.none,
-        free_now=data.get("free_now", False),
-        side_quest_invites=data.get("side_quest_invites", True),
+        friendship_status=friendship,
+        free_now=is_friend and bool(data.get("free_now", False)),
+        side_quest_invites=bool(data.get("side_quest_invites", True)) if is_friend else True,
     )
 
 
@@ -560,10 +563,55 @@ def _normalize_code(code: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", code.upper())
 
 
+# The prefix comes from the (public) username, so the random part alone has to
+# resist guessing: 32^5 ≈ 33M per prefix, plus the daily attempt cap below.
+_CODE_RANDOM_CHARS = 5
+# Redeem + look-up attempts per user per day. Redeeming makes a friendship with
+# no accept step, so guessing must be impractical.
+REFERRAL_DAILY_ATTEMPTS = 20
+
+
 def _new_code(seed: str) -> str:
     prefix = re.sub(r"[^A-Z]", "", seed.upper())[:4] or "FAFO"
-    suffix = "".join(secrets.choice(_CODE_ALPHABET) for _ in range(3))
+    suffix = "".join(secrets.choice(_CODE_ALPHABET) for _ in range(_CODE_RANDOM_CHARS))
     return f"{prefix}-{suffix}"
+
+
+def _consume_referral_attempt(db, uid: str) -> None:
+    """Count one code redeem/look-up against the user's daily cap (atomic)."""
+    day = _now().date().isoformat()
+    ref = db.collection("users").document(uid).collection("referral_attempts").document(day)
+
+    @firestore.transactional
+    def _txn(transaction):
+        snap = ref.get(transaction=transaction)
+        count = int((snap.to_dict() or {}).get("count", 0)) if snap.exists else 0
+        if count >= REFERRAL_DAILY_ATTEMPTS:
+            return False
+        transaction.set(ref, {"count": count + 1, "updated_at": _now()})
+        return True
+
+    if not _txn(db.transaction()):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many code attempts today. Try again tomorrow.")
+
+
+def _code_owner(db, code: str) -> str:
+    key = _normalize_code(code)
+    doc = db.collection("referral_codes").document(key).get() if key else None
+    if doc is None or not doc.exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="That code doesn't exist")
+    return doc.to_dict()["uid"]
+
+
+@router.get("/referral/{code}/owner", response_model=PublicUserResponse)
+def preview_referral_code(code: str, current_user: dict = Depends(get_current_user)):
+    """Who a code belongs to, so an invite link can ask before adding them."""
+    uid = current_user["uid"]
+    db = get_firestore()
+    _consume_referral_attempt(db, uid)
+    owner_uid = _code_owner(db, code)
+    owner_doc = _get_user_or_404(owner_uid)
+    return public_user_from_doc(owner_uid, owner_doc.to_dict(), uid)
 
 
 @router.get("/referral", response_model=ReferralCodeResponse)
@@ -595,13 +643,8 @@ def get_referral_code(current_user: dict = Depends(get_current_user)):
 def redeem_referral_code(body: ReferralRedeemRequest, current_user: dict = Depends(get_current_user)):
     uid = current_user["uid"]
     db = get_firestore()
-    key = _normalize_code(body.code)
-    if not key:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="That code doesn't exist")
-    code_doc = db.collection("referral_codes").document(key).get()
-    if not code_doc.exists:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="That code doesn't exist")
-    owner_uid = code_doc.to_dict()["uid"]
+    _consume_referral_attempt(db, uid)
+    owner_uid = _code_owner(db, body.code)
     if owner_uid == uid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="That's your own code")
     friendship = _friendship_status(uid, owner_uid)

@@ -179,3 +179,89 @@ def test_queued_event_pushes_are_skipped_while_events_are_parked(db, captured_fc
     )[0]
     assert notifications.dispatch_one(key) == "skipped"
     assert captured_fcm["calls"] == []
+
+
+# --- Review fixes ----------------------------------------------------------------
+
+
+def test_group_stays_open_to_answers_past_go_time():
+    data = _pending(
+        status="accepted_timer",
+        feed_type="group",
+        go_at=T0 + timedelta(minutes=5, seconds=30),
+        votes={"b": "yes"},
+    )
+    at_six = T0 + timedelta(minutes=6)
+    assert _settle(data, ["b", "c", "d"], at_six) == {}
+    assert _settle(data, ["b", "c", "d"], T0 + timedelta(minutes=10))["outcome"] == "yes"
+    everyone = {**data, "votes": {"b": "yes", "c": "no", "d": "no"}}
+    assert _settle(everyone, ["b", "c", "d"], at_six)["outcome"] == "yes"
+
+
+def test_late_settle_stamps_the_real_deadline():
+    hours_later = T0 + timedelta(hours=3)
+    assert _settle(_pending(), ["b"], hours_later)["resolved_at"] == T0 + timedelta(minutes=10)
+    accepted = _pending(status="accepted_timer", go_at=T0 + timedelta(minutes=16))
+    assert _settle(accepted, ["b"], hours_later)["resolved_at"] == T0 + timedelta(minutes=16)
+
+
+def test_referral_attempts_are_capped_per_day(db, monkeypatch):
+    from fastapi import HTTPException
+
+    from app.routers import friends
+
+    monkeypatch.setattr(friends, "get_firestore", lambda: db)
+    for _ in range(friends.REFERRAL_DAILY_ATTEMPTS):
+        friends._consume_referral_attempt(db, "u1")
+    with pytest.raises(HTTPException) as exc:
+        friends._consume_referral_attempt(db, "u1")
+    assert exc.value.status_code == 429
+
+
+def test_free_status_is_only_shown_to_friends(monkeypatch):
+    from app.routers import friends
+    from app.schemas import FriendshipStatus
+
+    data = {"display_name": "Maya", "username": "maya", "free_now": True, "side_quest_invites": False}
+    monkeypatch.setattr(friends, "_friendship_status", lambda viewer, uid: FriendshipStatus.none)
+    stranger_view = friends.public_user_from_doc("maya", data, "stranger")
+    assert stranger_view.free_now is False
+    assert stranger_view.side_quest_invites is True
+    monkeypatch.setattr(friends, "_friendship_status", lambda viewer, uid: FriendshipStatus.friends)
+    friend_view = friends.public_user_from_doc("maya", data, "friend")
+    assert friend_view.free_now is True
+    assert friend_view.side_quest_invites is False
+
+
+def test_nudges_go_data_only_only_to_capable_builds(db, captured_fcm):
+    users = db.collection("users").document("b").collection("devices")
+    users.document("new").set({"token": "new", "platform": "android", "capabilities": ["live_nudges"]})
+    users.document("old").set({"token": "old", "platform": "android"})
+    nudge_events.received(
+        None,
+        nudge_id="n2",
+        data={"feed_type": "friend", "target_id": "b", "sender_uid": "a", "sender_name": "Maya", "title": "Coffee?"},
+        recipient_uids=["b"],
+    )
+    by_token = {c["tokens"][0]: c["android_data_only"] for c in captured_fcm["calls"]}
+    assert by_token == {"new": True, "old": False}
+
+
+def test_receiver_push_points_old_clients_at_the_senders_feed(db, captured_fcm):
+    _device(db, "b")
+    nudge_events.received(
+        None,
+        nudge_id="n3",
+        data={"feed_type": "friend", "target_id": "b", "sender_uid": "a", "sender_name": "Maya", "title": "Coffee?"},
+        recipient_uids=["b"],
+    )
+    payload = captured_fcm["calls"][0]["data"]
+    assert payload["target_id"] == "a"
+    assert payload["title"] == "Maya"
+
+
+def test_malformed_copy_is_sent_as_is():
+    from app.notifications.service import _fill
+
+    assert _fill("Use code {", {}) == "Use code {"
+    assert _fill("{name} said yes", {"name": "Leo"}) == "Leo said yes"

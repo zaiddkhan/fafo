@@ -25,6 +25,7 @@ def register_device(body: DeviceRegisterRequest, current_user: dict = Depends(ge
         {
             "token": body.token,
             "platform": body.platform.value,
+            "capabilities": body.capabilities,
             "last_seen": datetime.now(timezone.utc),
         }
     )

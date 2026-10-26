@@ -56,6 +56,11 @@ class NudgeView {
   /// Whether this nudge belongs in home's live area right now.
   bool isInLiveArea(DateTime now) {
     final s = state(now);
+    // "Go time" shows briefly, then moves to Recent. A group can stay open to
+    // answers past go time, so don't wait for the nudge itself to resolve.
+    if (s == NudgeCardState.goTime && now.difference(nudge.goTime) >= resolvedLinger) {
+      return false;
+    }
     if (nudge.isLive) {
       // A receiver whose window closed unanswered goes straight to Recent.
       if (!isSender && s == NudgeCardState.expired) return false;

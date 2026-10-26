@@ -109,8 +109,12 @@ class LiveNudgeNotifications {
         details = _plain(channel);
     }
 
-    // A group's final tally lands beside the green countdown, not over it.
-    final id = template == 'nudge.group_final' ? idFor('$nudgeId:final') : idFor(nudgeId);
+    // A "2/5 in" tally lands beside the running green countdown. "No one's in"
+    // replaces the sender's red bar, which would otherwise keep counting.
+    final yesCount = int.tryParse(data['yes_count']?.toString() ?? '') ?? 0;
+    final id = template == 'nudge.group_final' && yesCount > 0
+        ? idFor('$nudgeId:final')
+        : idFor(nudgeId);
     await _plugin.show(
       id,
       title,
