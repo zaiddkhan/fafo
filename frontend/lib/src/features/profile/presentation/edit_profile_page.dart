@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:fafu/src/core/config/feature_flags.dart';
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/core/theme/app_typography.dart';
 import 'package:fafu/src/features/users/data/users_providers.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
-import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
 
 /// Edit Profile — lets the user change their core profile fields (PRD: "all
@@ -47,7 +49,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _username = TextEditingController(text: widget.profile.username);
     _area = widget.profile.area;
     _usernameAvailable = true; // current username is valid by definition
-    if (_area != null) _resolveAreaLabel();
+    // Area is parked with the map (V3 brief 1.2): no geocoding call.
+    if (FeatureFlags.map && _area != null) _resolveAreaLabel();
   }
 
   @override
@@ -186,160 +189,113 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final currentPhoto = widget.profile.photoUrl;
+    final fieldStyle = AppTypography.ui(17, fontWeight: FontWeight.w700);
+    const fieldDecoration = InputDecoration(
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(vertical: 12),
+    );
+    final helper = _usernameHelper();
+    final hasPhoto = _pickedBytes != null || currentPhoto != null;
 
-    return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
+    return FafoFormPage(
+      eyebrow: 'Profile',
+      title: 'Edit profile',
+      footer: FafoPill(
+        label: _saving ? 'Saving…' : 'Save changes',
+        block: true,
+        busy: _saving,
+        onPressed: _canSave ? _save : null,
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        children: [
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: _pickPhoto,
-                  child: SizedBox(
-                    width: 104,
-                    height: 104,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 46,
-                          backgroundColor: AppColors.bgSecondary,
-                          backgroundImage: _pickedBytes != null
-                              ? MemoryImage(_pickedBytes!)
-                              : (currentPhoto != null
-                                    ? NetworkImage(currentPhoto)
-                                          as ImageProvider
-                                    : null),
-                          child: (_pickedBytes == null && currentPhoto == null)
-                              ? const Icon(Icons.person, size: 42)
-                              : null,
-                        ),
-                        Positioned(
-                          right: 6,
-                          bottom: 6,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentPrimary,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.bgPrimary,
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              size: 16,
-                              color: Colors.white,
-                            ),
+      children: [
+        Row(
+          children: [
+            Semantics(
+              button: true,
+              label: 'Change photo',
+              child: GestureDetector(
+                onTap: _pickPhoto,
+                child: hasPhoto
+                    ? Container(
+                        width: 84,
+                        height: 84,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.ink, width: 2.5),
+                          image: DecorationImage(
+                            image: _pickedBytes != null
+                                ? MemoryImage(_pickedBytes!)
+                                : NetworkImage(currentPhoto!) as ImageProvider,
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _pickPhoto,
-                  child: const Text('Change photo'),
-                ),
-              ],
+                      )
+                    : FafoAvatar(name: _displayName.text, size: FafoAvatarSize.lg),
+              ),
             ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: FafoInlineLink(
+                label: hasPhoto ? 'Change photo' : 'Add a photo',
+                onTap: _pickPhoto,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 26),
+        const FafoFieldLabel('Name'),
+        TextField(
+          controller: _displayName,
+          style: fieldStyle,
+          textCapitalization: TextCapitalization.words,
+          decoration: fieldDecoration,
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 22),
+        const FafoFieldLabel('Username'),
+        TextField(
+          controller: _username,
+          style: fieldStyle,
+          autocorrect: false,
+          decoration: fieldDecoration.copyWith(
+            prefixIcon: Text('@', style: fieldStyle),
+            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
           ),
+          onChanged: _onUsernameChanged,
+        ),
+        if (helper != null) ...[
           const SizedBox(height: 8),
-          TextField(
-            controller: _displayName,
-            decoration: const InputDecoration(labelText: 'Display name'),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _username,
-            decoration: InputDecoration(
-              labelText: 'Username',
-              prefixText: '@',
-              helperText: _usernameHelper(),
-              helperStyle: TextStyle(
-                color: _usernameAvailable == false
-                    ? const Color(0xFFE5484D)
-                    : AppColors.textSecondary,
-              ),
-              suffixIcon: _checkingUsername
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : (_usernameAvailable == true
-                        ? const Icon(
-                            Icons.check_circle,
-                            color: Color(0xFF38A849),
-                          )
-                        : null),
-            ),
-            onChanged: _onUsernameChanged,
-          ),
-          const SizedBox(height: 16),
           Text(
-            'Area',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: AppColors.textSecondary,
+            helper,
+            style: AppTypography.ui(
+              13,
+              fontWeight: FontWeight.w500,
+              color: _usernameAvailable == false
+                  ? AppColors.signalRed
+                  : _usernameAvailable == true
+                  ? AppColors.textPrimary
+                  : AppColors.textSecondary,
             ),
-          ),
-          const SizedBox(height: 6),
-          InkWell(
-            onTap: _changeArea,
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.border),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.place_outlined, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _area == null
-                          ? 'Set your area'
-                          : (_areaLabel ?? 'Locating…'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, size: 20),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 28),
-          AppButton(
-            label: _saving ? 'Saving…' : 'Save changes',
-            onPressed: _canSave ? _save : null,
           ),
         ],
-      ),
+        // Parked with the map (V3 brief 1.2).
+        if (FeatureFlags.map) ...[
+          const SizedBox(height: 22),
+          const FafoFieldLabel('Area'),
+          FafoListRow(
+            title: _area == null ? 'Set your area' : (_areaLabel ?? 'Locating…'),
+            onTap: _changeArea,
+          ),
+        ],
+      ],
     );
   }
 
   String? _usernameHelper() {
     if (_username.text.trim() == widget.profile.username) return null;
-    if (_checkingUsername) return 'Checking availability…';
-    if (_usernameAvailable == true) return 'Username available';
-    if (_usernameAvailable == false) return 'Username already taken';
+    if (_checkingUsername) return 'Checking…';
+    if (_usernameAvailable == true) return 'That one’s yours.';
+    if (_usernameAvailable == false) return 'Taken. Try another.';
     return 'At least 3 characters';
   }
 }

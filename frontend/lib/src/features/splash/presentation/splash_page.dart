@@ -1,13 +1,13 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/core/theme/app_typography.dart';
 import 'package:fafu/src/core/utils/legal_links.dart';
 import 'package:fafu/src/shared/widgets/fafo_wordmark.dart';
 import 'package:fafu/src/features/auth/presentation/login_page.dart';
 import 'package:fafu/src/features/auth/presentation/signup_page.dart';
-import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -34,101 +34,70 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final legal = AppTypography.ui(12.5, fontWeight: FontWeight.w400, color: AppColors.textSecondary);
+    final link = legal.copyWith(
+      fontWeight: FontWeight.w700,
+      color: AppColors.textPrimary,
+      decoration: TextDecoration.underline,
+      decorationColor: AppColors.textPrimary,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: AppSpacing.xl),
-              // Brand
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [AppColors.accentPrimary, AppColors.accentWarm],
-                ).createShader(bounds),
-                child: FafoWordmark(
-                  style: theme.textTheme.displayMedium!.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+              // Header, as on home: wordmark and a 2px rule.
+              Container(
+                padding: const EdgeInsets.only(top: 22, bottom: 14),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AppColors.rule, width: 2)),
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FafoWordmark(style: AppTypography.display(28).copyWith(height: 1)),
                 ),
               ),
-
               const Spacer(flex: 3),
-
-              // Hero
-              ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: [AppColors.textPrimary, AppColors.accentLight1],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ).createShader(bounds),
-                child: Text(
-                  'Discover\nwhat\'s happening\naround you',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.displayLarge?.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
+              const FafoEyebrow('Right now'),
+              const SizedBox(height: 12),
+              const FafoDisplay('Skip the group chat.', fontSize: 62),
+              const SizedBox(height: 12),
+              Text(
+                'Send one clear plan. Get one clear answer.',
+                style: AppTypography.ui(15, fontWeight: FontWeight.w400),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 280),
-                child: Text(
-                  'Events, late-night plans, and curated picks, all built around your vibe.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ),
-
               const Spacer(flex: 4),
-
-              // CTAs
-              AppButton(
-                label: 'Get Started',
-                variant: AppButtonVariant.featured,
+              FafoPill(
+                label: 'Get started',
+                block: true,
                 onPressed: () => context.push(SignupPage.routePath),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              AppButton(
+              const SizedBox(height: 10),
+              FafoPill(
                 label: 'I already have an account',
-                variant: AppButtonVariant.secondary,
+                primary: false,
+                block: true,
                 onPressed: () => context.push(LoginPage.routePath),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: 18),
               Text.rich(
                 TextSpan(
                   text: 'By continuing, you agree to our ',
-                  style: theme.textTheme.labelSmall,
+                  style: legal,
                   children: [
-                    TextSpan(
-                      text: 'Terms',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.accentPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                      recognizer: _termsRecognizer,
-                    ),
+                    TextSpan(text: 'Terms', style: link, recognizer: _termsRecognizer),
                     const TextSpan(text: ' and '),
-                    TextSpan(
-                      text: 'Privacy Policy',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.accentPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                      recognizer: _privacyRecognizer,
-                    ),
+                    TextSpan(text: 'Privacy Policy', style: link, recognizer: _privacyRecognizer),
                     const TextSpan(text: '.'),
                   ],
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: 14),
             ],
           ),
         ),

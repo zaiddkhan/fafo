@@ -14,9 +14,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/app_theme.dart';
+import 'package:fafu/src/features/auth/presentation/login_page.dart';
+import 'package:fafu/src/features/auth/presentation/otp_page.dart';
+import 'package:fafu/src/features/auth/presentation/signup_page.dart';
+import 'package:fafu/src/features/friends/presentation/invite_landing_page.dart';
+import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
+import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
+import 'package:fafu/src/features/settings/presentation/settings_page.dart';
+import 'package:fafu/src/features/splash/presentation/splash_page.dart';
 import 'package:fafu/src/features/friends/data/friends_providers.dart';
 import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
@@ -220,6 +229,15 @@ class _FakeLiveFriends extends LiveFriendsNotifier {
 class _FakeFriendsRepo extends FriendsRepository {
   _FakeFriendsRepo() : super(Dio());
   @override
+  Future<PublicUserResponse> previewReferralCode(String code) async =>
+      const PublicUserResponse(
+        uid: 'maya',
+        displayName: 'Maya Rao',
+        username: 'maya',
+        online: false,
+        friendshipStatus: FriendshipStatus.none,
+      );
+  @override
   Future<ReferralCode> getReferralCode() async =>
       const ReferralCode(code: 'LILO-7K2QX', shareUrl: 'https://getfafo.app/invite/LILO7K2QX');
 }
@@ -278,7 +296,10 @@ Future<void> _shoot(
 }
 
 void main() {
-  setUpAll(_loadFonts);
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    await _loadFonts();
+  });
 
   final scenes = <String, ({Widget screen, List<Override> overrides, double height})>{
     // Home
@@ -347,6 +368,19 @@ void main() {
     '24_group_edit': (screen: _asSheet(GroupSheet(group: _flatmates)), overrides: _overrides(), height: 1100),
     '25_code': (screen: _asSheet(const CodeSheet()), overrides: _overrides(), height: 950),
     '26_preview': (screen: _asSheet(const PreviewSheet()), overrides: _overrides(), height: 1650),
+    // Screens the prototype doesn't show, restyled in its language.
+    '30_landing': (screen: const SplashPage(), overrides: _overrides(), height: 844),
+    '31_login': (screen: const LoginPage(), overrides: _overrides(), height: 844),
+    '32_signup': (screen: const SignupPage(), overrides: _overrides(), height: 844),
+    '33_otp': (
+      screen: const OtpPage(phoneNumber: '+919876543210', verificationId: 'v1'),
+      overrides: _overrides(),
+      height: 844,
+    ),
+    '34_onboarding': (screen: const ProfileSetupPage(), overrides: _overrides(), height: 1000),
+    '35_settings': (screen: const SettingsPage(), overrides: _overrides(), height: 1100),
+    '36_edit_profile': (screen: EditProfilePage(profile: _profile()), overrides: _overrides(), height: 844),
+    '37_invite_link': (screen: const InviteLandingPage(token: 'MAYA7K2QX'), overrides: _overrides(), height: 844),
   };
 
   for (final entry in scenes.entries) {
@@ -357,7 +391,7 @@ void main() {
   }
 
   // Dark theme
-  for (final name in ['02_home_free_recent', '04_receiver_answering', '07_sender_said_yes', '20_composer', '22_profile']) {
+  for (final name in ['02_home_free_recent', '04_receiver_answering', '07_sender_said_yes', '20_composer', '22_profile', '30_landing', '33_otp', '35_settings']) {
     testWidgets('dark_$name', (tester) async {
       final s = scenes[name]!;
       await _shoot(tester, 'dark_$name', s.screen, overrides: s.overrides, height: s.height, brightness: Brightness.dark);
@@ -365,7 +399,7 @@ void main() {
   }
 
   // Small phone (320pt wide, e.g. iPhone SE 1st gen)
-  for (final name in ['02_home_free_recent', '04_receiver_answering', '11_group_sender_tally', '20_composer', '22_profile']) {
+  for (final name in ['02_home_free_recent', '04_receiver_answering', '11_group_sender_tally', '20_composer', '22_profile', '30_landing', '33_otp', '34_onboarding']) {
     testWidgets('small_$name', (tester) async {
       final s = scenes[name]!;
       await _shoot(tester, 'small_$name', s.screen, overrides: s.overrides, height: s.height, width: 320);

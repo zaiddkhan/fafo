@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/core/theme/app_typography.dart';
 import 'package:fafu/src/features/auth/data/auth_repository.dart';
 import 'package:fafu/src/features/auth/presentation/otp_page.dart';
 import 'package:fafu/src/features/auth/presentation/signup_page.dart';
-import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -60,107 +60,64 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final viewInsets = MediaQuery.of(context).viewInsets;
-
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg + viewInsets.bottom,
+    return FafoFormPage(
+      eyebrow: 'Log in',
+      title: 'Welcome back.',
+      subtitle: 'Enter your phone number to log in.',
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FafoPill(
+            label: _sendingOtp ? 'Sending code…' : 'Continue',
+            block: true,
+            busy: _sendingOtp,
+            onPressed: _canContinue && !_sendingOtp ? _sendOtp : null,
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "Don't have an account? ",
+                style: AppTypography.ui(14, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
               ),
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: AppSpacing.xl),
-                      GestureDetector(
-                        onTap: () => context.pop(),
-                        child: Icon(
-                          Icons.arrow_back,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Text(
-                        'Welcome\nback',
-                        style: theme.textTheme.displayLarge,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Enter your phone number to log in.',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      TextField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        style: theme.textTheme.bodyLarge,
-                        onChanged: (_) => setState(() => _error = null),
-                        decoration: const InputDecoration(
-                          labelText: 'Phone number',
-                          prefixText: '+91  ',
-                        ),
-                      ),
-                      if (_error != null) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          _error!,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: Colors.red,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.lg),
-                      AppButton(
-                        label: _sendingOtp ? 'Sending OTP...' : 'Continue',
-                        variant: AppButtonVariant.featured,
-                        onPressed: _canContinue && !_sendingOtp
-                            ? _sendOtp
-                            : null,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Center(
-                        child: GestureDetector(
-                          onTap: () =>
-                              context.pushReplacement(SignupPage.routePath),
-                          child: Text.rich(
-                            TextSpan(
-                              text: "Don't have an account? ",
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: 'Sign up',
-                                  style: theme.textTheme.bodyLarge?.copyWith(
-                                    color: AppColors.accentLight1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                  ),
-                ),
+              FafoInlineLink(
+                label: 'Sign up',
+                onTap: () => context.pushReplacement(SignupPage.routePath),
               ),
-            );
-          },
-        ),
+            ],
+          ),
+        ],
       ),
+      children: [
+        const FafoFieldLabel('Phone number'),
+        TextField(
+          controller: _phoneController,
+          keyboardType: TextInputType.phone,
+          autofocus: true,
+          style: AppTypography.ui(17, fontWeight: FontWeight.w700),
+          onChanged: (_) => setState(() => _error = null),
+          onSubmitted: (_) => _sendOtp(),
+          decoration: InputDecoration(
+            hintText: '98765 43210',
+            // Always visible, unlike prefixText (which hides until focus).
+            prefixIcon: Text('+91  ', style: AppTypography.ui(17, fontWeight: FontWeight.w700)),
+            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'We’ll text you a 6-digit code.',
+          style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 10),
+          Text(_error!, style: AppTypography.ui(13.5, color: AppColors.signalRed)),
+        ],
+      ],
     );
   }
 }

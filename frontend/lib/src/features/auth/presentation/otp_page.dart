@@ -7,18 +7,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:fafu/src/core/constants/app_spacing.dart';
 import 'package:fafu/src/core/network/auth_token_provider.dart';
 import 'package:fafu/src/core/network/session_expired_provider.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/theme/app_chrome.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/core/theme/app_typography.dart';
 import 'package:fafu/src/features/auth/data/auth_repository.dart';
 import 'package:fafu/src/features/auth/data/session_reset.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
-import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
 class OtpPage extends ConsumerStatefulWidget {
   const OtpPage({
@@ -260,154 +260,96 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final otpBoxWidth =
-        ((MediaQuery.sizeOf(context).width -
-                    (AppSpacing.lg * 2) -
-                    (AppSpacing.sm * (_otpLength - 1))) /
-                _otpLength)
-            .clamp(38.0, 50.0);
+        ((MediaQuery.sizeOf(context).width - 40 - (8 * (_otpLength - 1))) / _otpLength)
+            .clamp(38.0, 52.0);
+    final resendLabel = _waitingForCode
+        ? 'Sending code…'
+        : _resendSeconds > 0
+        ? 'Resend code in 0:${_resendSeconds.toString().padLeft(2, '0')}'
+        : 'Resend code';
 
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: AppSpacing.xl),
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Icon(Icons.arrow_back, color: AppColors.textPrimary),
+    return FafoFormPage(
+      eyebrow: 'Verify',
+      title: 'Check your texts.',
+      subtitle: _waitingForCode
+          ? 'Sending a 6-digit code to ${widget.phoneNumber}…'
+          : 'We sent a 6-digit code to ${widget.phoneNumber}.',
+      footer: FafoPill(
+        label: _waitingForCode
+            ? 'Waiting for the code…'
+            : _verifying
+            ? 'Verifying…'
+            : 'Verify',
+        block: true,
+        busy: _verifying,
+        onPressed: _isComplete && !_verifying && !_waitingForCode ? _verify : null,
+      ),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(_otpLength, (i) {
+            final filled = _controllers[i].text.isNotEmpty;
+            return SizedBox(
+              width: otpBoxWidth,
+              child: KeyboardListener(
+                focusNode: FocusNode(skipTraversal: true),
+                onKeyEvent: (event) => _onKeyDown(i, event),
+                // Digit boxes are choice chips: a filled digit reads as selected.
+                child: ListenableBuilder(
+                  listenable: _focusNodes[i],
+                  builder: (context, child) => Container(
+                    height: 58,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: filled ? AppColors.accentPrimary : AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppChrome.chipRadius),
+                      border: filled || _focusNodes[i].hasFocus
+                          ? Border.all(
+                              color: filled ? AppColors.ink : AppColors.border,
+                              width: AppChrome.outlineWidth,
+                            )
+                          : AppChrome.softBorder,
+                      boxShadow: filled ? AppChrome.cardShadowSoft : null,
+                    ),
+                    child: child,
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    'Verify your\nnumber',
-                    style: theme.textTheme.displayLarge,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    _waitingForCode
-                        ? 'Sending a 6-digit code to ${widget.phoneNumber}...'
-                        : 'We sent a 6-digit code to ${widget.phoneNumber}.',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
+                  child: TextField(
+                    controller: _controllers[i],
+                    focusNode: _focusNodes[i],
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    maxLength: 1,
+                    cursorColor: AppColors.textPrimary,
+                    style: AppTypography.timer(24, color: filled ? AppColors.onAccent : AppColors.textPrimary),
+                    onChanged: (v) => _onChanged(i, v),
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      counterText: '',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      isCollapsed: true,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(_otpLength, (i) {
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          right: i == _otpLength - 1 ? 0 : AppSpacing.sm,
-                        ),
-                        child: SizedBox(
-                          width: otpBoxWidth,
-                          child: KeyboardListener(
-                            focusNode: FocusNode(skipTraversal: true),
-                            onKeyEvent: (event) => _onKeyDown(i, event),
-                            child: TextField(
-                              controller: _controllers[i],
-                              focusNode: _focusNodes[i],
-                              textAlign: TextAlign.center,
-                              keyboardType: TextInputType.number,
-                              maxLength: 1,
-                              style: theme.textTheme.displayMedium?.copyWith(
-                                fontSize: 22,
-                              ),
-                              onChanged: (v) => _onChanged(i, v),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              decoration: InputDecoration(
-                                counterText: '',
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: AppSpacing.md,
-                                ),
-                                filled: true,
-                                fillColor: _controllers[i].text.isNotEmpty
-                                    ? AppColors.bgTertiary
-                                    : AppColors.surface,
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    AppChrome.controlRadius,
-                                  ),
-                                  borderSide: AppChrome.outlineSide.copyWith(
-                                    color: _controllers[i].text.isNotEmpty
-                                        ? AppColors.accentPrimary
-                                        : AppColors.border,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    AppChrome.controlRadius,
-                                  ),
-                                  borderSide: AppChrome.outlineSide,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Center(
-                    child: GestureDetector(
-                      onTap: _resendSeconds == 0 && !_waitingForCode
-                          ? _resendOtp
-                          : null,
-                      child: Text(
-                        _waitingForCode
-                            ? 'Sending code...'
-                            : _resendSeconds > 0
-                            ? 'Resend code in 0:${_resendSeconds.toString().padLeft(2, '0')}'
-                            : 'Resend code',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: _waitingForCode
-                              ? AppColors.textTertiary
-                              : _resendSeconds > 0
-                              ? AppColors.textSecondary
-                              : AppColors.accentLight1,
-                          fontWeight: _resendSeconds > 0 && !_waitingForCode
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      _error!,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: Colors.red,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: AppSpacing.xl),
-                  AppButton(
-                    label: _waitingForCode
-                        ? 'Waiting for OTP...'
-                        : _verifying
-                        ? 'Verifying...'
-                        : 'Verify',
-                    variant: AppButtonVariant.featured,
-                    onPressed: _isComplete && !_verifying && !_waitingForCode
-                        ? _verify
-                        : null,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                ],
+                ),
               ),
-            ),
+            );
+          }),
+        ),
+        const SizedBox(height: 18),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FafoInlineLink(
+            label: resendLabel,
+            onTap: _resendSeconds == 0 && !_waitingForCode ? _resendOtp : null,
           ),
         ),
-      ),
+        if (_error != null) ...[
+          const SizedBox(height: 10),
+          Text(_error!, style: AppTypography.ui(13.5, color: AppColors.signalRed)),
+        ],
+      ],
     );
   }
 }

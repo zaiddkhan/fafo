@@ -950,3 +950,141 @@ class FafoCheckRow extends StatelessWidget {
     );
   }
 }
+
+/// Round back button, matching the sheets' round ×.
+class FafoBackButton extends StatelessWidget {
+  const FafoBackButton({super.key, this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Back',
+      child: GestureDetector(
+        onTap: onTap ?? () => Navigator.of(context).maybePop(),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.surface,
+            border: Border.all(color: AppColors.hairline),
+          ),
+          child: Icon(Icons.arrow_back, size: 16, color: AppColors.textPrimary),
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-screen page in the V3 language for the screens the prototype doesn't
+/// show (auth, onboarding, settings): round back button, mono eyebrow, display
+/// title, a line of copy, content, and the primary action pinned at the bottom.
+class FafoFormPage extends StatelessWidget {
+  const FafoFormPage({
+    super.key,
+    required this.eyebrow,
+    required this.title,
+    this.subtitle,
+    this.children = const [],
+    this.footer,
+    this.showBack = true,
+    this.onBack,
+    this.titleSize = 52,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String? subtitle;
+  final List<Widget> children;
+
+  /// Pinned under the scrolling content, above the keyboard.
+  final Widget? footer;
+  final bool showBack;
+  final VoidCallback? onBack;
+  final double titleSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ListView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                children: [
+                  if (showBack)
+                    Align(alignment: Alignment.centerLeft, child: FafoBackButton(onTap: onBack))
+                  else
+                    const SizedBox(height: 36),
+                  const SizedBox(height: 28),
+                  FafoEyebrow(eyebrow),
+                  const SizedBox(height: 10),
+                  FafoDisplay(title, fontSize: titleSize),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 12),
+                    Text(subtitle!, style: AppTypography.ui(15, fontWeight: FontWeight.w400)),
+                  ],
+                  const SizedBox(height: 28),
+                  ...children,
+                ],
+              ),
+            ),
+            if (footer != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+                child: footer,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Label above a field, as in the composer ("Invite", "Countdown after yes").
+class FafoFieldLabel extends StatelessWidget {
+  const FafoFieldLabel(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 2),
+    child: FafoEyebrow(text, fontSize: 10.5),
+  );
+}
+
+/// Underlined inline text action ("Log in", "Resend code").
+class FafoInlineLink extends StatelessWidget {
+  const FafoInlineLink({super.key, required this.label, this.onTap, this.color});
+
+  final String label;
+  final VoidCallback? onTap;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = onTap == null ? AppColors.textSecondary : (color ?? AppColors.textPrimary);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          label,
+          style: AppTypography.ui(14, fontWeight: FontWeight.w700, color: c).copyWith(
+            decoration: onTap == null ? null : TextDecoration.underline,
+            decorationColor: c,
+            decorationThickness: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+}

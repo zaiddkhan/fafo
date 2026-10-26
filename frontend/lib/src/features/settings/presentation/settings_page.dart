@@ -14,6 +14,7 @@ import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/network/auth_token_provider.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/core/theme/app_typography.dart';
 import 'package:fafu/src/core/theme/theme_mode_controller.dart';
 import 'package:fafu/src/core/utils/legal_links.dart';
 import 'package:fafu/src/features/creators/data/creators_providers.dart';
@@ -23,7 +24,7 @@ import 'package:fafu/src/features/location/selected_area_controller.dart';
 import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
-import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -243,39 +244,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ? 'Auto (GPS)'
         : selectedArea.label.split(',').first;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Icon(Icons.arrow_back, color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Text('Settings', style: theme.textTheme.displayMedium),
-                ],
-              ),
-            ),
-            Divider(color: AppColors.border, height: 1),
-
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+    return FafoFormPage(
+      eyebrow: 'Profile',
+      title: 'Settings',
+      onBack: () => context.pop(),
                 children: [
                   // Parked (V3 brief 2.4): the app follows the system theme.
                   if (FeatureFlags.inAppThemeSwitch) ...[
-                    Text(
-                      'Appearance',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const _SectionLabel('Appearance'),
                     _SettingsToggle(
                       icon: isDarkMode
                           ? Icons.dark_mode_outlined
@@ -290,16 +266,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ],
 
                   // Account section
-                  Text(
-                    'Account',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const _SectionLabel('Account'),
                   _SettingsTile(
                     icon: Icons.person_outline,
-                    title: 'Edit Profile',
+                    title: 'Edit profile',
                     onTap: () {
                       final profile = ref.read(currentProfileProvider).value;
                       if (profile == null) {
@@ -361,16 +331,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   const SizedBox(height: AppSpacing.xl),
 
                   // Notifications section
-                  Text(
-                    'Notifications',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const _SectionLabel('Notifications'),
                   _SettingsToggle(
                     icon: Icons.notifications_outlined,
-                    title: 'Push Notifications',
+                    title: 'Push notifications',
                     value: _pushNotifications,
                     loading: _pushBusy,
                     onChanged: _setPushNotifications,
@@ -378,36 +342,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   const SizedBox(height: AppSpacing.xl),
 
                   // Privacy section
-                  Text(
-                    'Privacy',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const _SectionLabel('Privacy'),
                   _SettingsTile(
                     icon: Icons.shield_outlined,
-                    title: 'Privacy Policy',
+                    title: 'Privacy policy',
                     onTap: () => openExternalUrl(context, privacyUrl),
                   ),
                   _SettingsTile(
                     icon: Icons.description_outlined,
-                    title: 'Terms of Service',
+                    title: 'Terms of service',
                     onTap: () => openExternalUrl(context, termsUrl),
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
                   // About section
-                  Text(
-                    'About',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const _SectionLabel('About'),
                   _SettingsTile(
                     icon: Icons.info_outline,
-                    title: 'App Version',
+                    title: 'App version',
                     trailing: Text('1.0.0', style: theme.textTheme.labelMedium),
                     onTap: () {},
                   ),
@@ -419,32 +371,50 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(height: AppSpacing.xxl),
 
-                  AppButton(
-                    label: _busy ? 'Deleting…' : 'Delete Account',
-                    variant: AppButtonVariant.secondary,
-                    onPressed: _busy ? null : _deleteAccount,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Logout
-                  AppButton(
-                    label: 'Log Out',
-                    variant: AppButtonVariant.secondary,
+                  FafoPill(
+                    label: 'Log out',
+                    primary: false,
+                    block: true,
                     onPressed: () async {
                       await _signOutLocally();
                       if (context.mounted) context.go('/');
                     },
                   ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FafoInlineLink(
+                      label: _busy ? 'Deleting…' : 'Delete account',
+                      color: AppColors.signalRed,
+                      onTap: _busy ? null : _deleteAccount,
+                    ),
+                  ),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
 
+/// Mono section label with a 2px rule above, as between profile sections.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(top: 18, bottom: 4),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.rule, width: 2)),
+      ),
+      child: FafoEyebrow(text, color: AppColors.textSecondary),
+    );
+  }
+}
+
+/// A list row in the V3 style: title, optional value, arrow, hairline.
+/// [icon] is kept for the parked layout but not drawn (the prototype's rows
+/// carry no icons).
 class _SettingsTile extends StatelessWidget {
   const _SettingsTile({
     required this.icon,
@@ -460,24 +430,20 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 2),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.hairline)),
+        ),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.textSecondary, size: 22),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(child: Text(title, style: theme.textTheme.bodyLarge)),
-            trailing ??
-                Icon(
-                  Icons.chevron_right,
-                  color: AppColors.textTertiary,
-                  size: 20,
-                ),
+            Expanded(
+              child: Text(title, style: AppTypography.ui(15, fontWeight: FontWeight.w600)),
+            ),
+            trailing ?? Icon(Icons.arrow_forward, color: AppColors.textPrimary, size: 16),
           ],
         ),
       ),
@@ -485,6 +451,7 @@ class _SettingsTile extends StatelessWidget {
   }
 }
 
+/// On/off setting as the Quick defaults checkbox row.
 class _SettingsToggle extends StatelessWidget {
   const _SettingsToggle({
     required this.icon,
@@ -502,33 +469,11 @@ class _SettingsToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.textSecondary, size: 22),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(child: Text(title, style: theme.textTheme.bodyLarge)),
-          if (loading) ...[
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: AppSpacing.md),
-          ],
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: Colors.white,
-            activeTrackColor: AppColors.accentPrimary,
-            inactiveThumbColor: AppColors.lightBgSecondary,
-            inactiveTrackColor: AppColors.ink,
-          ),
-        ],
-      ),
+    return FafoCheckRow(
+      title: title,
+      subtitle: loading ? 'Updating…' : null,
+      checked: value,
+      onTap: loading || onChanged == null ? null : () => onChanged!(!value),
     );
   }
 }

@@ -15,11 +15,12 @@ import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/core/theme/app_typography.dart';
 import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
-import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
 class ProfileSetupPage extends ConsumerStatefulWidget {
   const ProfileSetupPage({super.key});
@@ -305,163 +306,151 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final viewInsets = MediaQuery.viewInsetsOf(context);
     final username = _usernameController.text.trim();
     final usernameHelper =
         !_isUsernameShapeValid(username) && username.isNotEmpty
         ? 'Use 3-30 lowercase letters, numbers, dots, or underscores.'
         : _checkingUsername
-        ? 'Checking availability...'
+        ? 'Checking…'
         : _usernameAvailable == true
-        ? 'Username is available.'
+        ? 'That one’s yours.'
         : _usernameAvailable == false
-        ? 'Username is already taken.'
-        : 'Choose a unique username.';
+        ? 'Taken. Try another.'
+        : 'Friends find you by this.';
+    final helperColor = _usernameAvailable == false ||
+            (!_isUsernameShapeValid(username) && username.isNotEmpty)
+        ? AppColors.signalRed
+        : _usernameAvailable == true
+        ? AppColors.textPrimary
+        : AppColors.textSecondary;
+    final fieldStyle = AppTypography.ui(17, fontWeight: FontWeight.w700);
+    const fieldDecoration = InputDecoration(
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(vertical: 12),
+    );
+    final name = _nameController.text.trim();
 
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg + viewInsets.bottom,
-              ),
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: AppSpacing.xl),
+    return FafoFormPage(
+      eyebrow: 'Profile',
+      title: 'Who’s this?',
+      subtitle: 'Your name and handle are how friends find you.',
+      showBack: false,
+      footer: FafoPill(
+        label: _saving ? 'Saving…' : 'Continue',
+        block: true,
+        busy: _saving,
+        onPressed: _canContinue ? _saveProfile : null,
+      ),
+      children: [
+        // Avatar: the photo if picked, else the red initial the app uses.
+        Row(
+          children: [
+            Semantics(
+              button: true,
+              label: 'Add a photo',
+              child: GestureDetector(
+                onTap: _pickAvatar,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    if (_selectedAvatarBytes != null)
                       Container(
-                        height: 3,
+                        width: 84,
+                        height: 84,
                         decoration: BoxDecoration(
-                          color: AppColors.accentPrimary,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xxl),
-                      Text(
-                        'Set up your\nprofile',
-                        style: theme.textTheme.displayLarge,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Add your name, unique username, and profile photo.',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      Center(
-                        child: GestureDetector(
-                          onTap: _pickAvatar,
-                          child: Container(
-                            width: 88,
-                            height: 88,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.bgSecondary,
-                              border: Border.all(color: AppColors.border),
-                              image: _selectedAvatarBytes != null
-                                  ? DecorationImage(
-                                      image: MemoryImage(_selectedAvatarBytes!),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
-                            ),
-                            child: _selectedAvatarBytes == null
-                                ? Icon(
-                                    Icons.camera_alt_outlined,
-                                    color: AppColors.textTertiary,
-                                    size: AppSpacing.lg,
-                                  )
-                                : null,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.ink, width: 2.5),
+                          image: DecorationImage(
+                            image: MemoryImage(_selectedAvatarBytes!),
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-                      TextField(
-                        controller: _nameController,
-                        style: theme.textTheme.bodyLarge,
-                        textCapitalization: TextCapitalization.words,
-                        onChanged: (_) => setState(() => _error = null),
-                        decoration: const InputDecoration(
-                          labelText: 'Display name',
+                      )
+                    else
+                      FafoAvatar(name: name.isEmpty ? '+' : name, size: FafoAvatarSize.lg),
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.border, width: 2),
                         ),
+                        child: Icon(Icons.camera_alt_outlined, size: 15, color: AppColors.textPrimary),
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-                      TextField(
-                        controller: _usernameController,
-                        style: theme.textTheme.bodyLarge,
-                        textCapitalization: TextCapitalization.none,
-                        autocorrect: false,
-                        onChanged: _onUsernameChanged,
-                        decoration: InputDecoration(
-                          labelText: 'Username',
-                          prefixText: '@',
-                          helperText: usernameHelper,
-                          helperStyle: theme.textTheme.labelMedium?.copyWith(
-                            color: _usernameAvailable == true
-                                ? Colors.green
-                                : _usernameAvailable == false
-                                ? Colors.red
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                      if (FeatureFlags.map) ...[
-                      const SizedBox(height: AppSpacing.lg),
-                      _AreaSetupCard(
-                        label: _areaLabel,
-                        radiusKm: _selectedArea?.radiusKm ?? 15,
-                        detecting: _detectingArea,
-                        hasArea: _selectedArea != null,
-                        onUseCurrentLocation: _useCurrentLocation,
-                        onSearchLocation: _openLocationSearchSheet,
-                      ),
-                      ],
-                      const SizedBox(height: AppSpacing.lg),
-                      TextField(
-                        controller: _codeController,
-                        style: theme.textTheme.bodyLarge,
-                        textCapitalization: TextCapitalization.characters,
-                        autocorrect: false,
-                        decoration: const InputDecoration(
-                          labelText: 'Friend’s code (optional)',
-                          hintText: 'MAYA-7K2QX',
-                          helperText: 'You’ll show up in each other’s invites.',
-                        ),
-                      ),
-                      if (_error != null) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          _error!,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: Colors.red,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.xl),
-                      AppButton(
-                        label: _saving ? 'Saving...' : 'Continue',
-                        variant: AppButtonVariant.featured,
-                        onPressed: _canContinue ? _saveProfile : null,
-                      ),
-                      const Spacer(),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            );
-          },
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: FafoInlineLink(
+                label: _selectedAvatarBytes == null ? 'Add a photo' : 'Change photo',
+                onTap: _pickAvatar,
+              ),
+            ),
+          ],
         ),
-      ),
+        const SizedBox(height: 26),
+        const FafoFieldLabel('Name'),
+        TextField(
+          controller: _nameController,
+          style: fieldStyle,
+          textCapitalization: TextCapitalization.words,
+          onChanged: (_) => setState(() => _error = null),
+          decoration: fieldDecoration.copyWith(hintText: 'Maya'),
+        ),
+        const SizedBox(height: 22),
+        const FafoFieldLabel('Username'),
+        TextField(
+          controller: _usernameController,
+          style: fieldStyle,
+          textCapitalization: TextCapitalization.none,
+          autocorrect: false,
+          onChanged: _onUsernameChanged,
+          decoration: fieldDecoration.copyWith(
+            hintText: 'maya',
+            // Always visible, unlike prefixText (which hides until focus).
+            prefixIcon: Text('@', style: fieldStyle),
+            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(usernameHelper, style: AppTypography.ui(13, fontWeight: FontWeight.w500, color: helperColor)),
+        if (FeatureFlags.map) ...[
+          const SizedBox(height: AppSpacing.lg),
+          _AreaSetupCard(
+            label: _areaLabel,
+            radiusKm: _selectedArea?.radiusKm ?? 15,
+            detecting: _detectingArea,
+            hasArea: _selectedArea != null,
+            onUseCurrentLocation: _useCurrentLocation,
+            onSearchLocation: _openLocationSearchSheet,
+          ),
+        ],
+        const SizedBox(height: 22),
+        const FafoFieldLabel('Friend’s code (optional)'),
+        TextField(
+          controller: _codeController,
+          style: fieldStyle,
+          textCapitalization: TextCapitalization.characters,
+          autocorrect: false,
+          decoration: fieldDecoration.copyWith(hintText: 'MAYA-7K2QX'),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'You’ll show up in each other’s invites.',
+          style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 14),
+          Text(_error!, style: AppTypography.ui(13.5, color: AppColors.signalRed)),
+        ],
+      ],
     );
   }
 }
