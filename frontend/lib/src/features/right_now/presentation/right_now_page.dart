@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:fafu/src/core/config/feature_flags.dart';
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/services/app_sounds.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
@@ -259,7 +260,7 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
                           onPreview: () => showPreviewSheet(context),
                         ),
                       ),
-                      if (live.isNotEmpty)
+                      if (FeatureFlags.previewBothSides && live.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 28),
                           child: FafoTextLink(
@@ -457,8 +458,11 @@ class _LiveArea extends StatelessWidget {
           ),
           TextButton(onPressed: onRetry, child: const Text('Try again')),
         ],
-        const SizedBox(height: 14),
-        FafoTextLink(label: 'Preview both sides', onTap: onPreview),
+        // Demo-only (parked): the prototype used it to play both phones.
+        if (FeatureFlags.previewBothSides) ...[
+          const SizedBox(height: 14),
+          FafoTextLink(label: 'Preview both sides', onTap: onPreview),
+        ],
       ],
     );
   }

@@ -37,6 +37,10 @@ class FeatureFlags {
   /// stay silent. Flipping this also moves Android to the custom-sound channels.
   static const bool customSounds = false;
 
+  /// "Preview both sides" (brief 3.9): a demo-only two-phone sheet from the
+  /// prototype. Not part of the real app; kept for client demos.
+  static const bool previewBothSides = false;
+
   /// In-app light/dark switch. V3 follows the system setting (brief 2.4).
   static const bool inAppThemeSwitch = false;
 }
