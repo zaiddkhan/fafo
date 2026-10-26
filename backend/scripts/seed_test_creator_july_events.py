@@ -18,6 +18,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from firebase_admin import auth
 from google.cloud.firestore import GeoPoint
 
+from app.config import EVENTS_ENABLED
 from app.firebase import init_firebase, get_firestore
 from app.geo import encode_geohash
 
@@ -206,6 +207,10 @@ def seed_events(db) -> None:
 
 
 def main() -> None:
+    # V3 brief 1.4: events are parked, so demo data no longer seeds them.
+    if not EVENTS_ENABLED:
+        print("Events are parked (EVENTS_ENABLED is off); not seeding demo events.")
+        return
     init_firebase()
     db = get_firestore()
     ensure_auth_user()

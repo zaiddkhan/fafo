@@ -24,3 +24,8 @@ Future<String?> consumePendingDeepLinkPath() async {
   await prefs.remove(pendingDeepLinkPathKey);
   return path;
 }
+
+/// A referral code from an `/invite/<code>` link opened before sign-up. Saved
+/// so onboarding can pre-fill it and make the friendship once the profile
+/// exists (V3 brief 3.8).
+const pendingReferralCodeKey = 'pending_referral_code';

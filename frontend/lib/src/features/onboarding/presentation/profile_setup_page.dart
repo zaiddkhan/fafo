@@ -15,6 +15,7 @@ import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/services/deep_link_service.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
@@ -33,6 +34,8 @@ class ProfileSetupPage extends ConsumerStatefulWidget {
 class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
+  // Optional friend's referral code (V3 brief 3.8).
+  final _codeController = TextEditingController();
   final _imagePicker = ImagePicker();
 
   XFile? _selectedAvatar;
@@ -49,6 +52,12 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   @override
   void initState() {
     super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      final code = prefs.getString(pendingReferralCodeKey);
+      if (code != null && mounted && _codeController.text.isEmpty) {
+        _codeController.text = code;
+      }
+    });
     // Nothing in V3 needs location, so the app never asks (brief 1.2).
     if (FeatureFlags.map) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _useCurrentLocation());
@@ -222,6 +231,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
 
   Future<void> _saveProfile() async {
     if (!_canContinue) return;
+    final messenger = ScaffoldMessenger.of(context);
     setState(() {
       _saving = true;
       _error = null;
@@ -255,6 +265,23 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(onboardingCompleteKey, true);
 
+      // Signing up with a code makes both people friends. Never blocks
+      // onboarding: a bad code just says so.
+      final code = _codeController.text.trim();
+      if (code.isNotEmpty) {
+        try {
+          final result = await ref.read(friendsRepositoryProvider).redeemReferralCode(code);
+          messenger.showSnackBar(
+            SnackBar(content: Text('You and ${result.friend.displayName} are friends now.')),
+          );
+        } catch (e) {
+          messenger.showSnackBar(
+            SnackBar(content: Text('Code didn’t work: ${friendlyErrorMessage(e)}')),
+          );
+        }
+      }
+      await prefs.remove(pendingReferralCodeKey);
+
       if (mounted) {
         final pendingPath = await consumePendingDeepLinkPath();
         if (!mounted) return;
@@ -272,6 +299,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     _usernameDebounce?.cancel();
     _nameController.dispose();
     _usernameController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -398,6 +426,18 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                         onSearchLocation: _openLocationSearchSheet,
                       ),
                       ],
+                      const SizedBox(height: AppSpacing.lg),
+                      TextField(
+                        controller: _codeController,
+                        style: theme.textTheme.bodyLarge,
+                        textCapitalization: TextCapitalization.characters,
+                        autocorrect: false,
+                        decoration: const InputDecoration(
+                          labelText: 'Friend’s code (optional)',
+                          hintText: 'MAYA-7K2',
+                          helperText: 'You’ll show up in each other’s invites.',
+                        ),
+                      ),
                       if (_error != null) ...[
                         const SizedBox(height: AppSpacing.md),
                         Text(

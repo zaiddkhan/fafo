@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:fafu/src/core/config/feature_flags.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
+import 'package:fafu/src/features/nudges/domain/nudge.dart';
 
 /// Android channel for V3 nudge notifications, drawn by the app from data-only
 /// pushes so they can carry a live countdown bar (brief 7.3).
@@ -85,6 +86,8 @@ class LiveNudgeNotifications {
       case 'nudge.received' || 'nudge.group_received' when answerBy != null:
         details = _bar(
           channel: channel,
+          // The sender's own bar: NS already played in the app.
+          silent: data['silent'] == '1',
           start: answerBy.subtract(const Duration(minutes: 10)),
           end: answerBy,
           now: now,
@@ -106,8 +109,10 @@ class LiveNudgeNotifications {
         details = _plain(channel);
     }
 
+    // A group's final tally lands beside the green countdown, not over it.
+    final id = template == 'nudge.group_final' ? idFor('$nudgeId:final') : idFor(nudgeId);
     await _plugin.show(
-      idFor(nudgeId),
+      id,
       title,
       body,
       NotificationDetails(android: details),
@@ -115,11 +120,31 @@ class LiveNudgeNotifications {
     );
   }
 
+  /// The sender's own red bar while they wait (brief 7.3, suggested): drawn
+  /// locally right after sending, so both sides watch one clock. The answer,
+  /// expiry or go-time push later replaces it under the same id.
+  Future<void> showSenderWaiting(NudgeResponse nudge) {
+    final who = nudge.targetName ?? (nudge.isGroup ? 'your group' : 'your friend');
+    return show({
+      'template_id': 'nudge.received',
+      'nudge_id': nudge.id,
+      'feed_type': nudge.isGroup ? 'group' : 'friend',
+      'target_id': nudge.targetId ?? '',
+      'title': nudge.title,
+      'answer_by': nudge.answerDeadline.toUtc().toIso8601String(),
+      'countdown_minutes': '${nudge.countdownMinutes}',
+      'n_title': '${nudge.isGroup ? 'Waiting on' : 'Waiting for'} $who: ${nudge.title}',
+      'n_body': 'Left to answer.',
+      'silent': '1',
+    });
+  }
+
   /// The user answered in the app: the red bar is no longer needed.
   Future<void> cancel(String nudgeId) => _plugin.cancel(idFor(nudgeId));
 
   AndroidNotificationDetails _bar({
     required AndroidNotificationChannel channel,
+    bool silent = false,
     required DateTime start,
     required DateTime end,
     required DateTime now,
@@ -137,6 +162,7 @@ class LiveNudgeNotifications {
       icon: '@mipmap/ic_launcher',
       color: color,
       category: AndroidNotificationCategory.progress,
+      silent: silent,
       ongoing: true,
       autoCancel: false,
       onlyAlertOnce: true,

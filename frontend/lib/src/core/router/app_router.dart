@@ -89,6 +89,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       final isOnboarded = prefs?.getBool(onboardingCompleteKey) ?? false;
 
+      // A referral link opened before sign-up: keep the code for onboarding.
+      if (!isOnboarded && path.startsWith('/invite/') && prefs != null) {
+        final code = state.pathParameters['token'] ?? path.substring('/invite/'.length);
+        if (code.isNotEmpty) prefs.setString(pendingReferralCodeKey, code);
+        return SplashPage.routePath;
+      }
+
       if (_isParkedPath(path)) {
         return isOnboarded ? MainShell.routePath : SplashPage.routePath;
       }

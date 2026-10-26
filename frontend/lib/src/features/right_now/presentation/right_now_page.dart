@@ -144,7 +144,9 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
 
   Future<void> _compose({QuestResponse? quest}) async {
     final nudge = await showComposeNudgeSheet(context, quest: quest);
-    if (nudge != null) ref.read(myNudgesProvider.notifier).upsert(nudge);
+    if (nudge == null) return;
+    ref.read(myNudgesProvider.notifier).upsert(nudge);
+    ref.read(pushServiceProvider).liveNudges.showSenderWaiting(nudge);
   }
 
   Future<void> _answer(NudgeResponse nudge, NudgeVote vote) async {
@@ -497,7 +499,7 @@ class _Recent extends StatelessWidget {
               subtitle: [
                 v.outcomeLabel(now),
                 if (v.nudge.isGroup) v.targetName,
-                if (v.nudge.isQuest) 'Side quest',
+                if (v.nudge.isQuest) 'Side quest · ${FafoQuestTags.levelLabel(v.nudge.questDifficulty)}',
               ].join(' · '),
               onTap: () => onOpen(v),
             ),
