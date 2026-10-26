@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -100,8 +101,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return isOnboarded ? MainShell.routePath : SplashPage.routePath;
       }
 
-      // If onboarded and on splash, skip straight to main
-      if (isOnboarded && path == SplashPage.routePath) {
+      // If onboarded *and still signed in* and on splash, skip straight to
+      // main. Without a Firebase user every request would 401, so stay on the
+      // welcome screen to sign in again.
+      if (isOnboarded && path == SplashPage.routePath && FirebaseAuth.instance.currentUser != null) {
         return MainShell.routePath;
       }
 

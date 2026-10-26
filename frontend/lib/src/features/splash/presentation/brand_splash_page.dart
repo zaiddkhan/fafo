@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -46,15 +47,29 @@ class _BrandSplashPageState extends ConsumerState<BrandSplashPage>
     _advanceTimer = Timer(const Duration(milliseconds: 2800), _advance);
   }
 
-  void _advance() {
+  Future<void> _advance() async {
     if (!mounted) return;
     final isOnboarded =
         ref.read(sharedPreferencesProvider).value?.getBool(
           onboardingCompleteKey,
         ) ??
         false;
+    // "Onboarded" alone isn't a session: without a signed-in Firebase user
+    // every request would 401, so go to the welcome screen instead of home.
+    User? user = FirebaseAuth.instance.currentUser;
+    if (isOnboarded && user == null) {
+      try {
+        user = await FirebaseAuth.instance
+            .authStateChanges()
+            .first
+            .timeout(const Duration(seconds: 2));
+      } catch (_) {
+        user = null;
+      }
+    }
+    if (!mounted) return;
     context.go(
-      isOnboarded ? MainShell.routePath : SplashPage.routePath,
+      isOnboarded && user != null ? MainShell.routePath : SplashPage.routePath,
     );
   }
 

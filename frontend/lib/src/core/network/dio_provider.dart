@@ -23,12 +23,19 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
-        var token = ref.read(authTokenProvider);
-
-        // Be resilient across refreshes/hot restarts: Riverpod state can be
-        // empty before SharedPreferences has hydrated, while Firebase Auth may
-        // already have the signed-in user.
-        token ??= await FirebaseAuth.instance.currentUser?.getIdToken();
+        // Prefer the live Firebase token: getIdToken() returns the cached one
+        // and refreshes it once it's expired. The stored copy is only a
+        // fallback, since it goes stale after an hour.
+        final user = FirebaseAuth.instance.currentUser;
+        String? token;
+        if (user != null) {
+          try {
+            token = await user.getIdToken();
+          } catch (_) {
+            token = null;
+          }
+        }
+        token ??= ref.read(authTokenProvider);
         if (token != null) {
           ref.read(authTokenProvider.notifier).setToken(token);
           options.headers['Authorization'] = 'Bearer $token';
@@ -54,10 +61,13 @@ final dioProvider = Provider<Dio>((ref) {
         if (error.response?.statusCode == 401 && !alreadyRetried) {
           final currentUser = FirebaseAuth.instance.currentUser;
 
-          // No signed-in user: this isn't an expired session, it's an
-          // unauthenticated request (e.g. previewing a shared event link).
-          // Let the normal routing/UI handle it — don't force a sign-out.
+          // No Firebase user. If we still sent a (stored) token, that session
+          // is dead and can't be refreshed: send the user to sign in. With no
+          // token at all it's just an unauthenticated request; leave it.
           if (currentUser == null) {
+            if (error.requestOptions.headers['Authorization'] != null) {
+              ref.read(sessionExpiredProvider.notifier).markExpired();
+            }
             handler.next(error);
             return;
           }

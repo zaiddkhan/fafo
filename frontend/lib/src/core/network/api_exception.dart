@@ -142,6 +142,11 @@ class ApiException implements Exception {
         return 'Network error. Please check your connection and try again.';
     }
 
+    // A rejected session: the app also redirects to sign-in, so keep it plain.
+    if (type == ApiErrorType.unauthorized) {
+      return 'Your session ended. Please sign in again.';
+    }
+
     // Some paths (e.g. web sign-in) carry no code, so match on the raw text.
     final lower = message.toLowerCase();
     if (lower.contains('verification code') || lower.contains('invalid otp')) {
