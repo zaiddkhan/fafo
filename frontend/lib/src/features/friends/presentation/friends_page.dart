@@ -118,7 +118,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     // assertion and crashes the app. See groups_page.dart for the same pattern.
     return showDialog<List<String>>(
       context: context,
-      builder: (context) => _NegativeAnswersDialog(title: title),
+      builder: (context) => NegativeAnswersDialog(title: title),
     );
   }
 
@@ -410,7 +410,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
   String _statusForFriend(FriendResponse friend) {
     final nudge = friend.lastNudge;
     if (nudge != null) {
-      final ago = _relativeSince(nudge.createdAt);
+      final ago = relativeSince(nudge.createdAt);
       if (!nudge.isResolved) {
         return nudge.direction == NudgeDirection.received
             ? 'Nudged you • $ago'
@@ -448,7 +448,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
 }
 
 /// Compact relative-time label, e.g. "2h ago", used for nudge timestamps.
-String _relativeSince(DateTime time) {
+String relativeSince(DateTime time) {
   final diff = DateTime.now().difference(time);
   if (diff.inSeconds < 60) return 'just now';
   if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
@@ -460,16 +460,16 @@ String _relativeSince(DateTime time) {
 /// Confirmation dialog for negative actions (block, unblock, unfriend). Owns
 /// its controllers in State so they are torn down safely after the route's exit
 /// transition — see [_FriendsPageState._negativeAnswers] for why.
-class _NegativeAnswersDialog extends StatefulWidget {
-  const _NegativeAnswersDialog({required this.title});
+class NegativeAnswersDialog extends StatefulWidget {
+  const NegativeAnswersDialog({super.key, required this.title});
 
   final String title;
 
   @override
-  State<_NegativeAnswersDialog> createState() => _NegativeAnswersDialogState();
+  State<NegativeAnswersDialog> createState() => NegativeAnswersDialogState();
 }
 
-class _NegativeAnswersDialogState extends State<_NegativeAnswersDialog> {
+class NegativeAnswersDialogState extends State<NegativeAnswersDialog> {
   final List<TextEditingController> _controllers =
       List.generate(3, (_) => TextEditingController());
 

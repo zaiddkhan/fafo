@@ -16,6 +16,7 @@ class FafoApp extends ConsumerStatefulWidget {
 
 class _FafoAppState extends ConsumerState<FafoApp> {
   DeepLinkHandler? _deepLinks;
+  Brightness? _brightness;
 
   @override
   void initState() {
@@ -41,11 +42,21 @@ class _FafoAppState extends ConsumerState<FafoApp> {
 
     // Static tokens need the effective brightness before the themes are built.
     // System mode reads the platform setting (MediaQuery from the root View).
-    AppColors.setBrightness(switch (themeMode) {
+    final brightness = switch (themeMode) {
       ThemeMode.dark => Brightness.dark,
       ThemeMode.light => Brightness.light,
       ThemeMode.system => MediaQuery.platformBrightnessOf(context),
-    });
+    };
+    AppColors.setBrightness(brightness);
+    // Widgets read the static tokens at build time, and const subtrees skip
+    // rebuilds, so a theme change must repaint everything or parts keep the
+    // old colours (cream-on-cream headers in Light on a dark phone).
+    if (_brightness != null && _brightness != brightness) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _rebuildAll(context as Element);
+      });
+    }
+    _brightness = brightness;
 
     return MaterialApp.router(
       title: 'FaFo',
@@ -56,4 +67,13 @@ class _FafoAppState extends ConsumerState<FafoApp> {
       routerConfig: router,
     );
   }
+}
+
+void _rebuildAll(Element root) {
+  void mark(Element e) {
+    e.markNeedsBuild();
+    e.visitChildren(mark);
+  }
+
+  root.visitChildren(mark);
 }
