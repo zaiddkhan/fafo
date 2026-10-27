@@ -798,6 +798,53 @@ Future<T?> showFafoSheet<T>(
   );
 }
 
+/// Yes/no question as a card: display title, one line, ink primary pill and an
+/// outline "keep" pill. Resolves true only on [confirmLabel].
+Future<bool> showFafoConfirm(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+  String cancelLabel = 'Keep it',
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppChrome.cardRadius),
+          border: Border.all(color: AppColors.border, width: AppChrome.outlineWidth),
+          boxShadow: AppChrome.cardShadow,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            FafoDisplay(title, fontSize: 36, maxLines: 3),
+            const SizedBox(height: 10),
+            Text(message, style: AppTypography.ui(15, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
+            const SizedBox(height: 22),
+            FafoPill(label: confirmLabel, block: true, onPressed: () => Navigator.of(dialogContext).pop(true)),
+            const SizedBox(height: 10),
+            FafoPill(
+              label: cancelLabel,
+              block: true,
+              primary: false,
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  return result ?? false;
+}
+
 /// Standard scrolling body for a sheet: 20px gutter, 22px gaps.
 class FafoSheetBody extends StatelessWidget {
   const FafoSheetBody({super.key, required this.children, this.gap = 22});

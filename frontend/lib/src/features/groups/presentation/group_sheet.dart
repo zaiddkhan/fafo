@@ -11,6 +11,7 @@ import 'package:fafu/src/features/groups/data/groups_repository.dart';
 import 'package:fafu/src/features/groups/domain/group.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// Max people in a group, creator included (V3 brief 6.5; matches backend).
 const maxGroupSize = 15;
@@ -40,7 +41,6 @@ class _GroupSheetState extends ConsumerState<GroupSheet> {
   late final TextEditingController _name;
   late final Set<String> _selected;
   bool _busy = false;
-  String? _error;
 
   GroupResponse? get _group => widget.group;
   bool get _isNew => _group == null;
@@ -66,14 +66,13 @@ class _GroupSheetState extends ConsumerState<GroupSheet> {
   Future<void> _run(Future<GroupResponse?> Function() action) async {
     setState(() {
       _busy = true;
-      _error = null;
     });
     try {
       final result = await action();
       ref.invalidate(groupsListProvider);
       if (mounted) Navigator.of(context).pop(result);
     } catch (e) {
-      if (mounted) setState(() => _error = friendlyErrorMessage(e));
+      if (mounted) FafoToasts.show(friendlyErrorMessage(e), kind: FafoToastKind.error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -211,8 +210,6 @@ class _GroupSheetState extends ConsumerState<GroupSheet> {
               ),
             ),
           ),
-        if (_error != null)
-          Text(_error!, style: AppTypography.ui(13, color: AppColors.signalRed)),
         Text(
           'Friends are added straight away, no accept step. You can rename, add, remove and delete; anyone can leave.',
           style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),

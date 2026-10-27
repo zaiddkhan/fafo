@@ -53,7 +53,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   Timer? _timer;
   bool _verifying = false;
   bool _waitingForCode = false;
-  String? _error;
   late String _verificationId = widget.verificationId;
   int? _resendToken;
 
@@ -83,15 +82,14 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         _verificationId = result.verificationId;
         _resendToken = result.resendToken;
         _waitingForCode = false;
-        _error = null;
       });
       _focusNodes.first.requestFocus();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _waitingForCode = false;
-        _error = friendlyAuthError(e);
       });
+      FafoToasts.show(friendlyAuthError(e), kind: FafoToastKind.error);
     }
   }
 
@@ -132,7 +130,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     if (value.length == 1 && index < _otpLength - 1) {
       _focusNodes[index + 1].requestFocus();
     }
-    setState(() => _error = null);
   }
 
   void _onKeyDown(int index, KeyEvent event) {
@@ -149,7 +146,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     if (_resendSeconds > 0 || _waitingForCode) return;
     setState(() {
       _waitingForCode = true;
-      _error = null;
     });
     try {
       final result = await ref
@@ -178,8 +174,8 @@ class _OtpPageState extends ConsumerState<OtpPage> {
       if (mounted) {
         setState(() {
           _waitingForCode = false;
-          _error = friendlyAuthError(e);
         });
+        FafoToasts.show(friendlyAuthError(e), kind: FafoToastKind.error);
       }
     }
   }
@@ -193,7 +189,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     }
     setState(() {
       _verifying = true;
-      _error = null;
     });
 
     try {
@@ -202,7 +197,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           .signInWithOtp(verificationId: _verificationId, smsCode: _otp);
       await _completeSession(idToken);
     } catch (e) {
-      if (mounted) setState(() => _error = friendlyAuthError(e));
+      if (mounted) FafoToasts.show(friendlyAuthError(e), kind: FafoToastKind.error);
     } finally {
       if (mounted) setState(() => _verifying = false);
     }
@@ -214,7 +209,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     setState(() {
       _waitingForCode = false;
       _verifying = true;
-      _error = null;
     });
     try {
       final idToken = await ref
@@ -222,7 +216,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           .signInWithCredential(credential);
       await _completeSession(idToken);
     } catch (e) {
-      if (mounted) setState(() => _error = friendlyAuthError(e));
+      if (mounted) FafoToasts.show(friendlyAuthError(e), kind: FafoToastKind.error);
     } finally {
       if (mounted) setState(() => _verifying = false);
     }
@@ -341,10 +335,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
             onTap: _resendSeconds == 0 && !_waitingForCode ? _resendOtp : null,
           ),
         ),
-        if (_error != null) ...[
-          const SizedBox(height: 10),
-          Text(_error!, style: AppTypography.ui(13.5, color: AppColors.signalRed)),
-        ],
       ],
     );
   }

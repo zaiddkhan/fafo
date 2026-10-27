@@ -49,7 +49,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   bool? _usernameAvailable;
   bool _checkingUsername = false;
   bool _saving = false;
-  String? _error;
 
   @override
   void initState() {
@@ -128,7 +127,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     if (_detectingArea) return;
     setState(() {
       _detectingArea = true;
-      _error = null;
     });
 
     try {
@@ -168,7 +166,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     setState(() {
       _selectedArea = Area(lat: selected.lat, lng: selected.lng);
       _areaLabel = selected.label;
-      _error = null;
     });
   }
 
@@ -199,7 +196,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     _usernameDebounce?.cancel();
     setState(() {
       _usernameAvailable = null;
-      _error = null;
     });
 
     if (!_isUsernameShapeValid(normalized)) return;
@@ -212,7 +208,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
             .checkUsername(normalized);
         if (mounted) setState(() => _usernameAvailable = result.available);
       } catch (e) {
-        if (mounted) setState(() => _error = friendlyErrorMessage(e));
+        if (mounted) FafoToasts.show(friendlyErrorMessage(e), kind: FafoToastKind.error);
       } finally {
         if (mounted) setState(() => _checkingUsername = false);
       }
@@ -236,7 +232,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() {
       _saving = true;
-      _error = null;
     });
 
     try {
@@ -286,7 +281,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
         context.go(pendingPath ?? MainShell.routePath);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = friendlyErrorMessage(e));
+      if (mounted) FafoToasts.show(friendlyErrorMessage(e), kind: FafoToastKind.error);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -398,7 +393,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
           controller: _nameController,
           style: fieldStyle,
           textCapitalization: TextCapitalization.words,
-          onChanged: (_) => setState(() => _error = null),
           decoration: fieldDecoration.copyWith(hintText: 'Maya'),
         ),
         const SizedBox(height: 22),
@@ -443,10 +437,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
           'You’ll show up in each other’s invites.',
           style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
         ),
-        if (_error != null) ...[
-          const SizedBox(height: 14),
-          Text(_error!, style: AppTypography.ui(13.5, color: AppColors.signalRed)),
-        ],
       ],
     );
   }
@@ -561,7 +551,6 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
   final _controller = TextEditingController();
   List<_LocationSearchResult> _results = const [];
   bool _searching = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -575,14 +564,13 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
 
     setState(() {
       _searching = true;
-      _error = null;
     });
 
     try {
       final results = await _searchLocations(query);
       if (mounted) setState(() => _results = results);
     } catch (e) {
-      if (mounted) setState(() => _error = friendlyErrorMessage(e));
+      if (mounted) FafoToasts.show(friendlyErrorMessage(e), kind: FafoToastKind.error);
     } finally {
       if (mounted) setState(() => _searching = false);
     }
@@ -638,13 +626,6 @@ class _LocationSearchSheetState extends State<_LocationSearchSheet> {
                 ),
               ),
             ),
-            if (_error != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                _error!,
-                style: theme.textTheme.labelMedium?.copyWith(color: Colors.red),
-              ),
-            ],
             const SizedBox(height: AppSpacing.md),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 320),

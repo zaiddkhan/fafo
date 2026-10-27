@@ -172,6 +172,28 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
     }
   }
 
+  Future<void> _cancel(NudgeResponse nudge) async {
+    final who = nudge.targetName ?? (nudge.isGroup ? 'your group' : 'your friend');
+    final sure = await showFafoConfirm(
+      context,
+      title: 'Cancel this plan?',
+      message: nudge.isAccepted
+          ? '$who already said yes. They’ll get a heads-up that it’s off.'
+          : '“${nudge.title}” goes away for $who. You can send a new one straight after.',
+      confirmLabel: 'Cancel plan',
+    );
+    if (!sure || !mounted) return;
+    try {
+      final updated = await ref.read(nudgesRepositoryProvider).cancel(nudge.id);
+      ref.read(myNudgesProvider.notifier).upsert(updated);
+      ref.read(pushServiceProvider).liveNudges.cancel(nudge.id);
+      FafoToasts.show('Plan cancelled.');
+    } catch (e) {
+      FafoToasts.error(e);
+      ref.read(myNudgesProvider.notifier).refresh();
+    }
+  }
+
   Future<void> _openProfile() async {
     // Invite on a side quest closes the profile and opens the composer.
     final quest = await showProfileSheet(context);
@@ -258,6 +280,7 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
                           handle: handle,
                           answering: _answering,
                           onAnswer: _answer,
+                          onCancel: _cancel,
                           onPreview: () => showPreviewSheet(context),
                         ),
                       ),
@@ -405,6 +428,7 @@ class _LiveArea extends StatelessWidget {
     required this.handle,
     required this.answering,
     required this.onAnswer,
+    required this.onCancel,
     required this.onPreview,
   });
 
@@ -415,6 +439,7 @@ class _LiveArea extends StatelessWidget {
   final String handle;
   final Set<String> answering;
   final void Function(NudgeResponse, NudgeVote) onAnswer;
+  final void Function(NudgeResponse) onCancel;
   final VoidCallback onPreview;
 
   @override
@@ -437,6 +462,7 @@ class _LiveArea extends StatelessWidget {
               answering: answering.contains(live[i].nudge.id),
               onYes: () => onAnswer(live[i].nudge, NudgeVote.yes),
               onNo: () => onAnswer(live[i].nudge, NudgeVote.no),
+              onCancel: () => onCancel(live[i].nudge),
             ),
           ],
         ],

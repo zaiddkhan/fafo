@@ -36,6 +36,10 @@ NOTIFICATION_CATALOG = [
     {"type": "nudge", "subtype": "go_time", "sound": "exp",
      "title": "Go time. {title}", "body": "{who}",
      "variables": ["title", "who"], "params": {}},
+    # Not in the brief: the sender cancelled (see /nudges/{id}/cancel).
+    {"type": "nudge", "subtype": "cancelled", "sound": "n",
+     "title": "Cancelled: {title}", "body": "{name} called it off.",
+     "variables": ["name", "title"], "params": {}},
 
     # Social Pull — real time, never batched.
     {"type": "social_pull", "subtype": "nudge_received", "sound": "nudge",

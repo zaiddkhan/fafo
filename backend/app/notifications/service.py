@@ -158,6 +158,11 @@ class NotificationService:
                 outbox.mark_skipped(db, dedupe_key_, "events_parked")
                 return "skipped"
 
+            # A go-time push queued for a plan the sender since cancelled.
+            if template_id == "nudge.go_time" and self._nudge_cancelled(db, data.get("data", {}).get("nudge_id")):
+                outbox.mark_skipped(db, dedupe_key_, "nudge_cancelled")
+                return "skipped"
+
             # Admin broadcasts carry inline copy (override) instead of a catalog template.
             override = data.get("override")
             if override:
@@ -280,6 +285,12 @@ class NotificationService:
     def _load_user(self, db, uid: str) -> dict:
         doc = db.collection("users").document(uid).get()
         return doc.to_dict() or {} if doc.exists else {}
+
+    def _nudge_cancelled(self, db, nudge_id: str | None) -> bool:
+        if not nudge_id:
+            return False
+        doc = db.collection("nudges").document(nudge_id).get()
+        return doc.exists and (doc.to_dict() or {}).get("outcome") == "cancelled"
 
     def _live_nudge_tokens(self, db, uid: str) -> list[str]:
         return [

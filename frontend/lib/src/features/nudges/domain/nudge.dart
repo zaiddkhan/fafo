@@ -71,7 +71,7 @@ class NudgeResponse {
   final DateTime? answerBy;
   final DateTime? goAt;
 
-  /// "yes" | "no" | "expired" once resolved.
+  /// "yes" | "no" | "expired" | "cancelled" once resolved.
   final String? outcome;
   final String? description;
   final String? questId;
@@ -91,6 +91,7 @@ class NudgeResponse {
   bool get isAccepted => status == NudgeStatus.acceptedTimer;
   bool get isLive => isPending || isAccepted;
   bool get isQuest => questId != null;
+  bool get isCancelled => outcome == 'cancelled';
   DateTime get answerDeadline => answerBy ?? expiresAt;
   DateTime get goTime => goAt ?? expiresAt;
   String? voteOf(String uid) => votes[uid];

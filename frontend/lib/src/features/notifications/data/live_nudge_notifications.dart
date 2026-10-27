@@ -68,6 +68,11 @@ class LiveNudgeNotifications {
     if (nudgeId == null) return;
 
     final template = data['template_id'] as String;
+    // Cancelled before they answered: just take the bar down, no buzz.
+    if (template == 'nudge.cancelled' && data['silent_remove'] == '1') {
+      await cancel(nudgeId);
+      return;
+    }
     final title = data['n_title'] as String? ?? '';
     final body = data['n_body'] as String? ?? '';
     final now = DateTime.now().toUtc();
@@ -105,6 +110,8 @@ class LiveNudgeNotifications {
         details = _done(channel: channel, color: AppColors.signalRed);
       case 'nudge.go_time':
         details = _done(channel: channel, color: AppColors.stateGreen);
+      case 'nudge.cancelled':
+        details = _plain(channel);
       default:
         details = _plain(channel);
     }

@@ -201,6 +201,7 @@ final _recent = [
     votes: {_me: 'yes'},
     acceptedAfter: const Duration(minutes: 2),
   ),
+  _nudge(id: 'r5', title: 'Late lunch?', age: const Duration(hours: 3), status: NudgeStatus.resolved, outcome: 'cancelled'),
   _nudge(id: 'r4', title: 'Geri?', age: const Duration(days: 1), status: NudgeStatus.resolved, outcome: 'no', votes: {'maya': 'no'}),
 ];
 
@@ -304,6 +305,7 @@ Future<void> _shoot(
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+        builder: (context, child) => FafoToastHost(child: child!),
         home: screen,
       ),
     ),
@@ -380,6 +382,12 @@ void main() {
       overrides: _overrides(nudges: [_nudge(id: 'g', title: 'Movie night?', sent: false, group: true, groupSize: 4, votes: {'leo': 'yes'})]),
       height: 1250,
     ),
+    '14_receiver_cancelled': (
+      screen: const RightNowPage(),
+      overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?', sent: false, status: NudgeStatus.resolved, outcome: 'cancelled', age: const Duration(seconds: 50)), ..._recent]),
+      height: 1300,
+    ),
+    '15_cancel_confirm': (screen: const _ConfirmDemo(), overrides: _overrides(), height: 844),
     '13_quest_receiver': (
       screen: const RightNowPage(),
       overrides: _overrides(nudges: [_nudge(id: 'q', title: 'Walk one block', description: 'Meet outside and walk one block with me?', sent: false, questDifficulty: 'easy')]),
@@ -493,6 +501,32 @@ class _ToastDemoState extends State<_ToastDemo> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => showFafoToast(context, widget.message, kind: widget.kind));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(backgroundColor: AppColors.bgPrimary);
+}
+
+/// The sender's "Cancel plan" confirm, opened once mounted.
+class _ConfirmDemo extends StatefulWidget {
+  const _ConfirmDemo();
+
+  @override
+  State<_ConfirmDemo> createState() => _ConfirmDemoState();
+}
+
+class _ConfirmDemoState extends State<_ConfirmDemo> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => showFafoConfirm(
+        context,
+        title: 'Cancel this plan?',
+        message: '“Coffee downstairs?” goes away for Maya. You can send a new one straight after.',
+        confirmLabel: 'Cancel plan',
+      ),
+    );
   }
 
   @override

@@ -1,7 +1,7 @@
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
 
 /// What a card shows, from one phone's point of view (V3 brief, Nudge states).
-enum NudgeCardState { pending, accepted, declined, expired, goTime }
+enum NudgeCardState { pending, accepted, declined, expired, goTime, cancelled }
 
 /// How long a just-resolved nudge stays in the live area ("Go time", "said no")
 /// before it moves to Recent.
@@ -25,6 +25,7 @@ class NudgeView {
 
   NudgeCardState state(DateTime now) {
     final n = nudge;
+    if (n.isCancelled) return NudgeCardState.cancelled;
     if (isSender) {
       if (n.isPending) {
         return now.isBefore(n.answerDeadline)
@@ -56,6 +57,9 @@ class NudgeView {
   /// Whether this nudge belongs in home's live area right now.
   bool isInLiveArea(DateTime now) {
     final s = state(now);
+    // The sender cancelled it themselves: straight to Recent. The other side
+    // sees "Cancelled" for a moment so the card doesn't just vanish.
+    if (s == NudgeCardState.cancelled && isSender) return false;
     // "Go time" shows briefly, then moves to Recent. A group can stay open to
     // answers past go time, so don't wait for the nudge itself to resolve.
     if (s == NudgeCardState.goTime && now.difference(nudge.goTime) >= resolvedLinger) {
@@ -70,8 +74,10 @@ class NudgeView {
     return resolvedAt != null && now.difference(resolvedAt) < resolvedLinger;
   }
 
-  /// Outcome line in Recent: Yes, No or Expired; "{n}/{N} in" for groups.
+  /// Outcome line in Recent: Yes, No, Expired or Cancelled; "{n}/{N} in" for
+  /// groups.
   String outcomeLabel(DateTime now) {
+    if (nudge.isCancelled) return 'Cancelled';
     if (nudge.isGroup) {
       return yesCount > 0 ? '$yesCount/$groupSize in' : 'No one’s in';
     }
@@ -80,6 +86,7 @@ class NudgeView {
       NudgeCardState.declined => 'No',
       NudgeCardState.expired => 'Expired',
       NudgeCardState.pending => 'Pending',
+      NudgeCardState.cancelled => 'Cancelled',
     };
   }
 

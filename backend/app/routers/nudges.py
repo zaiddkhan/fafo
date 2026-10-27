@@ -499,6 +499,49 @@ def expire_nudge(nudge_id: str, current_user: dict = Depends(get_current_user)):
     return _to_response(nudge_id, {**data, **update})
 
 
+@router.post("/{nudge_id}/cancel", response_model=NudgeResponse)
+def cancel_nudge(nudge_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    """The sender calls the plan off while it's waiting or counting down. Closes
+    it at once so a new one can go to the same friend or group; the scheduled
+    go-time push is dropped at dispatch. Not in the brief: added so a typo or a
+    plan that fell through doesn't lock the friend for 10+ minutes."""
+    validate_document_id(nudge_id)
+    uid = current_user["uid"]
+    db = get_firestore()
+    ref = db.collection("nudges").document(nudge_id)
+
+    # A transaction so a yes landing in the same second can't be lost or win.
+    @firestore.transactional
+    def apply(transaction):
+        snap = ref.get(transaction=transaction)
+        if not snap.exists:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nudge not found")
+        data = snap.to_dict()
+        if data.get("sender_uid") != uid:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the sender can cancel")
+        now = _now()
+        settled = _settle(data, _expected_voters(db, data), now)
+        data = {**data, **settled}
+        if data.get("status") not in (NudgeStatus.active.value, NudgeStatus.accepted_timer.value):
+            if settled:
+                transaction.update(ref, settled)
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This plan already ended")
+        update = {
+            "status": NudgeStatus.resolved.value,
+            "outcome": "cancelled",
+            "resolved_at": now,
+            "cancelled_at": now,
+            # The sweep has nothing left to announce.
+            "final_pushed": True,
+        }
+        transaction.update(ref, {**settled, **update})
+        return {**data, **update}
+
+    data = apply(db.transaction())
+    nudge_events.cancelled(background_tasks, nudge_id=nudge_id, data=data, sender_name=_display_name(db, uid))
+    return _to_response(nudge_id, data)
+
+
 def _maybe_group_final(background_tasks, db, nudge_id: str, data: dict, now: datetime | None = None) -> None:
     """One tally push to the sender once a group's answers are in: everyone
     answered, the 10-minute window closed, or the nudge resolved."""

@@ -139,6 +139,27 @@ def expired(background_tasks, *, nudge_id: str, data: dict) -> None:
             )
 
 
+def cancelled(background_tasks, *, nudge_id: str, data: dict, sender_name: str) -> None:
+    """The sender called it off. Whoever said yes gets a real push; whoever
+    hadn't answered only has their live bar withdrawn (`silent_remove`), so a
+    cancel before they answer doesn't buzz them for nothing. No-voters are done."""
+    sender = data.get("sender_uid")
+    votes = data.get("votes") or {}
+    others = [u for u in data.get("participant_uids", []) if u != sender]
+    said_yes = [u for u in others if votes.get(u) == "yes"]
+    unanswered = [u for u in others if u not in votes]
+    for recipients, extra in ((said_yes, {}), (unanswered, {"silent_remove": "1"})):
+        if recipients:
+            _send(
+                background_tasks,
+                template_id="nudge.cancelled",
+                recipient_uids=recipients,
+                variables={"name": sender_name, "title": data.get("title", "")},
+                data={**_payload(nudge_id, data, for_receiver=True), **extra},
+                dedupe_base=f"nudge.cancelled:{nudge_id}",
+            )
+
+
 def schedule_go_time(*, nudge_id: str, data: dict, recipient_uids: list[str], go_at: datetime) -> None:
     """Queue the go-time push for the moment the countdown ends. Delivered by the
     dispatch cron. Re-calling for a later yes in a group only adds that member

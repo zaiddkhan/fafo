@@ -15,6 +15,7 @@ class NudgeCard extends StatelessWidget {
     required this.myHandle,
     this.onYes,
     this.onNo,
+    this.onCancel,
     this.answering = false,
     this.receiverHandle,
   });
@@ -28,13 +29,16 @@ class NudgeCard extends StatelessWidget {
   final String? receiverHandle;
   final VoidCallback? onYes;
   final VoidCallback? onNo;
+
+  /// Sender only: calls the plan off while it's waiting or counting down.
+  final VoidCallback? onCancel;
   final bool answering;
 
   @override
   Widget build(BuildContext context) {
     return FafoTicker(
       builder: (context, now) => view.isSender
-          ? _SenderCard(view: view, now: now)
+          ? _SenderCard(view: view, now: now, onCancel: onCancel)
           : _ReceiverCard(
               view: view,
               now: now,
@@ -48,10 +52,11 @@ class NudgeCard extends StatelessWidget {
 }
 
 class _SenderCard extends StatelessWidget {
-  const _SenderCard({required this.view, required this.now});
+  const _SenderCard({required this.view, required this.now, this.onCancel});
 
   final NudgeView view;
   final DateTime now;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +102,11 @@ class _SenderCard extends StatelessWidget {
       case NudgeCardState.goTime:
         head = 'Go time';
         timerZone = const FafoCountdown(to: null, label: 'go time');
+      case NudgeCardState.cancelled:
+        head = 'Cancelled';
+        foot = 'You called it off.';
     }
+    final canCancel = onCancel != null && (state == NudgeCardState.pending || state == NudgeCardState.accepted);
     return FafoCard(
       stripLeft: 'You',
       stripRight: 'Sender',
@@ -115,7 +124,17 @@ class _SenderCard extends StatelessWidget {
             if (isGroup) _Tally(view: view, color: AppColors.textPrimary, mutedNames: true),
           ],
         ),
-        if (timerZone != null) FafoZone(big: true, children: [timerZone]),
+        if (timerZone != null)
+          FafoZone(
+            big: true,
+            children: [
+              timerZone,
+              if (canCancel) ...[
+                const SizedBox(height: 6),
+                FafoInlineLink(label: 'Cancel plan', onTap: onCancel),
+              ],
+            ],
+          ),
         if (foot != null) FafoZone(children: [_Foot(foot)]),
       ],
     );
@@ -169,6 +188,9 @@ class _ReceiverCard extends StatelessWidget {
       case NudgeCardState.goTime:
         head = 'Go time';
         timerZone = const FafoCountdown(to: null, label: 'go time', color: white);
+      case NudgeCardState.cancelled:
+        head = 'Cancelled';
+        foot = '${view.senderName} called it off.';
     }
     final from = 'From ${view.senderName}${n.isGroup ? ' in ${view.targetName}' : ''}';
     return FafoCard(

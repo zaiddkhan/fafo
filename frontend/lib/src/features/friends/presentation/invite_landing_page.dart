@@ -9,6 +9,7 @@ import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// Landing screen for a `/invite/<code>` link, the link shared from the Code
 /// sheet. Shows whose code it is and asks first: redeeming makes both people
@@ -28,6 +29,7 @@ class InviteLandingPage extends ConsumerStatefulWidget {
 
 class _InviteLandingPageState extends ConsumerState<InviteLandingPage> {
   PublicUserResponse? _owner;
+  /// Why the code couldn't be previewed; it becomes the page's line.
   String? _error;
   bool _loading = true;
   bool _adding = false;
@@ -51,15 +53,12 @@ class _InviteLandingPageState extends ConsumerState<InviteLandingPage> {
   }
 
   Future<void> _add() async {
-    setState(() {
-      _adding = true;
-      _error = null;
-    });
+    setState(() => _adding = true);
     try {
       await ref.read(friendsRepositoryProvider).redeemReferralCode(widget.token);
       if (mounted) setState(() => _added = true);
     } catch (e) {
-      if (mounted) setState(() => _error = _describe(e));
+      if (mounted) FafoToasts.show(_describe(e), kind: FafoToastKind.error);
     } finally {
       if (mounted) setState(() => _adding = false);
     }
@@ -108,10 +107,6 @@ class _InviteLandingPageState extends ConsumerState<InviteLandingPage> {
                 FafoDisplay(headline, fontSize: 52),
                 const SizedBox(height: 12),
                 Text(line, style: AppTypography.ui(15, fontWeight: FontWeight.w400)),
-                if (_error != null && owner != null) ...[
-                  const SizedBox(height: 10),
-                  Text(_error!, style: AppTypography.ui(13.5, color: AppColors.signalRed)),
-                ],
               ],
               const Spacer(),
               if (owner != null && !_added && !alreadyFriends) ...[

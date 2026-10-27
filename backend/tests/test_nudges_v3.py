@@ -265,3 +265,69 @@ def test_malformed_copy_is_sent_as_is():
 
     assert _fill("Use code {", {}) == "Use code {"
     assert _fill("{name} said yes", {"name": "Leo"}) == "Leo said yes"
+
+
+# --- Cancel ----------------------------------------------------------------------
+
+
+def _live_doc(db, doc_id, **data):
+    soon = datetime.now(UTC) + timedelta(minutes=8)
+    return _nudge_doc(db, doc_id, **{"status": "active", "answer_by": soon, "expires_at": soon, "votes": {}, **data})
+
+
+def test_sender_cancels_and_can_send_again(nudge_db, captured_fcm):
+    _live_doc(nudge_db, "n1")
+    res = nudges.cancel_nudge("n1", None, {"uid": "a"})
+    assert res.outcome == "cancelled"
+    doc = nudge_db.collection("nudges").document("n1").get().to_dict()
+    assert doc["status"] == "resolved" and doc["final_pushed"] is True
+    # The sweep has nothing more to say about it.
+    sweep_nudges()
+    assert all("Expired" not in c["title"] for c in captured_fcm["calls"])
+
+
+def test_only_the_sender_can_cancel(nudge_db):
+    _live_doc(nudge_db, "n1")
+    with pytest.raises(nudges.HTTPException) as e:
+        nudges.cancel_nudge("n1", None, {"uid": "b"})
+    assert e.value.status_code == 403
+
+
+def test_cannot_cancel_a_finished_plan(nudge_db):
+    past = datetime.now(UTC) - timedelta(minutes=1)
+    _nudge_doc(nudge_db, "n1", status="active", answer_by=past, expires_at=past, votes={})
+    with pytest.raises(nudges.HTTPException) as e:
+        nudges.cancel_nudge("n1", None, {"uid": "a"})
+    assert e.value.status_code == 409
+
+
+def test_cancel_pushes_yes_voters_and_quietly_clears_the_rest(nudge_db, captured_fcm):
+    for uid in ("b", "c", "d"):
+        _device(nudge_db, uid)
+    _live_doc(nudge_db, "n1", feed_type="group", participant_uids=["a", "b", "c", "d"], votes={"b": "yes", "c": "no"})
+    nudges.cancel_nudge("n1", None, {"uid": "a"})
+    by_token = {c["tokens"][0]: c for c in captured_fcm["calls"]}
+    assert set(by_token) == {"tok-b", "tok-d"}  # c already said no: nothing to tell
+    assert by_token["tok-b"]["title"] == "Cancelled: Coffee downstairs?"
+    assert "silent_remove" not in by_token["tok-b"]["data"]
+    assert by_token["tok-d"]["data"]["silent_remove"] == "1"
+
+
+def test_go_time_push_is_dropped_after_cancel(nudge_db, captured_fcm):
+    _device(nudge_db, "a")
+    _live_doc(nudge_db, "n1", status="accepted_timer", votes={"b": "yes"})
+    nudge_events.schedule_go_time(
+        nudge_id="n1", data={"title": "Coffee?", "feed_type": "friend", "sender_uid": "a"},
+        recipient_uids=["a"], go_at=datetime.now(UTC) + timedelta(minutes=5),
+    )
+    nudges.cancel_nudge("n1", None, {"uid": "a"})
+    from app.notifications.service import NotificationService
+
+    svc = NotificationService()
+    go = [d for d in nudge_db.collection(outbox.COLLECTION).stream() if d.id.startswith("nudge.go_time")]
+    assert go
+    for doc in go:
+        # Go time arrives: the dispatch cron picks it up.
+        doc.reference.update({"scheduled_for": datetime.now(UTC) - timedelta(seconds=1)})
+        assert svc.dispatch_one(doc.id) == "skipped"
+    assert all(not c["title"].startswith("Go time") for c in captured_fcm["calls"])

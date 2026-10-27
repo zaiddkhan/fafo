@@ -32,8 +32,6 @@ class CodeSheet extends ConsumerStatefulWidget {
 class _CodeSheetState extends ConsumerState<CodeSheet> {
   final _redeem = TextEditingController();
   bool _redeeming = false;
-  String? _message;
-  bool _messageIsError = false;
 
   @override
   void dispose() {
@@ -59,10 +57,7 @@ class _CodeSheetState extends ConsumerState<CodeSheet> {
   Future<void> _submitRedeem() async {
     final code = _redeem.text.trim();
     if (code.isEmpty || _redeeming) return;
-    setState(() {
-      _redeeming = true;
-      _message = null;
-    });
+    setState(() => _redeeming = true);
     try {
       final result = await ref.read(friendsRepositoryProvider).redeemReferralCode(code);
       // The sheet may have been closed while the request was in flight.
@@ -70,18 +65,12 @@ class _CodeSheetState extends ConsumerState<CodeSheet> {
       ref.invalidate(liveFriendsProvider);
       final name = result.friend.displayName;
       _redeem.clear();
-      setState(() {
-        _messageIsError = false;
-        _message = result.alreadyFriends
-            ? 'You and $name are already friends.'
-            : 'You and $name are friends now.';
-      });
+      FafoToasts.show(
+        result.alreadyFriends ? 'You and $name are already friends.' : 'You and $name are friends now.',
+        kind: result.alreadyFriends ? FafoToastKind.info : FafoToastKind.success,
+      );
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _messageIsError = true;
-        _message = friendlyErrorMessage(e);
-      });
+      if (mounted) FafoToasts.error(e);
     } finally {
       if (mounted) setState(() => _redeeming = false);
     }
@@ -184,16 +173,6 @@ class _CodeSheetState extends ConsumerState<CodeSheet> {
                 busy: _redeeming,
                 onPressed: _submitRedeem,
               ),
-              if (_message != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  _message!,
-                  style: AppTypography.ui(
-                    13.5,
-                    color: _messageIsError ? AppColors.signalRed : AppColors.textPrimary,
-                  ),
-                ),
-              ],
             ],
           ),
         ),

@@ -17,6 +17,7 @@ import 'package:fafu/src/features/quests/domain/quest.dart';
 import 'package:fafu/src/features/right_now/data/right_now_providers.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// Opens the composer. Pass [quest] to share a side quest as a tagged nudge.
 /// Resolves with the created nudge, or null if dismissed.
@@ -61,7 +62,6 @@ class _ComposeNudgeSheetState extends ConsumerState<ComposeNudgeSheet> {
   _Target? _target;
   int? _countdown;
   bool _sending = false;
-  String? _error;
 
   QuestResponse? get _quest => widget.quest;
 
@@ -98,7 +98,6 @@ class _ComposeNudgeSheetState extends ConsumerState<ComposeNudgeSheet> {
     if (target == null || _planTitle.isEmpty || _sending) return;
     setState(() {
       _sending = true;
-      _error = null;
     });
     try {
       final nudge = await ref.read(nudgesRepositoryProvider).create(
@@ -114,8 +113,8 @@ class _ComposeNudgeSheetState extends ConsumerState<ComposeNudgeSheet> {
       if (mounted) {
         setState(() {
           _sending = false;
-          _error = friendlyErrorMessage(e);
         });
+        FafoToasts.show(friendlyErrorMessage(e), kind: FafoToastKind.error);
       }
     }
   }
@@ -204,11 +203,6 @@ class _ComposeNudgeSheetState extends ConsumerState<ComposeNudgeSheet> {
                   busy: _sending,
                   onPressed: ok ? _send : null,
                 ),
-                if (_error != null)
-                  Text(
-                    _error!,
-                    style: AppTypography.ui(13, color: AppColors.signalRed),
-                  ),
               ],
             ),
           ],

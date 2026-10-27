@@ -77,6 +77,16 @@ class NudgesRepository {
     }
   }
 
+  /// Sender only, while waiting or counting down.
+  Future<NudgeResponse> cancel(String nudgeId) async {
+    try {
+      final response = await _dio.post('/nudges/$nudgeId/cancel');
+      return NudgeResponse.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   Future<void> remind(String nudgeId) async {
     try {
       await _dio.post('/nudges/$nudgeId/remind');

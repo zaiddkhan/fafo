@@ -22,7 +22,6 @@ class SignupPage extends ConsumerStatefulWidget {
 class _SignupPageState extends ConsumerState<SignupPage> {
   final _phoneController = TextEditingController();
   bool _sendingOtp = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -40,7 +39,6 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     if (!_canContinue || _sendingOtp) return;
     setState(() {
       _sendingOtp = true;
-      _error = null;
     });
 
     final pendingVerification = ref
@@ -97,7 +95,6 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           keyboardType: TextInputType.phone,
           autofocus: true,
           style: AppTypography.ui(17, fontWeight: FontWeight.w700),
-          onChanged: (_) => setState(() => _error = null),
           onSubmitted: (_) => _sendOtp(),
           decoration: InputDecoration(
             hintText: '98765 43210',
@@ -113,10 +110,6 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           'We’ll text you a 6-digit code.',
           style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
         ),
-        if (_error != null) ...[
-          const SizedBox(height: 10),
-          Text(_error!, style: AppTypography.ui(13.5, color: AppColors.signalRed)),
-        ],
       ],
     );
   }

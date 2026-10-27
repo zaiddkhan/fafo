@@ -6,6 +6,7 @@ import 'package:fafu/src/core/services/deep_link_handler.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/app_theme.dart';
 import 'package:fafu/src/core/theme/theme_mode_controller.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class FafoApp extends ConsumerStatefulWidget {
   const FafoApp({super.key});
@@ -65,6 +66,8 @@ class _FafoAppState extends ConsumerState<FafoApp> {
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       routerConfig: router,
+      // Toasts sit above every route, sheets and dialogs included.
+      builder: (context, child) => FafoToastHost(child: child!),
     );
   }
 }
