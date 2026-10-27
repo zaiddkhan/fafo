@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -120,6 +121,7 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Coming back from the background: catch up on answers immediately.
     if (state == AppLifecycleState.resumed) {
+      ref.read(currentProfileProvider.notifier).retryIfFailed();
       ref.read(myNudgesProvider.notifier).refresh();
       ref.read(liveFriendsProvider.notifier).refresh();
     }
@@ -220,7 +222,9 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
     final profile = ref.watch(currentProfileProvider).value;
     final nudges = ref.watch(myNudgesProvider);
     final friends = ref.watch(liveFriendsProvider).value ?? const <FriendResponse>[];
-    final myUid = profile?.uid ?? '';
+    // Fall back to the signed-in account so a profile that hasn't loaded
+    // can't hide which answers are yours.
+    final myUid = profile?.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
     final handle = profile?.username ?? 'you';
     final free = _freeOverride ?? profile?.freeNow ?? false;
     final freeFriends = friends.where((f) => f.user.freeNow).toList();

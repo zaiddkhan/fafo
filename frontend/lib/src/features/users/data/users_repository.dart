@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/network/dio_provider.dart';
+import 'package:fafu/src/core/services/network_status.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
 import 'package:fafu/src/features/users/domain/profile_stats.dart';
 
@@ -29,7 +30,17 @@ final currentProfileProvider =
 class CurrentProfileNotifier extends AsyncNotifier<ProfileResponse> {
   @override
   Future<ProfileResponse> build() {
+    // A load that failed while offline would otherwise stick for the whole
+    // session: home then can't tell which answers are yours.
+    ref.listen<bool>(networkStatusProvider, (was, online) {
+      if (was == false && online) retryIfFailed();
+    });
     return ref.watch(usersRepositoryProvider).getMe();
+  }
+
+  /// Re-fetch only if the last load failed (on reconnect and app resume).
+  void retryIfFailed() {
+    if (state.hasError && !state.isLoading) ref.invalidateSelf();
   }
 
   /// Seed the cache with an already-fetched profile (e.g. the response returned
