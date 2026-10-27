@@ -18,6 +18,7 @@ import 'package:fafu/src/features/groups/presentation/groups_body.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
 import 'package:fafu/src/features/nudges/presentation/nudge_feed_sheet.dart';
 import 'package:fafu/src/features/profile/presentation/public_profile_page.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class FriendsPage extends ConsumerStatefulWidget {
   const FriendsPage({this.showBackButton = true, super.key});
@@ -86,10 +87,8 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
     }
   }
 
-  void _showSnack(String text) {
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(text)));
+  void _showSnack(String text, {FafoToastKind kind = FafoToastKind.error}) {
+    ScaffoldMessenger.of(context).toast(text, kind: kind);
   }
 
   void _openNudgeFeed(PublicUserResponse user) {
@@ -138,7 +137,7 @@ class _FriendsPageState extends ConsumerState<FriendsPage> {
       }
       if (mounted) {
         _showSnack(
-          'Invite link copied${canOpen ? ' and WhatsApp opened' : ''}',
+          'Invite link copied${canOpen ? ' and WhatsApp opened' : ''}', kind: FafoToastKind.success,
         );
       }
     } on ApiException catch (e) {

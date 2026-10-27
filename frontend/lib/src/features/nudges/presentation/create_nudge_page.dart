@@ -7,6 +7,7 @@ import 'package:fafu/src/features/friends/data/friends_providers.dart';
 import 'package:fafu/src/features/nudges/data/nudges_providers.dart';
 import 'package:fafu/src/features/nudges/data/nudges_repository.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// Full-screen "Create Nudge" form. Returns `true` when a nudge was created.
 class CreateNudgePage extends ConsumerStatefulWidget {
@@ -40,7 +41,7 @@ class _CreateNudgePageState extends ConsumerState<CreateNudgePage> {
   Future<void> _submit() async {
     final title = _title.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add a title first.')));
+      ScaffoldMessenger.of(context).toast('Add a title first.', kind: FafoToastKind.info);
       return;
     }
     setState(() => _busy = true);
@@ -61,9 +62,9 @@ class _CreateNudgePageState extends ConsumerState<CreateNudgePage> {
       }
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) ScaffoldMessenger.of(context).toast(e.message, kind: FafoToastKind.error);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+      if (mounted) ScaffoldMessenger.of(context).toastError(e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -19,6 +19,7 @@ import 'package:fafu/src/features/auth/data/session_reset.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class OtpPage extends ConsumerStatefulWidget {
   const OtpPage({
@@ -172,12 +173,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         _waitingForCode = false;
       });
       _startTimer();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Code sent'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).toast('Code sent.');
     } catch (e) {
       if (mounted) {
         setState(() {

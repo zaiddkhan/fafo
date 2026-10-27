@@ -14,6 +14,7 @@ import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// Edit Profile — lets the user change their core profile fields (PRD: "all
 /// core fields editable"): display name, username, area, and photo.
@@ -167,20 +168,20 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Profile updated.')));
+        ).toast('Profile updated.');
         Navigator.of(context).pop(true);
       }
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
+        ).toast(e.message, kind: FafoToastKind.error);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+        ).toastError(e);
       }
     } finally {
       if (mounted) setState(() => _saving = false);

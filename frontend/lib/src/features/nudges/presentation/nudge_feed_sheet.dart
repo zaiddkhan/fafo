@@ -12,6 +12,7 @@ import 'package:fafu/src/features/nudges/data/nudges_providers.dart';
 import 'package:fafu/src/features/nudges/data/nudges_repository.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
 import 'package:fafu/src/features/nudges/presentation/create_nudge_page.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class NudgeFeedSheet extends ConsumerStatefulWidget {
   const NudgeFeedSheet({
@@ -63,9 +64,7 @@ class _NudgeFeedSheetState extends ConsumerState<NudgeFeedSheet> {
     if (nudges.any((n) => !n.isResolved)) {
       _messengerKey.currentState
         ?..clearSnackBars()
-        ..showSnackBar(
-          const SnackBar(content: Text('Resolve the active nudge first.')),
-        );
+        ..toast('Resolve the active nudge first.', kind: FafoToastKind.info);
       return;
     }
 
@@ -402,13 +401,9 @@ class _NudgeBubble extends ConsumerWidget {
                                       final messenger = ScaffoldMessenger.of(context);
                                       try {
                                         await ref.read(nudgesRepositoryProvider).remind(nudge.id);
-                                        messenger.showSnackBar(
-                                          const SnackBar(content: Text('Reminder sent')),
-                                        );
+                                        messenger.toast('Reminder sent');
                                       } catch (e) {
-                                        messenger.showSnackBar(
-                                          SnackBar(content: Text(friendlyErrorMessage(e))),
-                                        );
+                                        messenger.toastError(e);
                                       }
                                       onChanged();
                                     }

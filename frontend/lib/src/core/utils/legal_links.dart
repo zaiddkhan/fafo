@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// Canonical hosted legal documents. Single source of truth — used by both the
 /// welcome screen and Settings so the URLs never drift apart.
@@ -12,6 +13,6 @@ Future<void> openExternalUrl(BuildContext context, String url) async {
   final messenger = ScaffoldMessenger.of(context);
   final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   if (!ok) {
-    messenger.showSnackBar(SnackBar(content: Text('Could not open $url')));
+    messenger.toast('Could not open $url', kind: FafoToastKind.error);
   }
 }

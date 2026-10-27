@@ -12,6 +12,7 @@ import 'package:fafu/src/features/groups/domain/group.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
 import 'package:fafu/src/features/nudges/presentation/nudge_feed_sheet.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// The groups experience (create group, invites, your groups) as a non-scrolling
 /// [Column]. Designed to live inside a host scroll view — the standalone
@@ -61,10 +62,8 @@ class _GroupsBodyState extends ConsumerState<GroupsBody> {
     ref.invalidate(friendsListProvider);
   }
 
-  void _showSnack(String text) {
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(text)));
+  void _showSnack(String text, {FafoToastKind kind = FafoToastKind.error}) {
+    ScaffoldMessenger.of(context).toast(text, kind: kind);
   }
 
   Future<void> _run(Future<void> Function() action) async {

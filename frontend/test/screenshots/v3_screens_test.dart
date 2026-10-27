@@ -45,6 +45,7 @@ import 'package:fafu/src/features/right_now/presentation/right_now_page.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 // --- Fonts ----------------------------------------------------------------------
 
@@ -289,6 +290,7 @@ Future<void> _shoot(
   Brightness brightness = Brightness.light,
   double width = 390,
   double height = 1500,
+  Duration settle = Duration.zero,
 }) async {
   AppColors.setBrightness(brightness);
   tester.view.physicalSize = Size(width * 2, height * 2);
@@ -308,6 +310,10 @@ Future<void> _shoot(
   );
   await tester.pump(const Duration(milliseconds: 50));
   await tester.pump(const Duration(milliseconds: 50));
+  if (settle > Duration.zero) {
+    await tester.pump(settle);
+    await tester.pump(settle);
+  }
   await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/$name.png'));
   // Unmount so tickers' periodic timers are cancelled before the test ends.
   await tester.pumpWidget(const SizedBox());
@@ -432,6 +438,28 @@ void main() {
     });
   }
 
+  // Toasts: success, error, info, light and dark.
+  const toasts = {
+    'success': (FafoToastKind.success, 'Defaults saved.'),
+    'error': (FafoToastKind.error, 'Your session ended. Please sign in again.'),
+    'info': (FafoToastKind.info, 'Profile still loading…'),
+  };
+  for (final dark in [false, true]) {
+    for (final t in toasts.entries) {
+      final name = '${dark ? 'dark_' : ''}50_toast_${t.key}';
+      testWidgets(name, (tester) async {
+        await _shoot(
+          tester,
+          name,
+          _ToastDemo(kind: t.value.$1, message: t.value.$2),
+          height: 500,
+          brightness: dark ? Brightness.dark : Brightness.light,
+          settle: const Duration(milliseconds: 600),
+        );
+      });
+    }
+  }
+
   // Dark theme
   for (final name in ['02_home_free_recent', '04_receiver_answering', '07_sender_said_yes', '20_composer', '22_profile', '30_landing', '33_otp', '35_settings', '40_shell_home', '41_shell_friends']) {
     testWidgets('dark_$name', (tester) async {
@@ -447,4 +475,26 @@ void main() {
       await _shoot(tester, 'small_$name', s.screen, overrides: s.overrides, height: s.height, width: 320);
     });
   }
+}
+
+/// Shows one toast over an empty page once mounted.
+class _ToastDemo extends StatefulWidget {
+  const _ToastDemo({required this.kind, required this.message});
+
+  final FafoToastKind kind;
+  final String message;
+
+  @override
+  State<_ToastDemo> createState() => _ToastDemoState();
+}
+
+class _ToastDemoState extends State<_ToastDemo> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => showFafoToast(context, widget.message, kind: widget.kind));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(backgroundColor: AppColors.bgPrimary);
 }

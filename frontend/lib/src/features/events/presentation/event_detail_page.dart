@@ -25,6 +25,7 @@ import 'package:fafu/src/features/home/presentation/home_page.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/users/data/users_providers.dart';
 import 'package:fafu/src/shared/widgets/app_pressable.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class EventDetailPage extends ConsumerStatefulWidget {
   const EventDetailPage({super.key, required this.eventId, this.initialEvent});
@@ -153,7 +154,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('You joined this event.')));
+        ).toast('You joined this event.');
       }
     } catch (e) {
       if (mounted) setState(() => _error = friendlyErrorMessage(e));
@@ -196,7 +197,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('You left this event.')));
+        ).toast('You left this event.');
       }
     } catch (e) {
       if (mounted) setState(() => _error = friendlyErrorMessage(e));
@@ -210,13 +211,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
         .read(savedEventIdsProvider.notifier)
         .toggle(widget.eventId);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          nowSaved ? 'Saved to your profile.' : 'Removed from saved.',
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(context).toast(nowSaved ? 'Saved to your profile.' : 'Removed from saved.');
   }
 
   MockEvent? get _displayEvent {
@@ -327,9 +322,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the share sheet.')),
-      );
+      ScaffoldMessenger.of(context).toast('Could not open the share sheet.', kind: FafoToastKind.error);
     }
   }
 
@@ -1191,9 +1184,7 @@ class _OrganizerTrustCard extends StatelessWidget {
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
     if (!launched && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open ${uri.toString()}')),
-      );
+      ScaffoldMessenger.of(context).toast('Could not open ${uri.toString()}', kind: FafoToastKind.error);
     }
   }
 

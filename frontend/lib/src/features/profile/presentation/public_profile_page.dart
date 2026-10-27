@@ -7,6 +7,7 @@ import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
 import 'package:fafu/src/features/nudges/presentation/nudge_feed_sheet.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class PublicProfilePage extends ConsumerWidget {
   const PublicProfilePage({required this.user, super.key});
@@ -72,7 +73,7 @@ class PublicProfilePage extends ConsumerWidget {
             FriendshipStatus.none => FilledButton(
                 onPressed: () async {
                   await ref.read(friendsRepositoryProvider).sendFriendRequest(uid: user.uid);
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Friend request sent')));
+                  if (context.mounted) ScaffoldMessenger.of(context).toast('Friend request sent');
                 },
                 child: const Text('Friend Request'),
               ),

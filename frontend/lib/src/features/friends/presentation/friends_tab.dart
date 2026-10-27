@@ -13,6 +13,7 @@ import 'package:fafu/src/features/friends/presentation/friends_page.dart';
 import 'package:fafu/src/features/right_now/data/right_now_providers.dart';
 import 'package:fafu/src/features/right_now/presentation/code_sheet.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 final _myCodeProvider = FutureProvider.autoDispose<ReferralCode>(
   (ref) => ref.watch(friendsRepositoryProvider).getReferralCode(),
@@ -301,7 +302,7 @@ class _RequestRowState extends ConsumerState<_RequestRow> {
       ref.invalidate(incomingFriendRequestsProvider);
       if (accept) await ref.read(liveFriendsProvider.notifier).refresh();
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+      messenger.toastError(e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -443,11 +444,9 @@ class _FriendSheetState extends ConsumerState<_FriendSheet> {
       }
       await ref.read(liveFriendsProvider.notifier).refresh();
       navigator.pop();
-      messenger.showSnackBar(
-        SnackBar(content: Text(block ? '${user.displayName} is blocked.' : '${user.displayName} is no longer a friend.')),
-      );
+      messenger.toast(block ? '${user.displayName} is blocked.' : '${user.displayName} is no longer a friend.');
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+      messenger.toastError(e);
       if (mounted) setState(() => _busy = false);
     }
   }

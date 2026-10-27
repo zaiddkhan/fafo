@@ -24,6 +24,7 @@ import 'package:fafu/src/features/right_now/presentation/code_sheet.dart';
 import 'package:fafu/src/features/right_now/presentation/preview_sheet.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// Home, "Right now" (V3 brief 3.1-3.9). The only screen: free status, friends
 /// who are also free, the live nudge card (or the empty state), Recent, and a
@@ -139,9 +140,7 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
     } catch (e) {
       if (!mounted) return;
       setState(() => _freeOverride = null);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(e))),
-      );
+      ScaffoldMessenger.of(context).toastError(e);
     } finally {
       if (mounted) setState(() => _freeBusy = false);
     }
@@ -165,9 +164,7 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
       ref.read(pushServiceProvider).liveNudges.cancel(nudge.id);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
+        ScaffoldMessenger.of(context).toastError(e);
       }
       ref.read(myNudgesProvider.notifier).refresh();
     } finally {

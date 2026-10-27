@@ -6,6 +6,7 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/quests/data/quests_providers.dart';
 import 'package:fafu/src/features/quests/data/quests_repository.dart';
 import 'package:fafu/src/features/quests/domain/quest.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class QuestsPage extends ConsumerStatefulWidget {
   const QuestsPage({super.key});
@@ -47,7 +48,7 @@ class _QuestsPageState extends ConsumerState<QuestsPage> {
       // the real server state agrees — avoids a flicker back to the old state.
       await ref.read(questActivationsProvider.future);
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+      messenger.toastError(e);
     } finally {
       if (mounted) {
         setState(() {

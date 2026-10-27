@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// Quick defaults (brief 6.2): default countdown and side quest invites.
 /// Lives in Settings. Changes apply only after "Save defaults".
@@ -34,9 +34,9 @@ class _QuickDefaultsState extends ConsumerState<QuickDefaults> {
         sideQuestInvites: _quests,
       );
       ref.read(currentProfileProvider.notifier).setProfile(updated);
-      messenger.showSnackBar(const SnackBar(content: Text('Defaults saved.')));
+      messenger.toast('Defaults saved.');
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+      messenger.toastError(e);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

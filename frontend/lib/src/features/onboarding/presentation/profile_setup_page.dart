@@ -21,6 +21,7 @@ import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class ProfileSetupPage extends ConsumerStatefulWidget {
   const ProfileSetupPage({super.key});
@@ -272,13 +273,9 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
       if (code.isNotEmpty) {
         try {
           final result = await ref.read(friendsRepositoryProvider).redeemReferralCode(code);
-          messenger.showSnackBar(
-            SnackBar(content: Text('You and ${result.friend.displayName} are friends now.')),
-          );
+          messenger.toast('You and ${result.friend.displayName} are friends now.');
         } catch (e) {
-          messenger.showSnackBar(
-            SnackBar(content: Text('Code didn’t work: ${friendlyErrorMessage(e)}')),
-          );
+          messenger.toast('Code didn’t work: ${friendlyErrorMessage(e)}', kind: FafoToastKind.error);
         }
       }
       await prefs.remove(pendingReferralCodeKey);

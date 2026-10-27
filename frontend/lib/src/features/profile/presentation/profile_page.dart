@@ -26,6 +26,7 @@ import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
 import 'package:fafu/src/features/users/domain/profile_stats.dart';
 import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key, required this.savedEvents});
@@ -428,13 +429,13 @@ Future<void> _startQuest(
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Quest activated.')));
+      ).toast('Quest activated.');
     }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+      ).toastError(e);
     }
   }
 }
@@ -1045,12 +1046,12 @@ class _JoinedEventCard extends ConsumerWidget {
       ref.invalidate(_joinedEventsProvider);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('RSVP cancelled.')));
+      ).toast('RSVP cancelled.');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+        ).toastError(e);
       }
     }
   }
@@ -1059,14 +1060,12 @@ class _JoinedEventCard extends ConsumerWidget {
     try {
       await ref.read(savedEventIdsProvider.notifier).toggle(event.id);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Removed from saved events.')),
-      );
+      ScaffoldMessenger.of(context).toast('Removed from saved events.');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
+        ).toastError(e);
       }
     }
   }

@@ -10,6 +10,7 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/features/friends/data/friends_providers.dart';
 import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class ContactsSyncPage extends ConsumerStatefulWidget {
   const ContactsSyncPage({super.key});
@@ -116,7 +117,7 @@ class _ContactsSyncPageState extends ConsumerState<ContactsSyncPage> {
       ref.invalidate(outgoingFriendRequestsProvider);
       ref.invalidate(friendStatsProvider);
       await _loadContacts();
-      if (mounted) _showSnack('Friend request sent');
+      if (mounted) _showSnack('Friend request sent', kind: FafoToastKind.success);
     } on ApiException catch (e) {
       if (mounted) _showSnack(e.message);
     } finally {
@@ -136,7 +137,7 @@ class _ContactsSyncPageState extends ConsumerState<ContactsSyncPage> {
       final opened = await _openSmsComposer(item.primaryPhone, text);
       if (mounted) {
         _showSnack(
-          opened ? 'Invite copied and SMS opened' : 'Invite link copied',
+          opened ? 'Invite copied and SMS opened' : 'Invite link copied', kind: FafoToastKind.success,
         );
       }
     } on ApiException catch (e) {
@@ -184,13 +185,11 @@ class _ContactsSyncPageState extends ConsumerState<ContactsSyncPage> {
     }).toList();
   }
 
-  void _showSnack(String text) {
+  void _showSnack(String text, {FafoToastKind kind = FafoToastKind.error}) {
     // Replace any queued/visible snackbar so rapid-fire actions (e.g. sending
     // several friend requests in a row) surface a single toast instead of a
     // long backlog that plays one after another until exhausted.
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(content: Text(text)));
+    ScaffoldMessenger.of(context).toast(text, kind: kind);
   }
 
   @override

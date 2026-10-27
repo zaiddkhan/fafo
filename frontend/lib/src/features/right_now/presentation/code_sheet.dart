@@ -11,6 +11,7 @@ import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
 import 'package:fafu/src/features/right_now/data/right_now_providers.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 final _referralCodeProvider = FutureProvider.autoDispose<ReferralCode>(
   (ref) => ref.watch(friendsRepositoryProvider).getReferralCode(),
@@ -51,9 +52,7 @@ class _CodeSheetState extends ConsumerState<CodeSheet> {
   Future<void> _copy(ReferralCode code) async {
     await Clipboard.setData(ClipboardData(text: code.code));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Code copied.')),
-      );
+      ScaffoldMessenger.of(context).toast('Code copied.');
     }
   }
 

@@ -22,6 +22,7 @@ import 'package:fafu/src/features/search/presentation/search_page.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/core/services/shared_preferences_provider.dart';
 import 'package:fafu/src/shared/widgets/app_button.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class HomeMapFocusTarget {
   const HomeMapFocusTarget({
@@ -1279,28 +1280,20 @@ class _EventCardState extends ConsumerState<_EventCard> {
       if (!mounted) return;
       bumpEventsRevision(ref);
       setState(() => _joined = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You joined this event.')),
-      );
+      ScaffoldMessenger.of(context).toast('You joined this event.');
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.type == ApiErrorType.conflict) {
         // Already joined (e.g. from an earlier session) — reflect that state
         // instead of surfacing a "conflict" error the user can't act on.
         setState(() => _joined = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("You're already going to this event.")),
-        );
+        ScaffoldMessenger.of(context).toast("You're already going to this event.", kind: FafoToastKind.info);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(friendlyErrorMessage(e))),
-        );
+        ScaffoldMessenger.of(context).toastError(e);
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(e))),
-      );
+      ScaffoldMessenger.of(context).toastError(e);
     } finally {
       if (mounted) setState(() => _joining = false);
     }

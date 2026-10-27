@@ -27,6 +27,7 @@ import 'package:fafu/src/features/settings/presentation/quick_defaults.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -86,9 +87,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         if (_pushNotifications == enabled) {
           setState(() => _pushNotifications = !enabled);
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not update push setting: $e')),
-        );
+        ScaffoldMessenger.of(context).toast('Couldn’t update notifications: ${friendlyErrorMessage(e)}', kind: FafoToastKind.error);
       }
     } finally {
       if (mounted) setState(() => _pushBusy = false);
@@ -154,9 +153,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           label: result.label,
         );
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Area set to ${result.label}. The map will re-centre.')),
-      );
+      ScaffoldMessenger.of(context).toast('Area set to ${result.label}. The map will re-centre.');
     }
   }
 
@@ -169,7 +166,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       await _signOutLocally();
       if (mounted) context.go('/');
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (mounted) ScaffoldMessenger.of(context).toast(e.message, kind: FafoToastKind.error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -285,9 +282,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: () {
                       final profile = ref.read(currentProfileProvider).value;
                       if (profile == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Profile still loading…')),
-                        );
+                        ScaffoldMessenger.of(context).toast('Profile still loading…', kind: FafoToastKind.info);
                         return;
                       }
                       Navigator.of(context).push(
@@ -326,13 +321,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             icon: Icons.hourglass_top_outlined,
                             title: 'Creator application pending',
                             onTap: () =>
-                                ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Your creator application is under review. We\'ll reach out over email.',
-                                ),
-                              ),
-                            ),
+                                ScaffoldMessenger.of(context).toast('Your creator application is under review. We\'ll reach out over email.', kind: FafoToastKind.info),
                           )
                         : _SettingsTile(
                             icon: Icons.verified_outlined,
