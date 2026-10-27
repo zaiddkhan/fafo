@@ -294,6 +294,8 @@ Future<void> _shoot(
   Duration settle = Duration.zero,
 }) async {
   AppColors.setBrightness(brightness);
+  // Toasts are app-wide state; don't let one test's toast leak into the next.
+  FafoToasts.hide();
   tester.view.physicalSize = Size(width * 2, height * 2);
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);

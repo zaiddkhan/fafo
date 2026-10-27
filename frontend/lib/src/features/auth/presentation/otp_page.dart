@@ -261,7 +261,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
     return FafoFormPage(
       eyebrow: 'Verify',
-      title: 'Check your texts.',
+      title: 'Six digits, incoming.',
       subtitle: _waitingForCode
           ? 'Sending a 6-digit code to ${widget.phoneNumber}…'
           : 'We sent a 6-digit code to ${widget.phoneNumber}.',

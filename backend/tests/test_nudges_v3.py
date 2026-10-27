@@ -85,7 +85,7 @@ def test_quest_nudge_push_leads_with_plan_title_and_tags(db, captured_fcm):
     )
     call = captured_fcm["calls"][0]
     assert call["title"] == "Maya: Walk one block"
-    assert call["body"] == "Side quest · Easy. You have 10 minutes."
+    assert call["body"] == "Side quest · Easy. You’ve got 10 minutes. In or out?"
     assert call["data"]["quest_difficulty"] == "easy"
     assert call["data"]["answer_by"] == T0.isoformat()
 
@@ -133,7 +133,7 @@ def test_sweep_expires_and_tells_the_sender_once(nudge_db, captured_fcm):
     assert doc["status"] == "expired"
     assert doc["final_pushed"] is True
     titles = [c["title"] for c in captured_fcm["calls"]]
-    assert titles == ["Expired: Coffee downstairs?"]
+    assert titles == ["Time’s up: Coffee downstairs?"]
 
 
 def test_sweep_sends_one_group_tally_when_window_closes(nudge_db, captured_fcm):
@@ -308,7 +308,7 @@ def test_cancel_pushes_yes_voters_and_quietly_clears_the_rest(nudge_db, captured
     nudges.cancel_nudge("n1", None, {"uid": "a"})
     by_token = {c["tokens"][0]: c for c in captured_fcm["calls"]}
     assert set(by_token) == {"tok-b", "tok-d"}  # c already said no: nothing to tell
-    assert by_token["tok-b"]["title"] == "Cancelled: Coffee downstairs?"
+    assert by_token["tok-b"]["title"] == "Called off: Coffee downstairs?"
     assert "silent_remove" not in by_token["tok-b"]["data"]
     assert by_token["tok-d"]["data"]["silent_remove"] == "1"
 

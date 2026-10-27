@@ -10,10 +10,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Display text is uppercased for rendering, sentence case for screen readers.
-    expect(find.text('SKIP THE GROUP CHAT.'), findsOneWidget);
-    expect(find.bySemanticsLabel('Skip the group chat.'), findsOneWidget);
-    expect(find.text('Send one clear plan. Get one clear answer.'), findsOneWidget);
-    expect(find.text('Get started'), findsOneWidget);
-    expect(find.text('I already have an account'), findsOneWidget);
+    expect(find.text('LESS “WE SHOULD HANG.” MORE HANGING.'), findsOneWidget);
+    expect(find.bySemanticsLabel('Less “we should hang.” More hanging.'), findsOneWidget);
+    expect(find.text('Send a friend one plan. They get 10 minutes to say yes or no. No group chat, no “maybe”.'), findsOneWidget);
+    expect(find.text('I’m in'), findsOneWidget);
+    expect(find.text('I’ve got an account'), findsOneWidget);
   });
 }

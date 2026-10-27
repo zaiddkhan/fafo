@@ -145,7 +145,7 @@ class LiveNudgeNotifications {
       'answer_by': nudge.answerDeadline.toUtc().toIso8601String(),
       'countdown_minutes': '${nudge.countdownMinutes}',
       'n_title': '${nudge.isGroup ? 'Waiting on' : 'Waiting for'} $who: ${nudge.title}',
-      'n_body': 'Left to answer.',
+      'n_body': 'Ball’s in their court.',
       'silent': '1',
     });
   }

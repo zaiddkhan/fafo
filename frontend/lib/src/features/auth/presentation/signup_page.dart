@@ -60,8 +60,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   Widget build(BuildContext context) {
     return FafoFormPage(
       eyebrow: 'Sign up',
-      title: 'Make plans in one tap.',
-      subtitle: 'Enter your phone number to get started.',
+      title: 'Let’s get you in.',
+      subtitle: 'Your number is your login. No passwords, ever.',
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

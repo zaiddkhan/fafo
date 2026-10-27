@@ -175,7 +175,7 @@ def schedule_go_time(*, nudge_id: str, data: dict, recipient_uids: list[str], go
                 None,
                 template_id="nudge.go_time",
                 recipient_uids=recipients,
-                variables={"title": data.get("title", ""), "who": "Your plan starts now."},
+                variables={"title": data.get("title", ""), "who": "Phone down, shoes on. Your plan starts now."},
                 data=_payload(nudge_id, {**data, "go_at": go_at}, for_receiver=for_receiver),
                 dedupe_base=f"nudge.go_time:{nudge_id}",
                 scheduled_for=go_at,

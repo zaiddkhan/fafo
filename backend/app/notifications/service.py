@@ -278,7 +278,11 @@ class NotificationService:
     def _load_template(self, db, template_id: str) -> dict | None:
         doc = db.collection("notification_templates").document(template_id).get()
         if doc.exists:
-            return doc.to_dict()
+            stored = doc.to_dict()
+            # Templates seeded before titles were stored keep the catalog title.
+            if not stored.get("title") and _CATALOG_BY_ID.get(template_id, {}).get("title"):
+                stored["title"] = _CATALOG_BY_ID[template_id]["title"]
+            return stored
         # Fall back to the static catalog so sends work even before admin seeding ran.
         return _CATALOG_BY_ID.get(template_id)
 

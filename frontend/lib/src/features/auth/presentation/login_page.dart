@@ -60,8 +60,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     return FafoFormPage(
       eyebrow: 'Log in',
-      title: 'Welcome back.',
-      subtitle: 'Enter your phone number to log in.',
+      title: 'Back for more?',
+      subtitle: 'Your number, then a 6-digit code. No passwords.',
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

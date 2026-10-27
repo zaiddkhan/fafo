@@ -38,6 +38,7 @@ def _ensure_seeded(db) -> None:
             {
                 "type": entry["type"],
                 "subtype": entry["subtype"],
+                "title": entry.get("title"),
                 "body": entry["body"],
                 "variables": entry["variables"],
                 "sound": entry["sound"],
