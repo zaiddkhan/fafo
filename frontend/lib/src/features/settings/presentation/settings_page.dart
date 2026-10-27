@@ -253,7 +253,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       title: 'Settings',
       onBack: () => context.pop(),
                 children: [
-                  // V3 brief 2.4 follows the system; System stays the default.
+                  // Light by default; System follows the phone.
                   if (FeatureFlags.inAppThemeSwitch) ...[
                     const _SectionLabel('Appearance'),
                     const SizedBox(height: 12),
