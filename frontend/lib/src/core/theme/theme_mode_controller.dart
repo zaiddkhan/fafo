@@ -12,8 +12,7 @@ final themeModeControllerProvider =
 class ThemeModeController extends Notifier<ThemeMode> {
   @override
   ThemeMode build() {
-    // V3 follows the phone's setting; the saved choice only applies while the
-    // in-app switch is un-parked.
+    // Follows the phone until the user picks Light or Dark in Settings.
     if (!FeatureFlags.inAppThemeSwitch) return ThemeMode.system;
     final savedMode = ref
         .watch(sharedPreferencesProvider)
@@ -38,8 +37,9 @@ class ThemeModeController extends Notifier<ThemeMode> {
       case 'dark':
         return ThemeMode.dark;
       case 'light':
-      default:
         return ThemeMode.light;
+      default:
+        return ThemeMode.system;
     }
   }
 }

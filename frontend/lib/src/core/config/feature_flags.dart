@@ -41,6 +41,7 @@ class FeatureFlags {
   /// prototype. Not part of the real app; kept for client demos.
   static const bool previewBothSides = false;
 
-  /// In-app light/dark switch. V3 follows the system setting (brief 2.4).
-  static const bool inAppThemeSwitch = false;
+  /// In-app System / Light / Dark choice in Settings. System is the default,
+  /// as brief 2.4 asks.
+  static const bool inAppThemeSwitch = true;
 }

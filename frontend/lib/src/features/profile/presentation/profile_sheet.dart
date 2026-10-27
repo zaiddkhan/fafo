@@ -22,9 +22,9 @@ Future<QuestResponse?> showProfileSheet(BuildContext context) => showFafoSheet<Q
   builder: (sheetContext) => ProfileSheet(onInvite: (q) => Navigator.of(sheetContext).pop(q)),
 );
 
-/// Profile, from the home header (V3 brief 6.1-6.4, 5.1): header, Quick
-/// defaults, Groups, then the admin-curated side quests. Stats, streaks, area
-/// and events stay parked.
+/// Profile (V3 brief 6.1-6.4, 5.1): header with the Settings button, Groups,
+/// then the admin-curated side quests. Quick defaults live in Settings.
+/// Stats, streaks, area and events stay parked.
 class ProfileSheet extends ConsumerWidget {
   const ProfileSheet({super.key, required this.onInvite, this.asTab = false});
 
@@ -49,7 +49,6 @@ class ProfileSheet extends ConsumerWidget {
       data: (p) => FafoSheetBody(
         children: [
           _Header(profile: p, clearClose: !asTab),
-          _QuickDefaults(profile: p),
           const _Section(
             eyebrow: 'Your groups',
             title: 'Groups',
@@ -59,20 +58,6 @@ class ProfileSheet extends ConsumerWidget {
             eyebrow: '15 minutes, no excuses',
             title: 'Side quests',
             child: _QuestList(onInvite: onInvite),
-          ),
-          // Inferred: sign-out, account deletion and legal links have to live
-          // somewhere; the prototype has no other route to them.
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: () => context.push(SettingsPage.routePath),
-              style: TextButton.styleFrom(padding: EdgeInsets.zero),
-              child: Text(
-                'Settings',
-                style: AppTypography.ui(14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)
-                    .copyWith(decoration: TextDecoration.underline, decorationColor: AppColors.textSecondary),
-              ),
-            ),
           ),
         ],
       ),
@@ -90,107 +75,46 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(right: clearClose ? 44 : 0, bottom: 20),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.rule, width: 2)),
-      ),
-      child: Row(
-        children: [
-          FafoAvatar(
-            name: profile.displayName,
-            size: FafoAvatarSize.lg,
-            photoUrl: profile.photoUrl,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const FafoEyebrow('Profile'),
-                const SizedBox(height: 6),
-                FafoDisplay(profile.displayName, fontSize: 44, maxLines: 2),
-                const SizedBox(height: 6),
-                Text(
-                  '@${profile.username}',
-                  style: AppTypography.ui(15, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Quick defaults (brief 6.2). Changes apply only after "Save settings".
-class _QuickDefaults extends ConsumerStatefulWidget {
-  const _QuickDefaults({required this.profile});
-
-  final ProfileResponse profile;
-
-  @override
-  ConsumerState<_QuickDefaults> createState() => _QuickDefaultsState();
-}
-
-class _QuickDefaultsState extends ConsumerState<_QuickDefaults> {
-  late int _countdown = widget.profile.defaultCountdownMinutes;
-  late bool _quests = widget.profile.sideQuestInvites;
-  bool _saving = false;
-
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final updated = await ref.read(usersRepositoryProvider).setQuickDefaults(
-        defaultCountdownMinutes: _countdown,
-        sideQuestInvites: _quests,
-      );
-      ref.read(currentProfileProvider.notifier).setProfile(updated);
-      messenger.showSnackBar(const SnackBar(content: Text('Settings saved.')));
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(friendlyErrorMessage(e))));
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+    // No rule underneath: the Groups section below draws its own.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FafoSectionHeader(eyebrow: 'Account settings', title: 'Quick defaults'),
-        const SizedBox(height: 18),
-        const FafoEyebrow('Default countdown', fontSize: 10.5),
-        const SizedBox(height: 14),
-        FafoChipGrid(
-          children: [
-            for (final m in const [5, 10, 15])
-              FafoChip(
-                selected: _countdown == m,
-                onTap: () => setState(() => _countdown = m),
-                child: Text('$m min'),
+        Padding(
+          padding: EdgeInsets.only(right: clearClose ? 46 : 0),
+          child: Row(
+            children: [
+              const Expanded(child: FafoEyebrow('Profile')),
+              FafoRoundButton(
+                icon: Icons.settings_outlined,
+                label: 'Settings',
+                onTap: () => context.push(SettingsPage.routePath),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            FafoAvatar(
+              name: profile.displayName,
+              size: FafoAvatarSize.lg,
+              photoUrl: profile.photoUrl,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FafoDisplay(profile.displayName, fontSize: 44, maxLines: 2),
+                  const SizedBox(height: 6),
+                  Text(
+                    '@${profile.username}',
+                    style: AppTypography.ui(15, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
           ],
-        ),
-        const SizedBox(height: 14),
-        FafoCheckRow(
-          title: 'Side quest invites',
-          subtitle: 'Let friends send you 15-minute quests',
-          checked: _quests,
-          topBorder: true,
-          onTap: () => setState(() => _quests = !_quests),
-        ),
-        const SizedBox(height: 14),
-        FafoPill(
-          label: 'Save settings',
-          small: true,
-          height: 44,
-          busy: _saving,
-          // Always enabled, as in the prototype; saving unchanged values is harmless.
-          onPressed: _save,
         ),
       ],
     );

@@ -23,6 +23,7 @@ import 'package:fafu/src/features/events/data/saved_events_controller.dart';
 import 'package:fafu/src/features/location/selected_area_controller.dart';
 import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
+import 'package:fafu/src/features/settings/presentation/quick_defaults.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
@@ -226,7 +227,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeMode = ref.watch(themeModeControllerProvider);
-    final isDarkMode = themeMode == ThemeMode.dark;
+    final profile = ref.watch(currentProfileProvider).value;
     final selectedArea = ref.watch(selectedAreaProvider);
     final isCreator = ref.watch(currentProfileProvider).value?.isCreator ?? false;
     // A submitted-but-unreviewed application means the user already filled the
@@ -249,19 +250,30 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       title: 'Settings',
       onBack: () => context.pop(),
                 children: [
-                  // Parked (V3 brief 2.4): the app follows the system theme.
+                  // V3 brief 2.4 follows the system; System stays the default.
                   if (FeatureFlags.inAppThemeSwitch) ...[
                     const _SectionLabel('Appearance'),
-                    _SettingsToggle(
-                      icon: isDarkMode
-                          ? Icons.dark_mode_outlined
-                          : Icons.light_mode_outlined,
-                      title: 'Dark Mode',
-                      value: isDarkMode,
-                      onChanged: (value) => ref
-                          .read(themeModeControllerProvider.notifier)
-                          .setThemeMode(value ? ThemeMode.dark : ThemeMode.light),
+                    const SizedBox(height: 12),
+                    FafoChipGrid(
+                      children: [
+                        for (final (mode, label) in const [
+                          (ThemeMode.system, 'System'),
+                          (ThemeMode.light, 'Light'),
+                          (ThemeMode.dark, 'Dark'),
+                        ])
+                          FafoChip(
+                            selected: themeMode == mode,
+                            onTap: () => ref.read(themeModeControllerProvider.notifier).setThemeMode(mode),
+                            child: Text(label),
+                          ),
+                      ],
                     ),
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
+
+                  if (profile != null) ...[
+                    const _SectionLabel('Quick defaults'),
+                    QuickDefaults(profile: profile),
                     const SizedBox(height: AppSpacing.xl),
                   ],
 

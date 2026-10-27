@@ -959,11 +959,29 @@ class FafoBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return FafoRoundButton(
+      icon: Icons.arrow_back,
+      label: 'Back',
+      onTap: onTap ?? () => Navigator.of(context).maybePop(),
+    );
+  }
+}
+
+/// 36px round icon button in the sheets' × style (back, settings).
+class FafoRoundButton extends StatelessWidget {
+  const FafoRoundButton({super.key, required this.icon, required this.label, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Back',
+      label: label,
       child: GestureDetector(
-        onTap: onTap ?? () => Navigator.of(context).maybePop(),
+        onTap: onTap,
         child: Container(
           width: 36,
           height: 36,
@@ -972,7 +990,7 @@ class FafoBackButton extends StatelessWidget {
             color: AppColors.surface,
             border: Border.all(color: AppColors.hairline),
           ),
-          child: Icon(Icons.arrow_back, size: 16, color: AppColors.textPrimary),
+          child: Icon(icon, size: 16, color: AppColors.textPrimary),
         ),
       ),
     );
