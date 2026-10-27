@@ -24,6 +24,7 @@ import 'package:fafu/src/features/right_now/data/right_now_providers.dart';
 import 'package:fafu/src/features/right_now/presentation/right_now_page.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/features/users/data/users_repository.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_status_bars.dart';
 
 final mainShellTabProvider =
     NotifierProvider<MainShellTabNotifier, int>(MainShellTabNotifier.new);
@@ -711,10 +712,16 @@ class _V3ShellState extends ConsumerState<_V3Shell> {
             ),
           ],
         ),
-        bottomNavigationBar: FafoBottomNav(
-          items: _items,
-          currentIndex: index,
-          onTap: (i) => ref.read(mainShellTabProvider.notifier).setTab(i),
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const FafoStatusBars(),
+            FafoBottomNav(
+              items: _items,
+              currentIndex: index,
+              onTap: (i) => ref.read(mainShellTabProvider.notifier).setTab(i),
+            ),
+          ],
         ),
       ),
     );

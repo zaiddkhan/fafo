@@ -12,6 +12,7 @@ import 'package:fafu/src/features/notifications/data/live_nudge_notifications.da
 import 'package:fafu/src/features/notifications/data/notification_navigation.dart';
 import 'package:fafu/src/features/right_now/data/home_focus.dart';
 import 'package:fafu/src/features/notifications/data/push_repository.dart';
+import 'package:fafu/src/features/notifications/data/notification_nag.dart';
 
 final pushServiceProvider = Provider<PushService>((ref) => PushService(ref));
 
@@ -80,6 +81,7 @@ class PushService {
         sound: true,
       );
       logger.i('Push permission: ${settings.authorizationStatus}');
+      await _ref.read(notificationNagProvider.notifier).record(settings.authorizationStatus);
 
       // iOS: also surface notifications while the app is foregrounded.
       await messaging.setForegroundNotificationPresentationOptions(

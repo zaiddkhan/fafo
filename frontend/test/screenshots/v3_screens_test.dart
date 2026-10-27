@@ -46,6 +46,9 @@ import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
+import 'package:fafu/src/core/services/network_status.dart';
+import 'package:fafu/src/features/notifications/data/notification_nag.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_status_bars.dart';
 
 // --- Fonts ----------------------------------------------------------------------
 
@@ -246,9 +249,16 @@ class _FakeFriendsRepo extends FriendsRepository {
       const ReferralCode(code: 'LILO-7K2QX', shareUrl: 'https://getfafo.app/invite/LILO7K2QX');
 }
 
-List<Override> _overrides({List<NudgeResponse> nudges = const [], bool free = false}) => [
+List<Override> _overrides({
+  List<NudgeResponse> nudges = const [],
+  bool free = false,
+  bool online = true,
+  bool notificationsOff = false,
+}) => [
   currentProfileProvider.overrideWith(() => _FakeProfile(_profile(free: free))),
   myNudgesProvider.overrideWith(() => _FakeNudges(nudges)),
+  networkStatusProvider.overrideWith(online ? _Online.new : _Offline.new),
+  notificationNagProvider.overrideWith(notificationsOff ? _NagOn.new : _NagOff.new),
   liveFriendsProvider.overrideWith(_FakeLiveFriends.new),
   friendsListProvider.overrideWith((ref) async => _friends),
   groupsListProvider.overrideWith((ref) async => [_flatmates]),
@@ -271,14 +281,20 @@ Widget _withNav(int index, Widget body) => Builder(
   builder: (context) => Scaffold(
     backgroundColor: AppColors.bgPrimary,
     body: body,
-    bottomNavigationBar: FafoBottomNav(
-      items: const [
-        FafoNavItem(icon: Icons.bolt_rounded, label: 'Home'),
-        FafoNavItem(icon: Icons.people_alt_outlined, label: 'Friends'),
-        FafoNavItem(icon: Icons.person_outline, label: 'Profile'),
+    bottomNavigationBar: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const FafoStatusBars(),
+        FafoBottomNav(
+          items: const [
+            FafoNavItem(icon: Icons.bolt_rounded, label: 'Home'),
+            FafoNavItem(icon: Icons.people_alt_outlined, label: 'Friends'),
+            FafoNavItem(icon: Icons.person_outline, label: 'Profile'),
+          ],
+          currentIndex: index,
+          onTap: (_) {},
+        ),
       ],
-      currentIndex: index,
-      onTap: (_) {},
     ),
   ),
 );
@@ -417,6 +433,11 @@ void main() {
     '36_edit_profile': (screen: EditProfilePage(profile: _profile()), overrides: _overrides(), height: 844),
     // V3 shell: Home / Friends / Profile with the bottom nav.
     '40_shell_home': (screen: _withNav(0, const RightNowPage()), overrides: _overrides(nudges: _recent, free: true), height: 1000),
+    '43_shell_offline_notifications_off': (
+      screen: _withNav(0, const RightNowPage()),
+      overrides: _overrides(nudges: _recent, online: false, notificationsOff: true),
+      height: 1000,
+    ),
     '41_shell_friends': (
       screen: _withNav(1, FriendsTab(onNudge: (_) {})),
       overrides: [
@@ -533,4 +554,24 @@ class _ConfirmDemoState extends State<_ConfirmDemo> {
 
   @override
   Widget build(BuildContext context) => Scaffold(backgroundColor: AppColors.bgPrimary);
+}
+
+class _Online extends NetworkStatus {
+  @override
+  bool build() => true;
+}
+
+class _Offline extends NetworkStatus {
+  @override
+  bool build() => false;
+}
+
+class _NagOff extends NotificationNag {
+  @override
+  bool build() => false;
+}
+
+class _NagOn extends NotificationNag {
+  @override
+  bool build() => true;
 }

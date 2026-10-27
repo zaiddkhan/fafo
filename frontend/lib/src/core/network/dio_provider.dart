@@ -6,6 +6,7 @@ import 'package:fafu/src/core/config/app_config.dart';
 import 'package:fafu/src/core/network/auth_token_provider.dart';
 import 'package:fafu/src/core/network/session_expired_provider.dart';
 import 'package:fafu/src/core/services/logger_provider.dart';
+import 'package:fafu/src/core/services/network_status.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final logger = ref.watch(loggerProvider);
@@ -47,10 +48,17 @@ final dioProvider = Provider<Dio>((ref) {
         handler.next(options);
       },
       onResponse: (response, handler) {
+        ref.read(networkStatusProvider.notifier).reportOnline();
         logger.i('RES ${response.statusCode} ${response.requestOptions.uri}');
         handler.next(response);
       },
       onError: (error, handler) async {
+        final status = ref.read(networkStatusProvider.notifier);
+        if (error.response != null) {
+          status.reportOnline();
+        } else if (isConnectionFailure(error)) {
+          status.reportOffline();
+        }
         logger.e(
           'ERR ${error.requestOptions.method} ${error.requestOptions.uri}',
           error: error,

@@ -28,6 +28,7 @@ import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/shared/widgets/location_search_sheet.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
+import 'package:fafu/src/features/notifications/data/notification_nag.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -90,7 +91,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ScaffoldMessenger.of(context).toast('Couldn’t update notifications: ${friendlyErrorMessage(e)}', kind: FafoToastKind.error);
       }
     } finally {
-      if (mounted) setState(() => _pushBusy = false);
+      // Switching push off here is a choice: the "notifications are off" bar
+      // shouldn't nag about it (and should come back if switched on again).
+      if (mounted) {
+        ref.read(notificationNagProvider.notifier).recheck();
+        setState(() => _pushBusy = false);
+      }
     }
   }
 
