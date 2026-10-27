@@ -393,6 +393,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
           controller: _nameController,
           style: fieldStyle,
           textCapitalization: TextCapitalization.words,
+          // Rebuild so the avatar initial and Continue follow the name.
+          onChanged: (_) => setState(() {}),
           decoration: fieldDecoration.copyWith(hintText: 'Maya'),
         ),
         const SizedBox(height: 22),

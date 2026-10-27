@@ -95,6 +95,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           keyboardType: TextInputType.phone,
           autofocus: true,
           style: AppTypography.ui(17, fontWeight: FontWeight.w700),
+          // Rebuild so Continue lights up at 10 digits.
+          onChanged: (_) => setState(() {}),
           onSubmitted: (_) => _sendOtp(),
           decoration: InputDecoration(
             hintText: '98765 43210',

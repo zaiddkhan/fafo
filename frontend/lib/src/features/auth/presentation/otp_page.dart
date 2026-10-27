@@ -130,6 +130,8 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     if (value.length == 1 && index < _otpLength - 1) {
       _focusNodes[index + 1].requestFocus();
     }
+    // Rebuild so Verify lights up once all six digits are in.
+    setState(() {});
   }
 
   void _onKeyDown(int index, KeyEvent event) {
