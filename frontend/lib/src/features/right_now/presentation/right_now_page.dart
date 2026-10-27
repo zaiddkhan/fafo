@@ -224,7 +224,7 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
     final friends = ref.watch(liveFriendsProvider).value ?? const <FriendResponse>[];
     // Fall back to the signed-in account so a profile that hasn't loaded
     // can't hide which answers are yours.
-    final myUid = profile?.uid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    final myUid = profile?.uid ?? _signedInUid() ?? '';
     final handle = profile?.username ?? 'you';
     final free = _freeOverride ?? profile?.freeNow ?? false;
     final freeFriends = friends.where((f) => f.user.freeNow).toList();
@@ -543,5 +543,15 @@ class _Recent extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// The signed-in Firebase account, or null when Firebase isn't set up
+/// (widget tests) or nobody is signed in.
+String? _signedInUid() {
+  try {
+    return FirebaseAuth.instance.currentUser?.uid;
+  } catch (_) {
+    return null;
   }
 }
