@@ -301,40 +301,31 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     final username = _usernameController.text.trim();
     final usernameHelper =
         !_isUsernameShapeValid(username) && username.isNotEmpty
-        ? 'Use 3-30 lowercase letters, numbers, dots, or underscores.'
+        ? '3 to 30 lowercase letters, numbers, . or _'
         : _checkingUsername
         ? 'Checking…'
         : _usernameAvailable == true
-        ? 'That one’s yours.'
+        ? 'Available'
         : _usernameAvailable == false
         ? 'Taken. Try another.'
-        : 'Friends find you by this.';
-    final helperColor = _usernameAvailable == false ||
-            (!_isUsernameShapeValid(username) && username.isNotEmpty)
-        ? AppColors.signalRed
-        : _usernameAvailable == true
-        ? AppColors.textPrimary
-        : AppColors.textSecondary;
-    final fieldStyle = AppTypography.ui(17, fontWeight: FontWeight.w700);
-    const fieldDecoration = InputDecoration(
-      isDense: true,
-      contentPadding: EdgeInsets.symmetric(vertical: 12),
-    );
-    final name = _nameController.text.trim();
+        : '3 to 30 lowercase letters, numbers, . or _';
+    final usernameBad = _usernameAvailable == false || (!_isUsernameShapeValid(username) && username.isNotEmpty);
+    final usernameOk = _usernameAvailable == true && !_checkingUsername;
+    final helperColor = usernameBad ? AppColors.errorText : (usernameOk ? AppColors.textPrimary : AppColors.textSecondary);
 
     return FafoFormPage(
-      eyebrow: 'Profile',
-      title: 'Who’s this?',
-      subtitle: 'Your name and handle are how friends find you.',
+      title: 'Who are you?',
+      step: 3,
+      subtitle: 'This is how friends see you on FaFo.',
       showBack: false,
       footer: FafoPill(
-        label: _saving ? 'Saving…' : 'Continue',
+        label: 'Let’s go',
         block: true,
         busy: _saving,
         onPressed: _canContinue ? _saveProfile : null,
       ),
       children: [
-        // Avatar: the photo if picked, else the red initial the app uses.
+        // Photo: dashed circle with a camera until one is picked.
         Row(
           children: [
             Semantics(
@@ -342,78 +333,82 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               label: 'Add a photo',
               child: GestureDetector(
                 onTap: _pickAvatar,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    if (_selectedAvatarBytes != null)
-                      Container(
+                child: _selectedAvatarBytes != null
+                    ? Container(
                         width: 84,
                         height: 84,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.ink, width: 2.5),
-                          image: DecorationImage(
-                            image: MemoryImage(_selectedAvatarBytes!),
-                            fit: BoxFit.cover,
-                          ),
+                          image: DecorationImage(image: MemoryImage(_selectedAvatarBytes!), fit: BoxFit.cover),
                         ),
                       )
-                    else
-                      FafoAvatar(name: name.isEmpty ? '+' : name, size: FafoAvatarSize.lg),
-                    Positioned(
-                      right: -2,
-                      bottom: -2,
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.border, width: 2),
+                    : CustomPaint(
+                        painter: _DashedCircle(AppColors.softLine),
+                        child: Container(
+                          width: 84,
+                          height: 84,
+                          decoration: BoxDecoration(color: AppColors.surface, shape: BoxShape.circle),
+                          child: Icon(Icons.photo_camera_outlined, size: 28, color: AppColors.textSecondary),
                         ),
-                        child: Icon(Icons.camera_alt_outlined, size: 15, color: AppColors.textPrimary),
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: FafoInlineLink(
-                label: _selectedAvatarBytes == null ? 'Add a photo' : 'Change photo',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: _pickAvatar,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  alignment: Alignment.centerLeft,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _selectedAvatarBytes == null ? 'Add a photo' : 'Change photo',
+                        style: AppTypography.ui(15, fontWeight: FontWeight.w700),
+                      ),
+                      Text('Optional', style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 26),
-        const FafoFieldLabel('Name'),
-        TextField(
+        const FafoSectionLabel('Name', top: 22, bottom: 10),
+        FafoInput(
           controller: _nameController,
-          style: fieldStyle,
+          hint: 'Lilo',
+          maxLength: 30,
           textCapitalization: TextCapitalization.words,
-          // Rebuild so the avatar initial and Continue follow the name.
+          // Rebuild so Let's go follows the name.
           onChanged: (_) => setState(() {}),
-          decoration: fieldDecoration.copyWith(hintText: 'Maya'),
         ),
-        const SizedBox(height: 22),
-        const FafoFieldLabel('Username'),
-        TextField(
+        const FafoSectionLabel('Username', top: 22, bottom: 10),
+        FafoInput(
           controller: _usernameController,
-          style: fieldStyle,
-          textCapitalization: TextCapitalization.none,
+          prefix: '@',
+          hint: 'lilo.blr',
           autocorrect: false,
+          error: usernameBad ? usernameHelper : null,
           onChanged: _onUsernameChanged,
-          decoration: fieldDecoration.copyWith(
-            hintText: 'maya',
-            // Always visible, unlike prefixText (which hides until focus).
-            prefixIcon: Text('@', style: fieldStyle),
-            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-          ),
         ),
         const SizedBox(height: 8),
-        Text(usernameHelper, style: AppTypography.ui(13, fontWeight: FontWeight.w500, color: helperColor)),
+        Row(
+          children: [
+            if (usernameOk) ...[
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(color: AppColors.accentPrimary, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Expanded(child: Text(usernameHelper, style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: helperColor))),
+          ],
+        ),
         if (FeatureFlags.map) ...[
           const SizedBox(height: AppSpacing.lg),
           _AreaSetupCard(
@@ -425,14 +420,12 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
             onSearchLocation: _openLocationSearchSheet,
           ),
         ],
-        const SizedBox(height: 22),
-        const FafoFieldLabel('Friend’s code (optional)'),
-        TextField(
+        const FafoSectionLabel('Friend’s code (optional)', top: 22, bottom: 10),
+        FafoInput(
           controller: _codeController,
-          style: fieldStyle,
+          hint: 'MAYA-7K2QX',
           textCapitalization: TextCapitalization.characters,
           autocorrect: false,
-          decoration: fieldDecoration.copyWith(hintText: 'MAYA-7K2QX'),
         ),
         const SizedBox(height: 8),
         Text(
@@ -679,4 +672,29 @@ class _LocationSearchResult {
     }
     return _LocationSearchResult(label: label, lat: lat, lng: lng);
   }
+}
+
+class _DashedCircle extends CustomPainter {
+  _DashedCircle(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final path = Path()..addOval(Offset.zero & size);
+    for (final m in path.computeMetrics()) {
+      var d = 0.0;
+      while (d < m.length) {
+        canvas.drawPath(m.extractPath(d, d + 6), paint);
+        d += 10;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCircle old) => old.color != color;
 }

@@ -65,11 +65,11 @@ class _FafoStatusBarsState extends ConsumerState<FafoStatusBars> with WidgetsBin
         mainAxisSize: MainAxisSize.min,
         children: [
           if (!online)
-            const _OfflineBar()
+            const _Float(child: _OfflineBar())
           else if (_backOnline)
-            const _BackOnlineBar(),
+            const _Float(child: _BackOnlineBar()),
           if (notificationsOff)
-            _NotificationsOffBar(onTap: () => ref.read(notificationNagProvider.notifier).openSettings()),
+            _Float(child: _NotificationsOffBar(onTap: () => ref.read(notificationNagProvider.notifier).openSettings())),
         ],
       ),
     );
@@ -154,10 +154,7 @@ class _NotificationsOffBar extends StatelessWidget {
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(16, 10, 14, 10),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            border: Border(top: BorderSide(color: AppColors.rule, width: AppChrome.outlineWidth)),
-          ),
+          color: AppColors.surface,
           child: Row(
             children: [
               Container(
@@ -191,6 +188,38 @@ class _NotificationsOffBar extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A bar floats above the menu like it: 16px side insets, rounded, soft
+/// shadow, no rule.
+class _Float extends StatelessWidget {
+  const _Float({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = AppColors.isDark;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.softLine, width: AppChrome.softOutlineWidth),
+          boxShadow: [
+            BoxShadow(
+              color: dark ? Colors.black.withValues(alpha: 0.7) : AppColors.ink.withValues(alpha: 0.22),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+              spreadRadius: -8,
+            ),
+          ],
+        ),
+        child: child,
       ),
     );
   }

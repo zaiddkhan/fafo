@@ -8,7 +8,6 @@ import 'package:fafu/src/core/network/api_exception.dart';
 import 'package:fafu/src/core/theme/app_chrome.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/app_typography.dart';
-import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
 enum FafoToastKind { success, error, info }
 
@@ -95,7 +94,8 @@ class _FafoToastHostState extends State<FafoToastHost> {
     final toast = FafoToasts._current.value;
     if (toast != null) {
       _timer = Timer(
-        Duration(milliseconds: toast.kind == FafoToastKind.error ? 4000 : 2600),
+        // About two seconds; errors get a beat longer to be read.
+        Duration(milliseconds: toast.kind == FafoToastKind.error ? 3200 : 2200),
         () {
           if (FafoToasts._current.value?.id == toast.id) FafoToasts.hide();
         },
@@ -144,14 +144,11 @@ class _FafoToast extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (String label, Color badge, IconData icon) = switch (kind) {
-      FafoToastKind.success => ('Done', AppColors.accentPrimary, Icons.check_rounded),
-      FafoToastKind.error => ('Nope', AppColors.signalRed, Icons.priority_high_rounded),
-      FafoToastKind.info => ('Heads up', AppColors.textPrimary, Icons.info_outline_rounded),
-    };
+    final dark = AppColors.isDark;
+    // One short sentence in an ink pill with a soft shadow (inverts in dark).
     final card = Semantics(
       liveRegion: true,
-      label: '$label. $message',
+      label: message,
       child: GestureDetector(
         onTap: FafoToasts.hide,
         // Flick it away upwards.
@@ -160,53 +157,26 @@ class _FafoToast extends StatelessWidget {
         },
         child: Material(
           type: MaterialType.transparency,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppChrome.rowRadius),
-              border: Border.all(color: AppColors.border, width: AppChrome.outlineWidth),
-              boxShadow: AppChrome.cardShadowSoft,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: badge,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.ink, width: AppChrome.outlineWidth),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 19,
-                    // Info's badge flips with the theme; the others sit on blue or red.
-                    color: kind == FafoToastKind.info ? AppColors.bgPrimary : AppColors.onAccent,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      FafoEyebrow(
-                        label,
-                        fontSize: 10,
-                        color: kind == FafoToastKind.error ? AppColors.signalRed : AppColors.textSecondary,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        message,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.ui(14.5, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryFill,
+                borderRadius: BorderRadius.circular(AppChrome.pillRadius),
+                boxShadow: dark
+                    ? [BoxShadow(color: Colors.black.withValues(alpha: 0.8), blurRadius: 32, offset: const Offset(0, 12), spreadRadius: -6)]
+                    : [
+                        BoxShadow(color: AppColors.ink.withValues(alpha: 0.38), blurRadius: 28, offset: const Offset(0, 10), spreadRadius: -8),
+                        BoxShadow(color: AppColors.ink.withValues(alpha: 0.10), blurRadius: 6, offset: const Offset(0, 2)),
+                      ],
+              ),
+              child: Text(
+                message,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppTypography.ui(14, fontWeight: FontWeight.w700, color: AppColors.onPrimaryFill),
+              ),
             ),
           ),
         ),

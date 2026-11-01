@@ -1,10 +1,8 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:fafu/src/core/theme/app_chrome.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/app_typography.dart';
-import 'package:fafu/src/core/utils/legal_links.dart';
-import 'package:fafu/src/shared/widgets/fafo_wordmark.dart';
 import 'package:fafu/src/features/auth/presentation/login_page.dart';
 import 'package:fafu/src/features/auth/presentation/signup_page.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
@@ -20,84 +18,60 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
-  late final TapGestureRecognizer _termsRecognizer = TapGestureRecognizer()
-    ..onTap = () => openExternalUrl(context, termsUrl);
-  late final TapGestureRecognizer _privacyRecognizer = TapGestureRecognizer()
-    ..onTap = () => openExternalUrl(context, privacyUrl);
-
-  @override
-  void dispose() {
-    _termsRecognizer.dispose();
-    _privacyRecognizer.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final legal = AppTypography.ui(12.5, fontWeight: FontWeight.w400, color: AppColors.textSecondary);
-    final link = legal.copyWith(
-      fontWeight: FontWeight.w700,
-      color: AppColors.textPrimary,
-      decoration: TextDecoration.underline,
-      decorationColor: AppColors.textPrimary,
-    );
-
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header, as on home: wordmark and a 2px rule.
-              Container(
-                padding: const EdgeInsets.only(top: 22, bottom: 14),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.rule, width: 2)),
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FafoWordmark(style: AppTypography.display(28).copyWith(height: 1)),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // The FaFo mark: blue rounded square, ink outline, offset.
+                    Container(
+                      width: 70,
+                      height: 70,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.accentPrimary,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppColors.ink, width: 2),
+                        boxShadow: AppChrome.cardShadowSoft,
+                      ),
+                      child: ExcludeSemantics(
+                        child: Text('F', style: AppTypography.display(40, color: AppColors.onAccent).copyWith(height: 1)),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const FafoDisplay('Plans in\nten minutes.', fontSize: 62),
+                    const SizedBox(height: 18),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 300),
+                      child: Text(
+                        'Send one clear plan. Get one clear answer. No group chat.',
+                        style: AppTypography.ui(16, fontWeight: FontWeight.w400),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(flex: 3),
-              const FafoEyebrow('Plans, not chats'),
-              const SizedBox(height: 12),
-              const FafoDisplay('Less “we should hang.” More hanging.', fontSize: 56),
-              const SizedBox(height: 12),
-              Text(
-                'Send a friend one plan. They get 10 minutes to say yes or no. No group chat, no “maybe”.',
-                style: AppTypography.ui(15, fontWeight: FontWeight.w400),
-              ),
-              const Spacer(flex: 4),
+              const SizedBox(height: 20),
               FafoPill(
-                label: 'I’m in',
+                label: 'Get started',
                 block: true,
                 onPressed: () => context.push(SignupPage.routePath),
               ),
-              const SizedBox(height: 10),
-              FafoPill(
-                label: 'I’ve got an account',
-                primary: false,
-                block: true,
-                onPressed: () => context.push(LoginPage.routePath),
+              const SizedBox(height: 6),
+              FafoTextButton(
+                label: 'I already have an account',
+                onTap: () => context.push(LoginPage.routePath),
               ),
-              const SizedBox(height: 18),
-              Text.rich(
-                TextSpan(
-                  text: 'By continuing, you agree to our ',
-                  style: legal,
-                  children: [
-                    TextSpan(text: 'Terms', style: link, recognizer: _termsRecognizer),
-                    const TextSpan(text: ' and '),
-                    TextSpan(text: 'Privacy Policy', style: link, recognizer: _privacyRecognizer),
-                    const TextSpan(text: '.'),
-                  ],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 14),
             ],
           ),
         ),

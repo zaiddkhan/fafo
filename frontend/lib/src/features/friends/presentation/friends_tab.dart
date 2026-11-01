@@ -1,33 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 
 import 'package:fafu/src/core/network/api_exception.dart';
-import 'package:fafu/src/core/theme/app_chrome.dart';
 import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/app_typography.dart';
+import 'package:fafu/src/core/utils/server_clock.dart';
 import 'package:fafu/src/features/friends/data/friends_providers.dart';
 import 'package:fafu/src/features/friends/data/friends_repository.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
-import 'package:fafu/src/features/friends/presentation/friends_page.dart';
+import 'package:fafu/src/features/friends/presentation/add_friends_sheet.dart';
+import 'package:fafu/src/features/groups/data/groups_providers.dart';
+import 'package:fafu/src/features/groups/domain/group.dart';
+import 'package:fafu/src/features/groups/presentation/group_sheet.dart';
+import 'package:fafu/src/features/nudges/domain/nudge.dart';
+import 'package:fafu/src/features/nudges/domain/nudge_view.dart';
+import 'package:fafu/src/features/nudges/presentation/plan_detail_sheet.dart';
 import 'package:fafu/src/features/right_now/data/right_now_providers.dart';
-import 'package:fafu/src/features/right_now/presentation/code_sheet.dart';
-import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
+import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
+import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 
-final _myCodeProvider = FutureProvider.autoDispose<ReferralCode>(
-  (ref) => ref.watch(friendsRepositoryProvider).getReferralCode(),
-);
+export 'package:fafu/src/features/friends/presentation/add_friends_sheet.dart' show showAddFriendsSheet;
 
-/// Friends tab: requests, who's free right now, everyone else, and your code.
-/// Free friends get the primary Nudge; the rest get the outline one, so the
-/// screen reads "these people can go now". Tap a row for the friend's sheet
-/// (nudge, unfriend, block). Adding friends goes through codes (brief 3.8).
+enum _Filter { free, everyone, groups }
+
+/// Friends: search with the add icon next to it, then Free now / Everyone /
+/// Groups. Rows open a friend's or group's sheet; free friends carry a blue
+/// dot on their avatar.
 class FriendsTab extends ConsumerStatefulWidget {
-  const FriendsTab({super.key, required this.onNudge});
+  const FriendsTab({super.key, required this.onNudge, this.onNudgeGroup, this.onSendAgain});
 
   /// Opens the composer for [friend]; the shell handles what happens after.
   final ValueChanged<PublicUserResponse> onNudge;
+  final ValueChanged<GroupResponse>? onNudgeGroup;
+  final ValueChanged<NudgeResponse>? onSendAgain;
 
   @override
   ConsumerState<FriendsTab> createState() => _FriendsTabState();
@@ -35,9 +41,8 @@ class FriendsTab extends ConsumerStatefulWidget {
 
 class _FriendsTabState extends ConsumerState<FriendsTab> {
   final _search = TextEditingController();
-
-  /// The search field only shows once the list is long enough to need it.
-  static const _searchFrom = 8;
+  _Filter _filter = _Filter.everyone;
+  String? _highlight;
 
   @override
   void initState() {
@@ -51,236 +56,275 @@ class _FriendsTabState extends ConsumerState<FriendsTab> {
     super.dispose();
   }
 
+  Future<void> _addFriends() async {
+    final group = await showAddFriendsSheet(context);
+    if (group != null && mounted) _showNewGroup(group);
+  }
+
+  /// Land on Groups with the new group washed blue for a moment.
+  void _showNewGroup(GroupResponse group) {
+    ref.invalidate(groupsListProvider);
+    setState(() {
+      _filter = _Filter.groups;
+      _highlight = group.id;
+    });
+    Future.delayed(const Duration(milliseconds: 2400), () {
+      if (mounted && _highlight == group.id) setState(() => _highlight = null);
+    });
+  }
+
+  Future<void> _openFriend(PublicUserResponse user, {FriendResponse? friend}) async {
+    final result = await showFriendSheet(context, user: user, friend: friend);
+    if (!mounted || result == null) return;
+    switch (result) {
+      case FriendSendNudge():
+        widget.onNudge(user);
+      case FriendSendAgain(:final nudge):
+        widget.onSendAgain?.call(nudge);
+    }
+  }
+
+  Future<void> _openGroup(GroupResponse group) async {
+    final result = await showGroupSheet(context, group: group);
+    if (!mounted || result == null) return;
+    switch (result) {
+      case GroupSendNudge(:final group):
+        widget.onNudgeGroup?.call(group);
+      case GroupSendAgain(:final nudge):
+        widget.onSendAgain?.call(nudge);
+      case GroupOpenFriend(:final user):
+        final friends = ref.read(liveFriendsProvider).value ?? const <FriendResponse>[];
+        await _openFriend(user, friend: friends.where((f) => f.user.uid == user.uid).firstOrNull);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final friends = ref.watch(liveFriendsProvider);
-    final requests = ref.watch(incomingFriendRequestsProvider);
+    final groupsAsync = ref.watch(groupsListProvider);
+    final requests = ref.watch(incomingFriendRequestsProvider).value ?? const <FriendRequestResponse>[];
     final all = friends.value ?? const <FriendResponse>[];
-    final query = _search.text.trim().toLowerCase();
-    final shown = [
-      for (final f in friendsByRecentNudge(all))
-        if (query.isEmpty ||
-            f.user.displayName.toLowerCase().contains(query) ||
-            f.user.username.toLowerCase().contains(query))
-          f,
-    ];
-    final free = [for (final f in shown) if (f.user.freeNow) f];
-    final rest = [for (final f in shown) if (!f.user.freeNow) f];
-    final pending = requests.value ?? const <FriendRequestResponse>[];
-    final freeCount = all.where((f) => f.user.freeNow).length;
+    final groups = groupsAsync.value ?? const <GroupResponse>[];
+    final myUid = ref.watch(currentProfileProvider).value?.uid;
+    final q = _search.text.trim().toLowerCase();
 
-    return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(incomingFriendRequestsProvider);
-            await ref.read(liveFriendsProvider.notifier).refresh();
-          },
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
+    bool friendHit(FriendResponse f) =>
+        q.isEmpty || f.user.displayName.toLowerCase().contains(q) || f.user.username.toLowerCase().contains(q);
+    final sorted = [...all]..sort((a, b) {
+      if (a.user.freeNow != b.user.freeNow) return a.user.freeNow ? -1 : 1;
+      return a.user.displayName.toLowerCase().compareTo(b.user.displayName.toLowerCase());
+    });
+    final freeCount = all.where((f) => f.user.freeNow).length;
+    final shownFriends = [
+      for (final f in sorted)
+        if (friendHit(f) && (_filter != _Filter.free || f.user.freeNow)) f,
+    ];
+    final shownGroups = [
+      for (final g in groups)
+        if (q.isEmpty || g.name.toLowerCase().contains(q)) g,
+    ];
+    final loading = friends.isLoading && !friends.hasValue;
+    final empty = !loading && all.isEmpty && groups.isEmpty && requests.isEmpty;
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(incomingFriendRequestsProvider);
+        ref.invalidate(groupsListProvider);
+        await ref.read(liveFriendsProvider.notifier).refresh();
+      },
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(20, 24, 20, FafoBottomNav.clearance(context)),
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              Row(
-                children: [
-                  const Expanded(child: FafoEyebrow('Friends')),
-                  FafoRoundButton(
-                    icon: Icons.person_add_alt,
-                    label: 'Add friends',
-                    onTap: () => showCodeSheet(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              const FafoDisplay('Your people', fontSize: 52),
-              const SizedBox(height: 6),
+              const FafoDisplay('Friends'),
+              const SizedBox(width: 10),
               Text(
-                all.isEmpty
-                    ? 'Nobody here yet.'
-                    : '${all.length} ${all.length == 1 ? 'friend' : 'friends'}'
-                          '${freeCount > 0 ? ', $freeCount free right now' : ''}.',
-                style: AppTypography.ui(15, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+                '${all.length}',
+                style: AppTypography.label(fontSize: 12, color: AppColors.textSecondary).copyWith(letterSpacing: 0),
               ),
-              if (all.length >= _searchFrom) ...[
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _search,
-                  textInputAction: TextInputAction.search,
-                  style: AppTypography.ui(16, fontWeight: FontWeight.w600),
-                  decoration: InputDecoration(
-                    hintText: 'Find a friend',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                    prefixIconConstraints: const BoxConstraints(minWidth: 28),
-                  ),
-                ),
-              ],
-              if (pending.isNotEmpty) ...[
-                const SizedBox(height: 26),
-                _RequestsCard(requests: pending),
-              ],
-              const SizedBox(height: 26),
-              if (friends.isLoading && all.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (friends.hasError && all.isEmpty)
-                Text(friendlyErrorMessage(friends.error), style: AppTypography.ui(13.5, color: AppColors.signalRed))
-              else if (all.isNotEmpty && shown.isEmpty)
-                Text(
-                  'No one called "${_search.text.trim()}".',
-                  style: AppTypography.ui(14, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-                )
-              else ...[
-                if (free.isNotEmpty) ...[
-                  _Section(label: 'Free right now', count: free.length, live: true),
-                  for (final f in free) _FriendRow(friend: f, onNudge: () => widget.onNudge(f.user)),
-                  const SizedBox(height: 26),
-                ],
-                if (rest.isNotEmpty) ...[
-                  _Section(label: free.isEmpty ? 'Everyone' : 'Everyone else', count: rest.length),
-                  for (final f in rest) _FriendRow(friend: f, onNudge: () => widget.onNudge(f.user)),
-                  const SizedBox(height: 26),
-                ],
-              ],
-              const _CodeCard(),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Mono label with a count, 2px rule above. [live] adds the blue dot.
-class _Section extends StatelessWidget {
-  const _Section({required this.label, required this.count, this.live = false});
-
-  final String label;
-  final int count;
-  final bool live;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(top: 14, bottom: 4),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.rule, width: 2)),
-      ),
-      child: Row(
-        children: [
-          if (live) ...[
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(color: AppColors.accentPrimary, shape: BoxShape.circle),
+          const SizedBox(height: 18),
+          if (empty)
+            _NoFriends(onAdd: _addFriends)
+          else ...[
+            Row(
+              children: [
+                Expanded(child: FafoSearchField(controller: _search)),
+                const SizedBox(width: 10),
+                FafoRoundButton(icon: Icons.person_add_alt_outlined, label: 'Add friends', size: 48, onTap: _addFriends),
+              ],
             ),
-            const SizedBox(width: 8),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                for (final (filter, label, count) in [
+                  (_Filter.free, 'Free now', freeCount),
+                  (_Filter.everyone, 'Everyone', all.length),
+                  (_Filter.groups, 'Groups', groups.length),
+                ]) ...[
+                  if (filter != _Filter.free) const SizedBox(width: 8),
+                  Expanded(
+                    child: FafoFilterChip(
+                      label: label,
+                      count: count,
+                      selected: _filter == filter,
+                      onTap: () => setState(() => _filter = filter),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (requests.isNotEmpty && _filter != _Filter.groups && q.isEmpty) ...[
+              const FafoSectionLabel('Wants to add you', top: 4, bottom: 4),
+              for (final r in requests) _RequestRow(request: r),
+              const FafoSectionLabel('Friends', top: 18, bottom: 4),
+            ],
+            if (loading)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (friends.hasError && all.isEmpty)
+              _None(friendlyErrorMessage(friends.error))
+            else if (_filter == _Filter.groups) ...[
+              for (final g in shownGroups)
+                _Highlight(
+                  on: _highlight == g.id,
+                  child: FafoListRow(
+                    title: g.name,
+                    subtitle: _memberLine(g, myUid),
+                    leading: SizedBox(
+                      width: 76,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FafoAvatarStack(
+                          people: [
+                            for (final m in g.members)
+                              if (m.user.uid != myUid) (m.user.displayName, m.user.photoUrl),
+                          ],
+                          dimension: 32,
+                        ),
+                      ),
+                    ),
+                    onTap: () => _openGroup(g),
+                  ),
+                ),
+              if (shownGroups.isEmpty)
+                _None(q.isNotEmpty ? 'No group called “${_search.text.trim()}”.' : 'No groups yet.'),
+            ] else ...[
+              for (final f in shownFriends)
+                FafoListRow(
+                  title: f.user.displayName,
+                  subtitle: '@${f.user.username}',
+                  leading: FafoAvatar(
+                    name: f.user.displayName,
+                    photoUrl: f.user.photoUrl,
+                    size: FafoAvatarSize.md,
+                    free: f.user.freeNow,
+                  ),
+                  onTap: () => _openFriend(f.user, friend: f),
+                ),
+              if (shownFriends.isEmpty)
+                _None(
+                  q.isNotEmpty
+                      ? 'No one called “${_search.text.trim()}”.'
+                      : _filter == _Filter.free
+                      ? 'Nobody’s free right now.'
+                      : 'No friends yet. Your people show up here once they’re on FaFo.',
+                ),
+            ],
           ],
-          Expanded(child: FafoEyebrow(label, fontSize: 11)),
-          FafoEyebrow('$count', fontSize: 11, color: AppColors.textSecondary),
         ],
       ),
     );
   }
 }
 
-class _FriendRow extends StatelessWidget {
-  const _FriendRow({required this.friend, required this.onNudge});
+/// "Maya, Leo, Nina +1".
+String _memberLine(GroupResponse g, String? myUid) {
+  final names = [
+    for (final m in g.members)
+      if (m.user.uid != myUid) m.user.displayName.split(' ').first,
+  ];
+  if (names.length <= 3) return names.join(', ');
+  return '${names.take(3).join(', ')} +${names.length - 3}';
+}
 
-  final FriendResponse friend;
-  final VoidCallback onNudge;
+class _None extends StatelessWidget {
+  const _None(this.text);
+
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    final user = friend.user;
-    return InkWell(
-      onTap: () => _showFriendSheet(context, friend, onNudge),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 68),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.hairline)),
-        ),
-        child: Row(
-          children: [
-            FafoAvatar(name: user.displayName, size: FafoAvatarSize.md, photoUrl: user.photoUrl),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user.displayName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.ui(15, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _statusLine(friend),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.ui(
-                      12.5,
-                      fontWeight: user.freeNow ? FontWeight.w700 : FontWeight.w400,
-                      color: user.freeNow ? AppColors.accentPrimary : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 2),
+      child: Text(text, style: AppTypography.ui(15, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
+    );
+  }
+}
+
+/// Empty Friends: one line, one action.
+class _NoFriends extends StatelessWidget {
+  const _NoFriends({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 130),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('No friends yet.', style: AppTypography.ui(22, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: Text(
+              'Your people show up here once they’re on FaFo.',
+              style: AppTypography.ui(15, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
             ),
-            const SizedBox(width: 12),
-            FafoPill(label: 'Nudge', small: true, primary: user.freeNow, height: 38, onPressed: onNudge),
-          ],
-        ),
+          ),
+          const SizedBox(height: 22),
+          FafoPill(label: 'Add friends', onPressed: onAdd),
+        ],
       ),
     );
   }
 }
 
-/// "Free rn", else the last plan between you, else the handle.
-String _statusLine(FriendResponse friend) {
-  if (friend.user.freeNow) return 'Free rn';
-  final nudge = friend.lastNudge;
-  if (nudge == null) return '@${friend.user.username}';
-  final who = nudge.direction == NudgeDirection.received ? 'From them' : 'You sent';
-  return '$who: ${nudge.title} · ${relativeSince(nudge.createdAt)}';
-}
+/// A 2.4 second blue wash on a row you were sent to.
+class _Highlight extends StatelessWidget {
+  const _Highlight({required this.on, required this.child});
 
-/// Incoming requests in one outlined card, so they read as "needs an answer".
-class _RequestsCard extends StatelessWidget {
-  const _RequestsCard({required this.requests});
-
-  final List<FriendRequestResponse> requests;
+  final bool on;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return FafoCard(
-      stripLeft: 'Wants to add you',
-      stripRight: '${requests.length}',
-      zones: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Column(
-            children: [
-              for (var i = 0; i < requests.length; i++)
-                _RequestRow(request: requests[i], last: i == requests.length - 1),
-            ],
-          ),
-        ),
-      ],
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    return AnimatedContainer(
+      duration: reduce ? Duration.zero : const Duration(milliseconds: 600),
+      decoration: BoxDecoration(
+        color: on ? AppColors.accentPrimary.withValues(alpha: 0.14) : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: child,
     );
   }
 }
 
+/// An incoming friend request: Add or No.
 class _RequestRow extends ConsumerStatefulWidget {
-  const _RequestRow({required this.request, required this.last});
+  const _RequestRow({required this.request});
 
   final FriendRequestResponse request;
-  final bool last;
 
   @override
   ConsumerState<_RequestRow> createState() => _RequestRowState();
@@ -291,7 +335,6 @@ class _RequestRowState extends ConsumerState<_RequestRow> {
 
   Future<void> _answer(bool accept) async {
     setState(() => _busy = true);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final repo = ref.read(friendsRepositoryProvider);
       if (accept) {
@@ -302,7 +345,7 @@ class _RequestRowState extends ConsumerState<_RequestRow> {
       ref.invalidate(incomingFriendRequestsProvider);
       if (accept) await ref.read(liveFriendsProvider.notifier).refresh();
     } catch (e) {
-      messenger.toastError(e);
+      FafoToasts.error(e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -311,232 +354,146 @@ class _RequestRowState extends ConsumerState<_RequestRow> {
   @override
   Widget build(BuildContext context) {
     final user = widget.request.requester;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: widget.last ? null : Border(bottom: BorderSide(color: AppColors.hairline)),
-      ),
-      child: Row(
+    return FafoListRow(
+      title: user.displayName,
+      subtitle: '@${user.username}',
+      leading: FafoAvatar(name: user.displayName, size: FafoAvatarSize.md, photoUrl: user.photoUrl),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          FafoAvatar(name: user.displayName, size: FafoAvatarSize.md, photoUrl: user.photoUrl),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.ui(15, fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  '@${user.username}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.ui(12.5, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
+          FafoPill(label: 'Add', small: true, height: 36, busy: _busy, onPressed: () => _answer(true)),
           const SizedBox(width: 8),
-          FafoPill(label: 'Add', small: true, height: 38, busy: _busy, onPressed: () => _answer(true)),
-          const SizedBox(width: 8),
-          FafoPill(
-            label: 'No',
-            small: true,
-            primary: false,
-            height: 38,
-            onPressed: _busy ? null : () => _answer(false),
-          ),
+          FafoPill(label: 'No', small: true, height: 36, primary: false, onPressed: _busy ? null : () => _answer(false)),
         ],
       ),
     );
   }
 }
 
-/// Your code at the foot of the list: the one way to add people.
-class _CodeCard extends ConsumerWidget {
-  const _CodeCard();
+/// What a friend's sheet hands back.
+sealed class FriendSheetResult {
+  const FriendSheetResult();
+}
+
+class FriendSendNudge extends FriendSheetResult {
+  const FriendSendNudge();
+}
+
+class FriendSendAgain extends FriendSheetResult {
+  const FriendSendAgain(this.nudge);
+  final NudgeResponse nudge;
+}
+
+/// A friend's sheet: who they are, Send nudge, the plans between you, then
+/// the quieter Unfriend and Block.
+Future<FriendSheetResult?> showFriendSheet(BuildContext context, {required PublicUserResponse user, FriendResponse? friend}) {
+  return showFafoSheet<FriendSheetResult>(context, builder: (_) => FriendSheet(user: user, friend: friend));
+}
+
+class FriendSheet extends ConsumerStatefulWidget {
+  const FriendSheet({super.key, required this.user, this.friend});
+
+  final PublicUserResponse user;
+  final FriendResponse? friend;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final code = ref.watch(_myCodeProvider).value;
-    return FafoCard(
-      stripLeft: 'Add friends',
-      stripRight: 'Your code',
-      zones: [
-        FafoZone(
-          gap: 12,
-          children: [
-            FafoDisplay(code?.code ?? '·····', fontSize: 44),
-            Text(
-              'Whoever signs up with your code shows up here, and you show up for them.',
-              style: AppTypography.ui(14, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                FafoPill(
-                  label: 'Share code',
-                  small: true,
-                  height: 44,
-                  onPressed: code == null
-                      ? null
-                      : () => SharePlus.instance.share(
-                          ShareParams(text: 'Add me on FaFo. My code: ${code.code}\n${code.shareUrl}'),
-                        ),
-                ),
-                const SizedBox(width: 14),
-                FafoInlineLink(label: 'Have a code?', onTap: () => showCodeSheet(context)),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  ConsumerState<FriendSheet> createState() => FriendSheetState();
 }
 
-/// A friend's sheet: who they are, Nudge, and the rarer Unfriend / Block.
-Future<void> _showFriendSheet(BuildContext context, FriendResponse friend, VoidCallback onNudge) {
-  return showFafoSheet<void>(
-    context,
-    builder: (sheetContext) => _FriendSheet(
-      friend: friend,
-      onNudge: () {
-        Navigator.of(sheetContext).pop();
-        onNudge();
-      },
-    ),
-  );
-}
-
-class _FriendSheet extends ConsumerStatefulWidget {
-  const _FriendSheet({required this.friend, required this.onNudge});
-
-  final FriendResponse friend;
-  final VoidCallback onNudge;
-
-  @override
-  ConsumerState<_FriendSheet> createState() => _FriendSheetState();
-}
-
-class _FriendSheetState extends ConsumerState<_FriendSheet> {
+class FriendSheetState extends ConsumerState<FriendSheet> {
   bool _busy = false;
 
   Future<void> _remove({required bool block}) async {
-    final user = widget.friend.user;
-    final answers = await showDialog<List<String>>(
-      context: context,
-      builder: (_) => NegativeAnswersDialog(title: '${block ? 'Block' : 'Unfriend'} ${user.displayName}?'),
+    final user = widget.user;
+    final first = user.displayName.split(' ').first;
+    final sure = await showFafoConfirm(
+      context,
+      title: '${block ? 'Block' : 'Unfriend'} $first?',
+      message: block
+          ? '$first can’t send you plans or add you again, and won’t be told. You can unblock from Settings.'
+          : 'You won’t see each other in Friends anymore. Any groups you share stay as they are.',
+      confirmLabel: block ? 'Block' : 'Unfriend',
     );
-    if (answers == null || !mounted) return;
+    if (!sure || !mounted) return;
     setState(() => _busy = true);
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
     try {
       final repo = ref.read(friendsRepositoryProvider);
       if (block) {
-        await repo.blockUser(user.uid, answers: answers);
+        await repo.blockUser(user.uid, answers: const []);
       } else {
-        await repo.unfriend(user.uid, answers: answers);
+        await repo.unfriend(user.uid, answers: const []);
       }
       await ref.read(liveFriendsProvider.notifier).refresh();
-      navigator.pop();
-      messenger.toast(block ? '${user.displayName} is blocked.' : '${user.displayName} is no longer a friend.');
+      ref.invalidate(blockedUsersProvider);
+      if (mounted) Navigator.of(context).pop();
+      FafoToasts.show(block ? '$first is blocked.' : 'You and $first aren’t friends anymore.');
     } catch (e) {
-      messenger.toastError(e);
+      FafoToasts.error(e);
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  Future<void> _openPlan(NudgeView view) async {
+    final again = await showPlanDetailSheet(context, view);
+    if (again != null && mounted) Navigator.of(context).pop(FriendSendAgain(again));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final friend = widget.friend;
-    final user = friend.user;
-    final nudge = friend.lastNudge;
+    final user = widget.user;
+    final myUid = ref.watch(currentProfileProvider).value?.uid ?? '';
+    final live = (ref.watch(liveFriendsProvider).value ?? const <FriendResponse>[])
+        .where((f) => f.user.uid == user.uid)
+        .firstOrNull;
+    final isFriend = live != null || widget.friend != null;
+    final free = live?.user.freeNow ?? user.freeNow;
+    final nudges = ref.watch(myNudgesProvider).value ?? const <NudgeResponse>[];
+    final plans = [
+      for (final n in nudges)
+        if (!n.isGroup && (n.senderUid == user.uid || n.targetId == user.uid)) NudgeView(n, myUid: myUid),
+    ]..sort((a, b) => b.nudge.createdAt.compareTo(a.nudge.createdAt));
+    final now = ServerClock.now();
+
     return FafoSheetBody(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(right: 44),
-          child: FafoEyebrow(user.freeNow ? 'Free right now' : 'Friend'),
+        Center(
+          child: FafoAvatar(name: user.displayName, photoUrl: user.photoUrl, size: FafoAvatarSize.lg, free: free),
         ),
-        Row(
-          children: [
-            FafoAvatar(name: user.displayName, size: FafoAvatarSize.lg, photoUrl: user.photoUrl),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FafoDisplay(user.displayName, fontSize: 40, maxLines: 2),
-                  const SizedBox(height: 4),
-                  Text(
-                    '@${user.username}',
-                    style: AppTypography.ui(15, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        const SizedBox(height: 12),
+        Text(
+          user.displayName,
+          textAlign: TextAlign.center,
+          style: AppTypography.ui(24, fontWeight: FontWeight.w800).copyWith(height: 1.15),
         ),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppChrome.rowRadius),
-            border: Border.all(color: AppColors.border, width: AppChrome.outlineWidth),
+        const SizedBox(height: 4),
+        Text(
+          '@${user.username}',
+          textAlign: TextAlign.center,
+          style: AppTypography.ui(14, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+        ),
+        // No second plan while one with them is still running.
+        if (isFriend && !plans.any((v) {
+          final st = v.state(now);
+          return st == NudgeCardState.pending || st == NudgeCardState.accepted;
+        })) ...[
+          const SizedBox(height: 20),
+          FafoPill(
+            label: 'Send nudge',
+            block: true,
+            onPressed: _busy ? null : () => Navigator.of(context).pop(const FriendSendNudge()),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const FafoEyebrow('Last plan', fontSize: 10.5),
-              const SizedBox(height: 8),
-              Text(
-                nudge == null ? 'Nothing yet. Be the first.' : nudge.title,
-                style: AppTypography.ui(16, fontWeight: FontWeight.w700),
-              ),
-              if (nudge != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  '${nudge.direction == NudgeDirection.received ? 'From them' : 'You sent it'}, '
-                  '${relativeSince(nudge.createdAt)}',
-                  style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Text(
-                'Friends since ${_monthYear(friend.friendsSince)}',
-                style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-              ),
-            ],
-          ),
-        ),
-        FafoPill(label: 'Nudge ${_firstName(user.displayName)}', block: true, onPressed: _busy ? null : widget.onNudge),
-        Row(
-          children: [
-            FafoInlineLink(label: 'Unfriend', onTap: _busy ? null : () => _remove(block: false)),
-            const SizedBox(width: 22),
-            FafoInlineLink(
-              label: 'Block',
-              color: AppColors.signalRed,
-              onTap: _busy ? null : () => _remove(block: true),
-            ),
+        ],
+        if (plans.isNotEmpty) ...[
+          const FafoSectionLabel('Plans', bottom: 4),
+          for (final v in plans) PlanRow(view: v, now: now, onTap: () => _openPlan(v)),
+        ],
+        FafoQuietLinks(
+          links: [
+            if (isFriend) ('Unfriend', _busy ? null : () => _remove(block: false), false),
+            ('Block', _busy ? null : () => _remove(block: true), true),
           ],
         ),
       ],
     );
   }
-}
-
-String _firstName(String name) {
-  final trimmed = name.trim();
-  if (trimmed.isEmpty) return 'them';
-  return trimmed.split(RegExp(r'\s+')).first;
-}
-
-String _monthYear(DateTime d) {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return '${months[d.toLocal().month - 1]} ${d.toLocal().year}';
 }

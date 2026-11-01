@@ -198,7 +198,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: SettingsPage.routePath,
         name: SettingsPage.routeName,
-        builder: (context, state) => const SettingsPage(),
+        builder: (context, state) => SettingsPage(focus: state.extra is String ? state.extra as String : null),
       ),
       GoRoute(
         path: ChatPage.routePath,

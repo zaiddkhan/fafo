@@ -41,6 +41,14 @@ class FeatureFlags {
   /// prototype. Not part of the real app; kept for client demos.
   static const bool previewBothSides = false;
 
+  /// "Also free" avatars under the free pill on Home. The 1 Nov design moves
+  /// free friends to the Friends tab's "Free now" filter.
+  static const bool homeAlsoFree = false;
+
+  /// Group mute (8 hours, 1 week, always). Needs a backend endpoint; until
+  /// then the Mute button stays hidden.
+  static const bool groupMute = false;
+
   /// In-app System / Light / Dark choice in Settings. Light is the default
   /// (product call; brief 2.4 had System).
   static const bool inAppThemeSwitch = true;

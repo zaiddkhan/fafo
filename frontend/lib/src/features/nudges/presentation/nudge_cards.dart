@@ -18,7 +18,11 @@ class NudgeCard extends StatelessWidget {
     this.onCancel,
     this.answering = false,
     this.receiverHandle,
+    this.myName,
   });
+
+  /// The viewer's display name, left out of "Meet … now." on group plans.
+  final String? myName;
 
   final NudgeView view;
 
@@ -46,6 +50,7 @@ class NudgeCard extends StatelessWidget {
               onYes: onYes,
               onNo: onNo,
               answering: answering,
+              myName: myName,
             ),
     );
   }
@@ -67,41 +72,44 @@ class _SenderCard extends StatelessWidget {
     String head;
     Widget? timerZone;
     String? foot;
+    final red = AppColors.signalRed;
+    final meet = n.yesNames.isEmpty ? name : n.yesNames.join(', ');
     switch (state) {
       case NudgeCardState.pending:
-        head = isGroup ? 'Waiting on $name' : 'Waiting for $name';
         if (isGroup && n.isAccepted) {
-          // First yes set go time; answers stay open to the 10-minute mark.
+          // First yes set go time; the others keep their 10 minutes.
+          head = '$name is on';
+          final waiting = (view.groupSize - n.voterCount).clamp(0, 99);
           timerZone = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FafoCountdown(to: n.goTime, label: 'until go time'),
-              const SizedBox(height: 10),
-              Text(
-                'Answers close in ${fafoMmss(n.answerDeadline.difference(now))}',
-                style: AppTypography.ui(12.5, color: AppColors.textSecondary),
-              ),
+              FafoCountdown(to: n.goTime, label: 'to get there', color: red, labelColor: AppColors.textPrimary),
+              if (waiting > 0) ...[
+                const SizedBox(height: 10),
+                Text(
+                  '$waiting ${waiting == 1 ? 'other has' : 'others have'} '
+                  '${fafoMmss(n.answerDeadline.difference(now))} to answer',
+                  style: AppTypography.ui(12.5, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                ),
+              ],
             ],
           );
         } else {
+          head = isGroup ? 'Waiting on $name' : 'Waiting for $name';
           timerZone = FafoCountdown(to: n.answerDeadline, label: 'left to answer');
         }
       case NudgeCardState.accepted:
-        head = isGroup
-            ? '${view.yesCount}/${view.groupSize} in'
-            : '$name said yes';
-        timerZone = FafoCountdown(to: n.goTime, label: 'until go time');
+        head = isGroup ? '$name is on' : '$name’s in';
+        timerZone = FafoCountdown(to: n.goTime, label: 'to get there', color: red, labelColor: AppColors.textPrimary);
       case NudgeCardState.declined:
         head = isGroup ? 'No one’s in' : '$name said no';
-        foot = 'A clear no. No follow-up needed.';
+        foot = 'That’s it. No chat opens.';
       case NudgeCardState.expired:
         head = isGroup ? 'No one’s in' : 'Expired';
-        foot = isGroup
-            ? 'Nobody said yes in 10 minutes.'
-            : 'No answer in 10 minutes.';
+        foot = isGroup ? 'Nobody said yes this time.' : 'No answer in 10 minutes.';
       case NudgeCardState.goTime:
         head = 'Go time';
-        timerZone = const FafoCountdown(to: null, label: 'go time');
+        timerZone = FafoCountdown(to: null, label: 'Meet $meet now.', color: red, labelColor: AppColors.textPrimary);
       case NudgeCardState.cancelled:
         head = 'Cancelled';
         foot = 'You called it off.';
@@ -121,7 +129,7 @@ class _SenderCard extends StatelessWidget {
                 n.description!,
                 style: AppTypography.ui(14, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
               ),
-            if (isGroup) _Tally(view: view, color: AppColors.textPrimary, mutedNames: true),
+            if (isGroup) _Tally(view: view, color: AppColors.textPrimary, ring: AppColors.surface, mutedNames: true),
           ],
         ),
         if (timerZone != null)
@@ -149,8 +157,10 @@ class _ReceiverCard extends StatelessWidget {
     required this.onYes,
     required this.onNo,
     required this.answering,
+    this.myName,
   });
 
+  final String? myName;
   final NudgeView view;
   final DateTime now;
   final String handle;
@@ -167,18 +177,32 @@ class _ReceiverCard extends StatelessWidget {
     Widget? timerZone;
     String? foot;
     var showActions = false;
+    final others = [
+      view.senderName,
+      for (final y in n.yesNames)
+        if (y != myName && y != view.senderName) y,
+    ];
     switch (state) {
       case NudgeCardState.pending:
         head = 'You have 10 minutes';
-        timerZone = FafoCountdown(to: n.answerDeadline, label: 'left to answer', color: white);
+        timerZone = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FafoCountdown(to: n.answerDeadline, label: 'left to answer', color: white),
+            // A group whose go time already started while you decide.
+            if (n.isGroup && n.isAccepted && now.isBefore(n.goTime)) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Go time already started · ${fafoMmss(n.goTime.difference(now))} to get there',
+                style: AppTypography.ui(12.5, fontWeight: FontWeight.w600, color: white.withValues(alpha: 0.9)),
+              ),
+            ],
+          ],
+        );
         showActions = true;
       case NudgeCardState.accepted:
-        head = 'You said yes';
-        timerZone = FafoCountdown(
-          to: n.goTime,
-          label: 'until your ${n.countdownMinutes}-minute plan starts',
-          color: white,
-        );
+        head = n.isGroup ? 'You’re in' : 'You said yes';
+        timerZone = FafoCountdown(to: n.goTime, label: 'to get there', color: white);
       case NudgeCardState.declined:
         head = 'You said no';
         foot = 'That’s it. No chat opens.';
@@ -187,12 +211,12 @@ class _ReceiverCard extends StatelessWidget {
         foot = 'The 10 minutes ran out.';
       case NudgeCardState.goTime:
         head = 'Go time';
-        timerZone = const FafoCountdown(to: null, label: 'go time', color: white);
+        timerZone = FafoCountdown(to: null, label: n.isGroup ? 'Meet ${others.join(', ')} now.' : 'go time', color: white);
       case NudgeCardState.cancelled:
         head = 'Cancelled';
         foot = '${view.senderName} called it off.';
     }
-    final from = 'From ${view.senderName}${n.isGroup ? ' in ${view.targetName}' : ''}';
+    final from = 'From ${view.senderName}${n.isGroup ? ' · ${view.targetName}' : ''}';
     return FafoCard(
       blue: true,
       stripLeft: '@$handle',
@@ -200,8 +224,8 @@ class _ReceiverCard extends StatelessWidget {
       zones: [
         FafoZone(
           children: [
-            FafoEyebrow(head, color: white),
             if (n.isQuest) FafoQuestTags(difficulty: n.questDifficulty, onBlue: true),
+            FafoEyebrow(head, color: white),
             Text(from, style: AppTypography.ui(13.5, fontWeight: FontWeight.w700, color: white)),
             FafoDisplay(n.title, color: white),
             if (n.description != null && n.description!.isNotEmpty)
@@ -213,14 +237,14 @@ class _ReceiverCard extends StatelessWidget {
                   color: white.withValues(alpha: 0.88),
                 ),
               ),
-            if (n.isGroup) _Tally(view: view, color: white),
+            if (n.isGroup) _Tally(view: view, color: white, ring: AppColors.accentPrimary),
           ],
         ),
         if (timerZone != null) FafoZone(big: true, children: [timerZone]),
         if (foot != null) FafoZone(children: [_Foot(foot, color: white)]),
         if (showActions)
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+            padding: const EdgeInsets.all(20),
             child: Row(
               children: [
                 Expanded(
@@ -251,35 +275,39 @@ class _ReceiverCard extends StatelessWidget {
   }
 }
 
-/// Live group tally: "2/5 in" and who said yes.
+/// Live group tally: who said yes (avatars), "2/4", then "in · Maya, Leo".
 class _Tally extends StatelessWidget {
-  const _Tally({required this.view, required this.color, this.mutedNames = false});
+  const _Tally({required this.view, required this.color, required this.ring, this.mutedNames = false});
 
   final NudgeView view;
   final Color color;
+
+  /// The card colour, for the gap between overlapping avatars.
+  final Color ring;
   final bool mutedNames;
 
   @override
   Widget build(BuildContext context) {
+    final names = view.nudge.yesNames;
     return Wrap(
-      spacing: 10,
+      spacing: 8,
       runSpacing: 4,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
+        if (names.isNotEmpty)
+          FafoAvatarStack(people: [for (final n in names) (n, null)], dimension: 28, ring: ring),
         Text(
           '${view.yesCount}/${view.groupSize}',
-          style: AppTypography.timer(20, color: color),
+          style: AppTypography.timer(24, color: color),
         ),
-        Text('in', style: AppTypography.ui(14, fontWeight: FontWeight.w700, color: color)),
-        if (view.nudge.yesNames.isNotEmpty)
-          Text(
-            view.nudge.yesNames.join(', '),
-            style: AppTypography.ui(
-              14,
-              fontWeight: FontWeight.w700,
-              color: mutedNames ? AppColors.textSecondary : color.withValues(alpha: 0.85),
-            ),
+        Text(
+          names.isEmpty ? 'in' : 'in · ${names.join(', ')}',
+          style: AppTypography.ui(
+            13,
+            fontWeight: FontWeight.w600,
+            color: mutedNames ? AppColors.textSecondary : color.withValues(alpha: 0.9),
           ),
+        ),
       ],
     );
   }

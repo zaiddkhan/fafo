@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fafu/src/core/router/app_router.dart';
@@ -66,8 +67,23 @@ class _FafoAppState extends ConsumerState<FafoApp> {
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       routerConfig: router,
-      // Toasts sit above every route, sheets and dialogs included.
-      builder: (context, child) => FafoToastHost(child: child!),
+      // Toasts sit above every route, sheets and dialogs included. Status and
+      // navigation bar icons follow the app's theme, not the phone's (Light
+      // by default even on a phone in dark mode).
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: AppColors.darkBgPrimary,
+                systemNavigationBarIconBrightness: Brightness.light,
+              )
+            : SystemUiOverlayStyle.dark.copyWith(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: AppColors.lightBgPrimary,
+                systemNavigationBarIconBrightness: Brightness.dark,
+              ),
+        child: FafoToastHost(child: child!),
+      ),
     );
   }
 }

@@ -16,3 +16,10 @@ Future<void> openExternalUrl(BuildContext context, String url) async {
     messenger.toast('Could not open $url', kind: FafoToastKind.error);
   }
 }
+
+/// Where "Report a problem" goes.
+const supportEmail = 'fafuwork@gmail.com';
+
+/// Opens a pre-addressed email for "Report a problem".
+Future<void> reportProblem(BuildContext context) =>
+    openExternalUrl(context, 'mailto:$supportEmail?subject=${Uri.encodeComponent('FaFo problem')}');

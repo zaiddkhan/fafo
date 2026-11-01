@@ -66,6 +66,10 @@ class AppColors {
   /// Medium badge only.
   static const Color amber = Color(0xFFF2C350);
 
+  /// Red text under 18px (brand red is too light for small copy): errors,
+  /// "Block", "Delete".
+  static Color get errorText => _isDark ? const Color(0xFFFF7A70) : const Color(0xFFB3342A);
+
   /// The live notification's post-yes bar. The only green in the app.
   static const Color stateGreen = Color(0xFF4ED164);
 

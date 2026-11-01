@@ -32,8 +32,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   String get _phoneNumber =>
       '+91${_phoneController.text.replaceAll(RegExp(r'\D'), '')}';
 
-  bool get _canContinue =>
-      _phoneController.text.replaceAll(RegExp(r'\D'), '').length == 10;
+  String get _digits => _phoneController.text.replaceAll(RegExp(r'\D'), '');
+
+  /// Indian mobile numbers are 10 digits starting 6 to 9.
+  bool get _canContinue => RegExp(r'^[6-9]\d{9}$').hasMatch(_digits);
+
+  String? get _phoneError =>
+      _digits.length == 10 && !_canContinue ? 'Indian mobile numbers start with 6, 7, 8 or 9.' : null;
 
   Future<void> _sendOtp() async {
     if (!_canContinue || _sendingOtp) return;
@@ -59,58 +64,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return FafoFormPage(
-      eyebrow: 'Log in',
-      title: 'Back for more?',
-      subtitle: 'Your number, then a 6-digit code. No passwords.',
-      footer: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          FafoPill(
-            label: _sendingOtp ? 'Sending code…' : 'Continue',
-            block: true,
-            busy: _sendingOtp,
-            onPressed: _canContinue && !_sendingOtp ? _sendOtp : null,
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Don't have an account? ",
-                style: AppTypography.ui(14, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-              ),
-              FafoInlineLink(
-                label: 'Sign up',
-                onTap: () => context.pushReplacement(SignupPage.routePath),
-              ),
-            ],
-          ),
-        ],
+      title: 'What’s your number?',
+      subtitle: 'We’ll text you a code to log you back in.',
+      footer: FafoPill(
+        label: 'Send code',
+        block: true,
+        busy: _sendingOtp,
+        onPressed: _canContinue && !_sendingOtp ? _sendOtp : null,
       ),
       children: [
-        const FafoFieldLabel('Phone number'),
-        TextField(
+        FafoInput(
           controller: _phoneController,
+          prefix: '+91',
+          hint: '98450 12873',
           keyboardType: TextInputType.phone,
           autofocus: true,
-          style: AppTypography.ui(17, fontWeight: FontWeight.w700),
-          // Rebuild so Continue lights up at 10 digits.
+          error: _phoneError,
+          // Rebuild so the button lights up at 10 digits.
           onChanged: (_) => setState(() {}),
-          onSubmitted: (_) => _sendOtp(),
-          decoration: InputDecoration(
-            hintText: '98765 43210',
-            // Always visible, unlike prefixText (which hides until focus).
-            prefixIcon: Text('+91  ', style: AppTypography.ui(17, fontWeight: FontWeight.w700)),
-            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          ),
         ),
-        const SizedBox(height: 10),
-        Text(
-          'We’ll text you a 6-digit code.',
-          style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+        if (_phoneError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_phoneError!, style: AppTypography.ui(13, fontWeight: FontWeight.w500, color: AppColors.errorText)),
+          ),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Text(
+              'New to FaFo? ',
+              style: AppTypography.ui(14, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
+            ),
+            FafoInlineLink(label: 'Get started', onTap: () => context.pushReplacement(SignupPage.routePath)),
+          ],
         ),
       ],
     );

@@ -21,7 +21,13 @@ import 'package:fafu/src/core/theme/app_theme.dart';
 import 'package:fafu/src/features/auth/presentation/login_page.dart';
 import 'package:fafu/src/features/auth/presentation/otp_page.dart';
 import 'package:fafu/src/features/auth/presentation/signup_page.dart';
+import 'package:fafu/src/features/friends/presentation/add_friends_sheet.dart';
 import 'package:fafu/src/features/friends/presentation/friends_tab.dart';
+import 'package:fafu/src/features/groups/presentation/new_group_page.dart';
+import 'package:fafu/src/features/home/presentation/app_header.dart';
+import 'package:fafu/src/features/nudges/domain/nudge_view.dart';
+import 'package:fafu/src/features/nudges/presentation/plan_detail_sheet.dart';
+import 'package:fafu/src/features/settings/presentation/faq_sheet.dart';
 import 'package:fafu/src/features/friends/presentation/invite_landing_page.dart';
 import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
 import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
@@ -269,30 +275,51 @@ List<Override> _overrides({
 // --- Harness ----------------------------------------------------------------------
 
 /// A sheet rendered full-screen on paper, as it looks when open.
-Widget _asSheet(Widget body) => Builder(
+Widget _asSheet(Widget body, {String? title}) => Builder(
   builder: (context) => Scaffold(
     backgroundColor: AppColors.bgPrimary,
-    body: SafeArea(child: body),
+    body: SafeArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [FafoSheetHeader(title: title), Flexible(child: body)],
+      ),
+    ),
   ),
 );
 
-/// A tab body with the V3 bottom nav, as the shell lays it out.
+/// A tab body under the header and floating menu, as the shell lays it out.
 Widget _withNav(int index, Widget body) => Builder(
   builder: (context) => Scaffold(
     backgroundColor: AppColors.bgPrimary,
-    body: body,
-    bottomNavigationBar: Column(
-      mainAxisSize: MainAxisSize.min,
+    body: Stack(
       children: [
-        const FafoStatusBars(),
-        FafoBottomNav(
-          items: const [
-            FafoNavItem(icon: Icons.bolt_rounded, label: 'Home'),
-            FafoNavItem(icon: Icons.people_alt_outlined, label: 'Friends'),
-            FafoNavItem(icon: Icons.person_outline, label: 'Profile'),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SafeArea(bottom: false, child: FafoAppHeader(onBack: index == 0 ? null : () {})),
+            Expanded(child: body),
           ],
-          currentIndex: index,
-          onTap: (_) {},
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const FafoStatusBars(),
+              FafoBottomNav(
+                items: const [
+                  FafoNavItem(icon: Icons.home_outlined, label: 'Home'),
+                  FafoNavItem(icon: Icons.people_outline_rounded, label: 'Friends'),
+                  FafoNavItem(icon: Icons.person_outline_rounded, label: 'Profile'),
+                ],
+                currentIndex: index,
+                onTap: (_) {},
+              ),
+            ],
+          ),
         ),
       ],
     ),
@@ -348,76 +375,88 @@ void main() {
 
   final scenes = <String, ({Widget screen, List<Override> overrides, double height})>{
     // Home
-    '01_home_idle': (screen: const RightNowPage(), overrides: _overrides(), height: 1000),
-    '02_home_free_recent': (screen: const RightNowPage(), overrides: _overrides(nudges: _recent, free: true), height: 1150),
+    '01_home_idle': (screen: _withNav(0, const RightNowPage()), overrides: _overrides(), height: 1000),
+    '02_home_free_recent': (screen: _withNav(0, const RightNowPage()), overrides: _overrides(nudges: _recent, free: true), height: 1150),
     '03_sender_waiting': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?'), ..._recent], free: true),
       height: 1500,
     ),
     '04_receiver_answering': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?', sent: false), ..._recent]),
       height: 1500,
     ),
     '05_sender_said_no': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?', status: NudgeStatus.resolved, outcome: 'no', votes: {'maya': 'no'}, age: const Duration(seconds: 50))]),
       height: 1100,
     ),
     '06_receiver_said_no': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?', sent: false, status: NudgeStatus.resolved, outcome: 'no', votes: {_me: 'no'}, age: const Duration(seconds: 50))]),
       height: 1100,
     ),
     '07_sender_said_yes': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?', status: NudgeStatus.acceptedTimer, votes: {'maya': 'yes'}, acceptedAfter: Duration.zero, age: const Duration(seconds: 30))]),
       height: 1100,
     ),
     '08_receiver_said_yes': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?', sent: false, status: NudgeStatus.acceptedTimer, votes: {_me: 'yes'}, acceptedAfter: Duration.zero, age: const Duration(seconds: 30))]),
       height: 1100,
     ),
     '09_sender_expired': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?', status: NudgeStatus.expired, outcome: 'expired', age: const Duration(seconds: 50))]),
       height: 1100,
     ),
     '10_sender_go_time': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?', status: NudgeStatus.acceptedTimer, votes: {'maya': 'yes'}, countdown: 5, acceptedAfter: Duration.zero, age: const Duration(minutes: 5, seconds: 5))]),
       height: 1100,
     ),
     '11_group_sender_tally': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'g', title: 'Movie night?', group: true, groupSize: 4, status: NudgeStatus.acceptedTimer, votes: {'maya': 'yes', 'leo': 'no', 'nina': 'yes'}, acceptedAfter: const Duration(minutes: 1), age: const Duration(minutes: 2))]),
       height: 1200,
     ),
     '12_group_receiver': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'g', title: 'Movie night?', sent: false, group: true, groupSize: 4, votes: {'leo': 'yes'})]),
       height: 1250,
     ),
     '14_receiver_cancelled': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'l', title: 'Coffee downstairs?', sent: false, status: NudgeStatus.resolved, outcome: 'cancelled', age: const Duration(seconds: 50)), ..._recent]),
       height: 1300,
     ),
     '15_cancel_confirm': (screen: const _ConfirmDemo(), overrides: _overrides(), height: 844),
     '13_quest_receiver': (
-      screen: const RightNowPage(),
+      screen: _withNav(0, const RightNowPage()),
       overrides: _overrides(nudges: [_nudge(id: 'q', title: 'Walk one block', description: 'Meet outside and walk one block with me?', sent: false, questDifficulty: 'easy')]),
       height: 1250,
     ),
     // Sheets
-    '20_composer': (screen: _asSheet(const ComposeNudgeSheet()), overrides: _overrides(), height: 1100),
-    '21_composer_quest': (screen: _asSheet(ComposeNudgeSheet(quest: _quests.first)), overrides: _overrides(), height: 1150),
-    '22_profile': (screen: _asSheet(ProfileSheet(onInvite: (_) {})), overrides: _overrides(), height: 2000),
-    '23_group_new': (screen: _asSheet(const GroupSheet()), overrides: _overrides(), height: 1000),
-    '24_group_edit': (screen: _asSheet(GroupSheet(group: _flatmates)), overrides: _overrides(), height: 1100),
-    '25_code': (screen: _asSheet(const CodeSheet()), overrides: _overrides(), height: 950),
+    '20_composer': (screen: _asSheet(const ComposeNudgeSheet(), title: 'New nudge'), overrides: _overrides(), height: 1000),
+    '21_composer_quest': (screen: _asSheet(ComposeNudgeSheet(quest: _quests.first), title: 'Side quest'), overrides: _overrides(), height: 1050),
+    '22_profile': (screen: _withNav(2, ProfileSheet(asTab: true, onInvite: (_) {})), overrides: _overrides(), height: 1900),
+    '23_group_new': (screen: const NewGroupPage(), overrides: _overrides(), height: 900),
+    '24_group_edit': (screen: _asSheet(GroupSheet(group: _flatmates)), overrides: _overrides(nudges: _recent), height: 1300),
+    '27_plan_detail': (
+      screen: _asSheet(PlanDetailSheet(view: NudgeView(_recent.first, myUid: _me)), title: 'Plan'),
+      overrides: _overrides(nudges: _recent),
+      height: 900,
+    ),
+    '28_add_friends': (screen: _asSheet(const AddFriendsSheet(), title: 'Add friends'), overrides: _overrides(), height: 900),
+    '29_friend_detail': (
+      screen: _asSheet(Builder(builder: (context) => _FriendSheetDemo())),
+      overrides: _overrides(nudges: _recent),
+      height: 1000,
+    ),
+    '38_faq': (screen: _asSheet(const FaqSheet(), title: 'FAQ'), overrides: _overrides(), height: 1300),
+    '25_code': (screen: _asSheet(const CodeSheet(), title: 'Your code'), overrides: _overrides(), height: 950),
     '26_preview': (screen: _asSheet(const PreviewSheet()), overrides: _overrides(), height: 1650),
     // Screens the prototype doesn't show, restyled in its language.
     '30_landing': (screen: const SplashPage(), overrides: _overrides(), height: 844),
@@ -430,7 +469,7 @@ void main() {
     ),
     '34_onboarding': (screen: const ProfileSetupPage(), overrides: _overrides(), height: 1000),
     '35_settings': (screen: const SettingsPage(), overrides: _overrides(), height: 1100),
-    '36_edit_profile': (screen: EditProfilePage(profile: _profile()), overrides: _overrides(), height: 844),
+    '36_edit_profile': (screen: _asSheet(EditProfilePage(profile: _profile()), title: 'Edit profile'), overrides: _overrides(), height: 844),
     // V3 shell: Home / Friends / Profile with the bottom nav.
     '40_shell_home': (screen: _withNav(0, const RightNowPage()), overrides: _overrides(nudges: _recent, free: true), height: 1000),
     '43_shell_offline_notifications_off': (
@@ -455,7 +494,7 @@ void main() {
       height: 1000,
     ),
     '42_shell_profile': (
-      screen: _withNav(2, Scaffold(backgroundColor: AppColors.bgPrimary, body: SafeArea(bottom: false, child: ProfileSheet(asTab: true, onInvite: (_) {})))),
+      screen: _withNav(2, ProfileSheet(asTab: true, onInvite: (_) {})),
       overrides: _overrides(),
       height: 1000,
     ),
@@ -574,4 +613,10 @@ class _NagOff extends NotificationNag {
 class _NagOn extends NotificationNag {
   @override
   bool build() => true;
+}
+
+/// Opens a friend's sheet body directly.
+class _FriendSheetDemo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => FriendSheet(user: _friends.first.user, friend: _friends.first);
 }

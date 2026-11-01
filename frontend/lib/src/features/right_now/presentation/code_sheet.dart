@@ -109,7 +109,7 @@ class _CodeSheetState extends ConsumerState<CodeSheet> {
                 error: (e, _) => Text(
                   friendlyErrorMessage(e),
                   textAlign: TextAlign.center,
-                  style: AppTypography.ui(13, color: AppColors.signalRed),
+                  style: AppTypography.ui(13, color: AppColors.errorText),
                 ),
                 // One line, centred; long codes scale down rather than wrap.
                 data: (c) => FittedBox(

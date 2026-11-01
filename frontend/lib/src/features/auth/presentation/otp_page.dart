@@ -126,7 +126,11 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   String get _otp => _controllers.map((c) => c.text).join();
   bool get _isComplete => _otp.length == _otpLength;
 
+  /// Inline error under the boxes (red borders too) after a failed verify.
+  String? _codeError;
+
   void _onChanged(int index, String value) {
+    _codeError = null;
     if (value.length == 1 && index < _otpLength - 1) {
       _focusNodes[index + 1].requestFocus();
     }
@@ -199,7 +203,8 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           .signInWithOtp(verificationId: _verificationId, smsCode: _otp);
       await _completeSession(idToken);
     } catch (e) {
-      if (mounted) FafoToasts.show(friendlyAuthError(e), kind: FafoToastKind.error);
+      // A wrong code is shown under the boxes, not as a toast.
+      if (mounted) setState(() => _codeError = friendlyAuthError(e));
     } finally {
       if (mounted) setState(() => _verifying = false);
     }
@@ -258,15 +263,15 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     final resendLabel = _waitingForCode
         ? 'Sending code…'
         : _resendSeconds > 0
-        ? 'Resend code in 0:${_resendSeconds.toString().padLeft(2, '0')}'
+        ? 'Resend in 0:${_resendSeconds.toString().padLeft(2, '0')}'
         : 'Resend code';
 
     return FafoFormPage(
-      eyebrow: 'Verify',
-      title: 'Six digits, incoming.',
+      title: 'Enter the code',
+      step: 2,
       subtitle: _waitingForCode
-          ? 'Sending a 6-digit code to ${widget.phoneNumber}…'
-          : 'We sent a 6-digit code to ${widget.phoneNumber}.',
+          ? 'Sending it to ${_pretty(widget.phoneNumber)}…'
+          : 'Sent to ${_pretty(widget.phoneNumber)}.',
       footer: FafoPill(
         label: _waitingForCode
             ? 'Waiting for the code…'
@@ -281,28 +286,28 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(_otpLength, (i) {
-            final filled = _controllers[i].text.isNotEmpty;
             return SizedBox(
               width: otpBoxWidth,
               child: KeyboardListener(
                 focusNode: FocusNode(skipTraversal: true),
                 onKeyEvent: (event) => _onKeyDown(i, event),
-                // Digit boxes are choice chips: a filled digit reads as selected.
+                // Card boxes; blue edge on the one being typed into.
                 child: ListenableBuilder(
                   listenable: _focusNodes[i],
                   builder: (context, child) => Container(
                     height: 58,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: filled ? AppColors.accentPrimary : AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppChrome.chipRadius),
-                      border: filled || _focusNodes[i].hasFocus
-                          ? Border.all(
-                              color: filled ? AppColors.ink : AppColors.border,
-                              width: AppChrome.outlineWidth,
-                            )
-                          : AppChrome.softBorder,
-                      boxShadow: filled ? AppChrome.cardShadowSoft : null,
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _codeError != null
+                            ? AppColors.signalRed
+                            : _focusNodes[i].hasFocus
+                            ? AppColors.accentPrimary
+                            : AppColors.softLine,
+                        width: AppChrome.softOutlineWidth,
+                      ),
                     ),
                     child: child,
                   ),
@@ -313,7 +318,9 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                     keyboardType: TextInputType.number,
                     maxLength: 1,
                     cursorColor: AppColors.textPrimary,
-                    style: AppTypography.timer(24, color: filled ? AppColors.onAccent : AppColors.textPrimary),
+                    style: AppTypography.ui(22, fontWeight: FontWeight.w700).copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                     onChanged: (v) => _onChanged(i, v),
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: const InputDecoration(
@@ -329,15 +336,30 @@ class _OtpPageState extends ConsumerState<OtpPage> {
             );
           }),
         ),
-        const SizedBox(height: 18),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FafoInlineLink(
-            label: resendLabel,
-            onTap: _resendSeconds == 0 && !_waitingForCode ? _resendOtp : null,
+        if (_codeError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(_codeError!, style: AppTypography.ui(13, fontWeight: FontWeight.w500, color: AppColors.errorText)),
           ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            FafoTextButton(label: 'Change number', onTap: () => Navigator.of(context).maybePop()),
+            FafoTextButton(
+              label: resendLabel,
+              color: _resendSeconds == 0 && !_waitingForCode ? AppColors.textPrimary : AppColors.textSecondary,
+              onTap: _resendSeconds == 0 && !_waitingForCode ? _resendOtp : null,
+            ),
+          ],
         ),
       ],
     );
   }
+}
+
+/// "+91 98450 12873".
+String _pretty(String phone) {
+  final m = RegExp(r'^\+91(\d{5})(\d{5})$').firstMatch(phone);
+  return m == null ? phone : '+91 ${m.group(1)} ${m.group(2)}';
 }

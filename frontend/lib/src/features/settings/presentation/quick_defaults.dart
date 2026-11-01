@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fafu/src/features/users/data/users_repository.dart';
 import 'package:fafu/src/features/users/domain/profile.dart';
+import 'package:fafu/src/core/theme/app_typography.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_ui.dart';
 import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
-/// Quick defaults (brief 6.2): default countdown and side quest invites.
-/// Lives in Settings. Changes apply only after "Save defaults".
+/// Quick defaults: the countdown new plans start with, and whether friends
+/// can send you side quests. Saves as you change them.
 class QuickDefaults extends ConsumerStatefulWidget {
   const QuickDefaults({super.key, required this.profile});
 
@@ -20,57 +21,76 @@ class QuickDefaults extends ConsumerStatefulWidget {
 class _QuickDefaultsState extends ConsumerState<QuickDefaults> {
   late int _countdown = widget.profile.defaultCountdownMinutes;
   late bool _quests = widget.profile.sideQuestInvites;
-  bool _saving = false;
 
-  bool get _dirty =>
-      _countdown != widget.profile.defaultCountdownMinutes || _quests != widget.profile.sideQuestInvites;
+  /// Bumped per save; only the latest save's answer (or failure) counts, so
+  /// quick taps can't land out of order.
+  int _seq = 0;
 
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
+  /// The last values the server confirmed, to roll back to on failure.
+  late (int, bool) _saved = (widget.profile.defaultCountdownMinutes, widget.profile.sideQuestInvites);
+
+  Future<void> _save({int? countdown, bool? quests}) async {
+    final seq = ++_seq;
+    setState(() {
+      _countdown = countdown ?? _countdown;
+      _quests = quests ?? _quests;
+    });
     try {
       final updated = await ref.read(usersRepositoryProvider).setQuickDefaults(
         defaultCountdownMinutes: _countdown,
         sideQuestInvites: _quests,
       );
+      if (seq != _seq || !mounted) return;
+      _saved = (updated.defaultCountdownMinutes, updated.sideQuestInvites);
       ref.read(currentProfileProvider.notifier).setProfile(updated);
-      messenger.toast('Defaults saved.');
     } catch (e) {
-      messenger.toastError(e);
-    } finally {
-      if (mounted) setState(() => _saving = false);
+      if (seq != _seq || !mounted) return;
+      setState(() {
+        _countdown = _saved.$1;
+        _quests = _saved.$2;
+      });
+      FafoToasts.error(e);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 12),
-        const FafoEyebrow('Default countdown', fontSize: 10.5),
-        const SizedBox(height: 12),
-        FafoChipGrid(
-          children: [
-            for (final m in const [5, 10, 15])
-              FafoChip(
-                selected: _countdown == m,
-                onTap: () => setState(() => _countdown = m),
-                child: Text('$m min'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 12, 2, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Default countdown', style: AppTypography.ui(16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  for (final m in const [5, 10, 15]) ...[
+                    if (m != 5) const SizedBox(width: 8),
+                    Expanded(
+                      child: FafoFilterChip(
+                        label: '$m min',
+                        selected: _countdown == m,
+                        onTap: () => _save(countdown: m),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
-        FafoCheckRow(
+        FafoListRow(
           title: 'Side quest invites',
           subtitle: 'Let friends send you 15-minute quests',
-          checked: _quests,
-          onTap: () => setState(() => _quests = !_quests),
+          trailing: FafoSwitch(
+            value: _quests,
+            label: 'Side quest invites',
+            onChanged: (v) => _save(quests: v),
+          ),
         ),
-        if (_dirty) ...[
-          const SizedBox(height: 14),
-          FafoPill(label: 'Save defaults', small: true, height: 44, busy: _saving, onPressed: _save),
-        ],
       ],
     );
   }

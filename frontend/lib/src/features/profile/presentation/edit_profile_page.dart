@@ -18,6 +18,22 @@ import 'package:fafu/src/shared/widgets/fafo/fafo_toast.dart';
 
 /// Edit Profile — lets the user change their core profile fields (PRD: "all
 /// core fields editable"): display name, username, area, and photo.
+/// Opens Edit profile from the header photo, its Edit pill, or Profile.
+Future<void> showEditProfileSheet(BuildContext context) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+  final profile = container.read(currentProfileProvider).value;
+  if (profile == null) {
+    FafoToasts.show('Profile still loading…', kind: FafoToastKind.info);
+    return;
+  }
+  await showFafoSheet<bool>(
+    context,
+    title: 'Edit profile',
+    builder: (_) => EditProfilePage(profile: profile),
+  );
+}
+
+/// Edit profile (a sheet): photo, name, username with a live check.
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({required this.profile, super.key});
 
@@ -133,10 +149,17 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     });
   }
 
+  bool get _dirty =>
+      _pickedPhoto != null ||
+      _displayName.text.trim() != widget.profile.displayName ||
+      _username.text.trim().toLowerCase() != widget.profile.username ||
+      _area != widget.profile.area;
+
   bool get _canSave {
     final name = _displayName.text.trim();
     final username = _username.text.trim();
-    return !_saving &&
+    return _dirty &&
+        !_saving &&
         !_checkingUsername &&
         name.isNotEmpty &&
         username.length >= 3 &&
@@ -166,22 +189,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       ref.read(currentProfileProvider.notifier).setProfile(updated);
       ref.invalidate(profileStatsProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).toast('Profile updated.');
+        FafoToasts.show('Profile updated.');
         Navigator.of(context).pop(true);
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).toast(e.message, kind: FafoToastKind.error);
+        FafoToasts.show(e.message, kind: FafoToastKind.error);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).toastError(e);
+        FafoToasts.error(e);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -191,98 +208,69 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     final currentPhoto = widget.profile.photoUrl;
-    final fieldStyle = AppTypography.ui(17, fontWeight: FontWeight.w700);
-    const fieldDecoration = InputDecoration(
-      isDense: true,
-      contentPadding: EdgeInsets.symmetric(vertical: 12),
-    );
     final helper = _usernameHelper();
-    final hasPhoto = _pickedBytes != null || currentPhoto != null;
+    final hasPhoto = _pickedBytes != null || (currentPhoto != null && currentPhoto.isNotEmpty);
 
-    return FafoFormPage(
-      eyebrow: 'Profile',
-      title: 'Edit profile',
+    return FafoSheetBody(
       footer: FafoPill(
-        label: _saving ? 'Saving…' : 'Save changes',
+        label: 'Save',
         block: true,
         busy: _saving,
         onPressed: _canSave ? _save : null,
       ),
       children: [
-        Row(
-          children: [
-            Semantics(
-              button: true,
-              label: 'Change photo',
-              child: GestureDetector(
-                onTap: _pickPhoto,
-                child: hasPhoto
-                    ? Container(
-                        width: 84,
-                        height: 84,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.ink, width: 2.5),
-                          image: DecorationImage(
-                            image: _pickedBytes != null
-                                ? MemoryImage(_pickedBytes!)
-                                : NetworkImage(currentPhoto!) as ImageProvider,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      )
-                    : FafoAvatar(name: _displayName.text, size: FafoAvatarSize.lg),
+        Center(
+          child: Semantics(
+            button: true,
+            label: 'Change photo',
+            child: GestureDetector(
+              onTap: _pickPhoto,
+              child: FafoProfilePhoto(
+                photoUrl: currentPhoto,
+                size: 104,
+                bytes: _pickedBytes == null ? null : MemoryImage(_pickedBytes!),
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: FafoInlineLink(
-                label: hasPhoto ? 'Change photo' : 'Add a photo',
-                onTap: _pickPhoto,
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 26),
-        const FafoFieldLabel('Name'),
-        TextField(
+        const SizedBox(height: 14),
+        Center(
+          child: FafoTextButton(label: hasPhoto ? 'Change photo' : 'Add a photo', onTap: _pickPhoto),
+        ),
+        const FafoSectionLabel('Name', top: 18, bottom: 10),
+        FafoInput(
           controller: _displayName,
-          style: fieldStyle,
+          maxLength: 30,
           textCapitalization: TextCapitalization.words,
-          decoration: fieldDecoration,
           onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(height: 22),
-        const FafoFieldLabel('Username'),
-        TextField(
-          controller: _username,
-          style: fieldStyle,
-          autocorrect: false,
-          decoration: fieldDecoration.copyWith(
-            prefixIcon: Text('@', style: fieldStyle),
-            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-          ),
-          onChanged: _onUsernameChanged,
-        ),
-        if (helper != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            helper,
-            style: AppTypography.ui(
-              13,
-              fontWeight: FontWeight.w500,
-              color: _usernameAvailable == false
-                  ? AppColors.signalRed
-                  : _usernameAvailable == true
-                  ? AppColors.textPrimary
-                  : AppColors.textSecondary,
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              '${_displayName.text.characters.length}/30',
+              style: AppTypography.label(fontSize: 11, color: AppColors.textSecondary).copyWith(letterSpacing: 0),
             ),
           ),
-        ],
-        // Parked with the map (V3 brief 1.2).
+        ),
+        const FafoSectionLabel('Username', top: 10, bottom: 10),
+        FafoInput(
+          controller: _username,
+          prefix: '@',
+          maxLength: 30,
+          autocorrect: false,
+          error: _usernameAvailable == false ? helper : null,
+          onChanged: _onUsernameChanged,
+        ),
+        const SizedBox(height: 8),
+        _UsernameHelper(
+          text: helper ?? 'Friends find you by this.',
+          available: helper == null ? null : _usernameAvailable,
+          checking: _checkingUsername,
+        ),
         if (FeatureFlags.map) ...[
-          const SizedBox(height: 22),
-          const FafoFieldLabel('Area'),
+          const FafoSectionLabel('Area'),
           FafoListRow(
             title: _area == null ? 'Set your area' : (_areaLabel ?? 'Locating…'),
             onTap: _changeArea,
@@ -295,8 +283,39 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   String? _usernameHelper() {
     if (_username.text.trim() == widget.profile.username) return null;
     if (_checkingUsername) return 'Checking…';
-    if (_usernameAvailable == true) return 'That one’s yours.';
-    if (_usernameAvailable == false) return 'Taken. Try another.';
-    return 'At least 3 characters';
+    final u = _username.text.trim().toLowerCase();
+    if (_usernameAvailable == true) return '@$u is yours if you want it.';
+    if (_usernameAvailable == false) return '@$u is taken. Try another.';
+    return '3 to 30 lowercase letters, numbers, . or _';
+  }
+}
+
+/// Under the username: the hint, or the live check (Checking, available with
+/// a blue dot, taken in red).
+class _UsernameHelper extends StatelessWidget {
+  const _UsernameHelper({required this.text, required this.available, required this.checking});
+
+  final String text;
+  final bool? available;
+  final bool checking;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = available == false && !checking ? AppColors.errorText : AppColors.textSecondary;
+    return Row(
+      children: [
+        if (available == true && !checking) ...[
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(color: AppColors.accentPrimary, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+        ],
+        Expanded(
+          child: Text(text, style: AppTypography.ui(13, fontWeight: FontWeight.w400, color: color)),
+        ),
+      ],
+    );
   }
 }

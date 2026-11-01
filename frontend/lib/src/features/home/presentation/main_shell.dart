@@ -14,6 +14,8 @@ import 'package:fafu/src/features/profile/presentation/profile_page.dart';
 import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/quests/presentation/quests_page.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
+import 'package:fafu/src/features/groups/domain/group.dart';
+import 'package:fafu/src/features/home/presentation/app_header.dart';
 import 'package:fafu/src/features/friends/presentation/friends_tab.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
 import 'package:fafu/src/features/nudges/presentation/compose_nudge_sheet.dart';
@@ -650,6 +652,33 @@ void handleNudgeSent(WidgetRef ref, NudgeResponse nudge) {
   ref.read(mainShellTabProvider.notifier).setTab(0);
 }
 
+/// The menu on full screens outside the shell (Settings, New group): the same
+/// floating pill, with [index] active. A tap goes back to the shell on that tab.
+class FafoPageMenu extends ConsumerWidget {
+  const FafoPageMenu({super.key, required this.index});
+
+  final int index;
+
+  static const items = [
+    FafoNavItem(icon: Icons.home_outlined, label: 'Home'),
+    FafoNavItem(icon: Icons.people_outline_rounded, label: 'Friends'),
+    FafoNavItem(icon: Icons.person_outline_rounded, label: 'Profile'),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (MediaQuery.viewInsetsOf(context).bottom > 0) return const SizedBox.shrink();
+    return FafoBottomNav(
+      items: items,
+      currentIndex: index,
+      onTap: (i) {
+        ref.read(mainShellTabProvider.notifier).setTab(i);
+        Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+      },
+    );
+  }
+}
+
 /// The V3 shell: Home ("Right now"), Friends, Profile.
 class _V3Shell extends ConsumerStatefulWidget {
   const _V3Shell();
@@ -659,11 +688,7 @@ class _V3Shell extends ConsumerStatefulWidget {
 }
 
 class _V3ShellState extends ConsumerState<_V3Shell> {
-  static const _items = [
-    FafoNavItem(icon: Icons.bolt_rounded, label: 'Home'),
-    FafoNavItem(icon: Icons.people_alt_outlined, label: 'Friends'),
-    FafoNavItem(icon: Icons.person_outline, label: 'Profile'),
-  ];
+  static const _items = FafoPageMenu.items;
 
   @override
   void initState() {
@@ -682,48 +707,169 @@ class _V3ShellState extends ConsumerState<_V3Shell> {
     if (HomeFocus.request.value != null) ref.read(mainShellTabProvider.notifier).setTab(0);
   }
 
-  Future<void> _nudge({PublicUserResponse? friend, QuestResponse? quest}) async {
-    final nudge = await showComposeNudgeSheet(context, friend: friend, quest: quest);
+  Future<void> _nudge({PublicUserResponse? friend, QuestResponse? quest, GroupResponse? group, NudgeResponse? again}) async {
+    final nudge = await showComposeNudgeSheet(context, friend: friend, quest: quest, group: group, again: again);
     if (nudge != null && mounted) handleNudgeSent(ref, nudge);
   }
 
   @override
   Widget build(BuildContext context) {
     final index = ref.watch(mainShellTabProvider).clamp(0, _items.length - 1);
+    void goHome() => ref.read(mainShellTabProvider.notifier).setTab(0);
     return PopScope(
       // Back from Friends or Profile goes Home; from Home it leaves the app.
       canPop: index == 0,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) ref.read(mainShellTabProvider.notifier).setTab(0);
+        if (!didPop) goHome();
       },
       child: Scaffold(
         backgroundColor: AppColors.bgPrimary,
-        body: IndexedStack(
-          index: index,
+        body: Stack(
           children: [
-            const RightNowPage(),
-            FriendsTab(onNudge: (friend) => _nudge(friend: friend)),
-            Scaffold(
-              backgroundColor: AppColors.bgPrimary,
-              body: SafeArea(
-                bottom: false,
-                child: ProfileSheet(asTab: true, onInvite: (quest) => _nudge(quest: quest)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SafeArea(
+                  bottom: false,
+                  child: FafoAppHeader(
+                    onBack: index == 0 ? null : goHome,
+                    onLogo: goHome,
+                  ),
+                ),
+                Expanded(
+                  child: _FadeTabs(
+                    index: index,
+                    children: [
+                      const RightNowPage(),
+                      FriendsTab(
+                        onNudge: (friend) => _nudge(friend: friend),
+                        onNudgeGroup: (group) => _nudge(group: group),
+                        onSendAgain: (nudge) => _nudge(again: nudge),
+                      ),
+                      ProfileSheet(asTab: true, onInvite: (quest) => _nudge(quest: quest)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // The menu floats over the content, which scrolls behind it. It
+            // steps aside while the keyboard is up.
+            if (MediaQuery.viewInsetsOf(context).bottom == 0)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const FafoStatusBars(),
+                  FafoBottomNav(
+                    items: _items,
+                    currentIndex: index,
+                    onTap: (i) => ref.read(mainShellTabProvider.notifier).setTab(i),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-        bottomNavigationBar: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const FafoStatusBars(),
-            FafoBottomNav(
-              items: _items,
-              currentIndex: index,
-              onTap: (i) => ref.read(mainShellTabProvider.notifier).setTab(i),
-            ),
-          ],
-        ),
       ),
+    );
+  }
+}
+
+/// Like an IndexedStack (every tab keeps its state and scroll), but the
+/// incoming tab fades in with a slight rise instead of snapping. Hidden tabs
+/// don't take taps, focus or screen reader focus.
+class _FadeTabs extends StatelessWidget {
+  const _FadeTabs({required this.index, required this.children});
+
+  final int index;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.disableAnimationsOf(context);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        for (var i = 0; i < children.length; i++)
+          _FadeTab(active: i == index, still: still, child: children[i]),
+      ],
+    );
+  }
+}
+
+class _FadeTab extends StatefulWidget {
+  const _FadeTab({required this.active, required this.still, required this.child});
+
+  final bool active;
+  final bool still;
+  final Widget child;
+
+  @override
+  State<_FadeTab> createState() => _FadeTabState();
+}
+
+/// The fade runs on this widget's own controller, outside the TickerMode
+/// that pauses the hidden tab, so a leaving tab always finishes fading out.
+/// Once fully faded it's Offstage: not painted, not hit-tested.
+class _FadeTabState extends State<_FadeTab> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    value: widget.active ? 1 : 0,
+    duration: const Duration(milliseconds: 220),
+    reverseDuration: const Duration(milliseconds: 120),
+  );
+  late final Animation<double> _fade = CurvedAnimation(parent: _c, curve: Curves.easeOut);
+  late final Animation<Offset> _rise = Tween(begin: const Offset(0, 0.015), end: Offset.zero)
+      .animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+
+  @override
+  void didUpdateWidget(_FadeTab old) {
+    super.didUpdateWidget(old);
+    if (old.active == widget.active) return;
+    if (widget.still) {
+      _c.value = widget.active ? 1 : 0;
+    } else if (widget.active) {
+      _c.forward();
+    } else {
+      _c.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.active;
+    return AnimatedBuilder(
+      animation: _c,
+      child: TickerMode(enabled: active, child: widget.child),
+      builder: (context, child) {
+        final hidden = !active && _c.value == 0;
+        return Offstage(
+          offstage: hidden,
+          child: IgnorePointer(
+            ignoring: !active,
+            child: ExcludeFocus(
+              excluding: !active,
+              child: ExcludeSemantics(
+                excluding: !active,
+                child: FadeTransition(
+                  opacity: _fade,
+                  child: SlideTransition(position: _rise, child: child),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
