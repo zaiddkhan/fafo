@@ -21,6 +21,7 @@ import 'package:fafu/src/features/creators/data/creators_providers.dart';
 import 'package:fafu/src/features/creators/presentation/creator_application_page.dart';
 import 'package:fafu/src/features/events/data/saved_events_controller.dart';
 import 'package:fafu/src/features/location/selected_area_controller.dart';
+import 'package:fafu/src/features/notifications/data/live_timers.dart';
 import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/settings/presentation/quick_defaults.dart';
 import 'package:fafu/src/features/settings/presentation/faq_sheet.dart';
@@ -144,6 +145,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             onTap: () => ref.read(notificationNagProvider.notifier).openSettings(),
           ),
+          if (FeatureFlags.extraSettings)
           FafoListRow(
             title: 'Plans on this phone',
             subtitle: _pushBusy ? 'Updating…' : 'Nudges, answers and go time',
@@ -257,6 +259,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     // Drop device-local, account-scoped caches so they don't bleed into the
     // next account signed in on this device.
     await prefs.remove(savedEventIdsPreferenceKey);
+    await LiveTimers.endAll();
     await FirebaseAuth.instance.signOut();
     ref.read(authTokenProvider.notifier).clearToken();
   }
@@ -445,7 +448,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                     ),
                   ),
-                if (profile != null) QuickDefaults(profile: profile),
+                if (FeatureFlags.extraSettings && profile != null) QuickDefaults(profile: profile),
 
                 const FafoSectionLabel('People', top: 30, bottom: 4),
                 _SettingsTile(

@@ -76,9 +76,9 @@ class _PreviewSheetState extends State<PreviewSheet> {
     final n = _nudge;
     if (n == null) return;
     HapticFeedback.selectionClick();
-    AppSounds.play(FafoSound.answer);
-    final now = ServerClock.now();
     final yes = vote == NudgeVote.yes;
+    AppSounds.play(yes ? FafoSound.answerYes : FafoSound.answerNo);
+    final now = ServerClock.now();
     final goAt = now.add(Duration(minutes: n.countdownMinutes));
     setState(() {
       _nudge = NudgeResponse(

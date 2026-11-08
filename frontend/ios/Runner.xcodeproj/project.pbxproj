@@ -7,19 +7,35 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0F19004B9F75E4A19F5B5F47 /* FafoTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAF8F0DDE5B6ED1BCC0C3380 /* FafoTimerAttributes.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		15C90BA689E1D100C3A1961A /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1F1279CE6AC7154F45713B0 /* Pods_RunnerTests.framework */; };
+		16ED5C2F9C473C87FF70207F /* FafoLiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 799E864A1B365F801B47417F /* FafoLiveActivityPlugin.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		424F995CF058EFE2AD463C47 /* FafoTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAF8F0DDE5B6ED1BCC0C3380 /* FafoTimerAttributes.swift */; };
+		42975408EE1AEACB0D90BDC1 /* FafoTimer.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 05CD788387C799F541B79465 /* FafoTimer.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		49682C45DEF348792BEF3319 /* FafoTimerBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34972E2D3F056BA2B5DF3576 /* FafoTimerBundle.swift */; };
+		4A4874CB3952B70C213AB77C /* Anton-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9FDB7BD86D66A9912315C7E2 /* Anton-Regular.ttf */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
+		7A7DAAE1AEE89F72BD54F190 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6C7A162E51CCE9C4F1AA8EBF /* Assets.xcassets */; };
+		842AF16DCE76595F4AD42C26 /* FafoTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3671075126ACBDB9692CD713 /* FafoTimerLiveActivity.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		D8A97288E4639C9214FC95EA /* IBMPlexMono-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1778836C8818A450BED8189C /* IBMPlexMono-SemiBold.ttf */; };
 		D9F3072F3DA485D9C2269E6D /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8FC5F98292D4DCB5B4D8237B /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		302D48448F854A8EBE97418E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0201AB12B49C7491FFCF30D9;
+			remoteInfo = FafoTimer;
+		};
 		331C8085294A63A400263BE5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
@@ -40,17 +56,35 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F81C527624191DC6C821DB6B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				42975408EE1AEACB0D90BDC1 /* FafoTimer.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		05CD788387C799F541B79465 /* FafoTimer.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FafoTimer.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		110EB8845BD5DDF8CB0CAC23 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		1778836C8818A450BED8189C /* IBMPlexMono-SemiBold.ttf */ = {isa = PBXFileReference; includeInIndex = 1; path = "IBMPlexMono-SemiBold.ttf"; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		34972E2D3F056BA2B5DF3576 /* FafoTimerBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FafoTimerBundle.swift; sourceTree = "<group>"; };
+		3671075126ACBDB9692CD713 /* FafoTimerLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FafoTimerLiveActivity.swift; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		6C7A162E51CCE9C4F1AA8EBF /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		799E864A1B365F801B47417F /* FafoLiveActivityPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FafoLiveActivityPlugin.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		8FC5F98292D4DCB5B4D8237B /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
@@ -62,14 +96,24 @@
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9D3B7EAE34CB70E6976316D0 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		9F5F900A3D9BBFE4D9664931 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		9FDB7BD86D66A9912315C7E2 /* Anton-Regular.ttf */ = {isa = PBXFileReference; includeInIndex = 1; path = "Anton-Regular.ttf"; sourceTree = "<group>"; };
 		B1F1279CE6AC7154F45713B0 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		C56487E3C4000485BA8D40E6 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		CAF8F0DDE5B6ED1BCC0C3380 /* FafoTimerAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FafoTimerAttributes.swift; sourceTree = "<group>"; };
 		D3C2B5B40F6A3B15CD1AEAC2 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		E63F0D5C3E5F025E133D4A24 /* FafoTimer.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = FafoTimer.xcconfig; sourceTree = "<group>"; };
 		FA7EBA1791C6DEDD67E301FB /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		FFA0B8A04F5EDAFC476EDD25 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		0C9F0991C79EBC5DC34F40D7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		6B792AFDBD76F5E19062C693 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -102,6 +146,7 @@
 			children = (
 				8FC5F98292D4DCB5B4D8237B /* Pods_Runner.framework */,
 				B1F1279CE6AC7154F45713B0 /* Pods_RunnerTests.framework */,
+				B2502A671437C2A626CF1DC5 /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -140,6 +185,7 @@
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				60D06F5F80D74C723EB820B7 /* Pods */,
 				50EFE50A7486858343980E33 /* Frameworks */,
+				CD1D2B81A39E211774D0CB98 /* FafoTimer */,
 			);
 			sourceTree = "<group>";
 		};
@@ -148,6 +194,7 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				05CD788387C799F541B79465 /* FafoTimer.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -164,13 +211,54 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				799E864A1B365F801B47417F /* FafoLiveActivityPlugin.swift */,
 			);
 			path = Runner;
+			sourceTree = "<group>";
+		};
+		B2502A671437C2A626CF1DC5 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		CD1D2B81A39E211774D0CB98 /* FafoTimer */ = {
+			isa = PBXGroup;
+			children = (
+				34972E2D3F056BA2B5DF3576 /* FafoTimerBundle.swift */,
+				3671075126ACBDB9692CD713 /* FafoTimerLiveActivity.swift */,
+				CAF8F0DDE5B6ED1BCC0C3380 /* FafoTimerAttributes.swift */,
+				6C7A162E51CCE9C4F1AA8EBF /* Assets.xcassets */,
+				9FDB7BD86D66A9912315C7E2 /* Anton-Regular.ttf */,
+				1778836C8818A450BED8189C /* IBMPlexMono-SemiBold.ttf */,
+				110EB8845BD5DDF8CB0CAC23 /* Info.plist */,
+				E63F0D5C3E5F025E133D4A24 /* FafoTimer.xcconfig */,
+			);
+			name = FafoTimer;
+			path = FafoTimer;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0201AB12B49C7491FFCF30D9 /* FafoTimer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2BF42AB10C685FAD423FA28C /* Build configuration list for PBXNativeTarget "FafoTimer" */;
+			buildPhases = (
+				528DF887F2046C04303D4CB6 /* Sources */,
+				0C9F0991C79EBC5DC34F40D7 /* Frameworks */,
+				DA03E079E85DB64AD0A37B4E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FafoTimer;
+			productName = FafoTimer;
+			productReference = 05CD788387C799F541B79465 /* FafoTimer.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		331C8080294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */;
@@ -200,12 +288,14 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				F81C527624191DC6C821DB6B /* Embed Foundation Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				2EE94DBE3955D4EDFD6EAE47 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				41F8D2AC35F7FD2677CAF509 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			productName = Runner;
@@ -247,6 +337,7 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				0201AB12B49C7491FFCF30D9 /* FafoTimer */,
 			);
 		};
 /* End PBXProject section */
@@ -267,6 +358,16 @@
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA03E079E85DB64AD0A37B4E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7A7DAAE1AEE89F72BD54F190 /* Assets.xcassets in Resources */,
+				4A4874CB3952B70C213AB77C /* Anton-Regular.ttf in Resources */,
+				D8A97288E4639C9214FC95EA /* IBMPlexMono-SemiBold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -376,6 +477,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		528DF887F2046C04303D4CB6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				49682C45DEF348792BEF3319 /* FafoTimerBundle.swift in Sources */,
+				842AF16DCE76595F4AD42C26 /* FafoTimerLiveActivity.swift in Sources */,
+				424F995CF058EFE2AD463C47 /* FafoTimerAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EA1CF9000F007C117D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -383,6 +494,8 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
+				16ED5C2F9C473C87FF70207F /* FafoLiveActivityPlugin.swift in Sources */,
+				0F19004B9F75E4A19F5B5F47 /* FafoTimerAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -393,6 +506,12 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		41F8D2AC35F7FD2677CAF509 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FafoTimer;
+			target = 0201AB12B49C7491FFCF30D9 /* FafoTimer */;
+			targetProxy = 302D48448F854A8EBE97418E /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -481,6 +600,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.getfafo.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -536,6 +660,35 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
+			};
+			name = Profile;
+		};
+		711B67D6A22FA661C776EE22 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E63F0D5C3E5F025E133D4A24 /* FafoTimer.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FafoTimer/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.getfafo.app.FafoTimer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Profile;
 		};
@@ -663,6 +816,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.getfafo.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -686,6 +844,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.getfafo.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -694,9 +857,75 @@
 			};
 			name = Release;
 		};
+		C919CBEF5BB7468018167F47 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E63F0D5C3E5F025E133D4A24 /* FafoTimer.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FafoTimer/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.getfafo.app.FafoTimer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		FAD9DAD2C05001D19FE32F37 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E63F0D5C3E5F025E133D4A24 /* FafoTimer.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FafoTimer/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.getfafo.app.FafoTimer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2BF42AB10C685FAD423FA28C /* Build configuration list for PBXNativeTarget "FafoTimer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C919CBEF5BB7468018167F47 /* Release */,
+				FAD9DAD2C05001D19FE32F37 /* Debug */,
+				711B67D6A22FA661C776EE22 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

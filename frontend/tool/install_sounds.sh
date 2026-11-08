@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Installs the five V3 sounds (brief 7.4). Usage, from frontend/:
-#   tool/install_sounds.sh /path/to/folder   # containing n, ns, yn, fr, exp .mp3
+# Installs the six V3 sounds (brief 7.4). Usage, from frontend/:
+#   tool/install_sounds.sh /path/to/folder   # containing n, ns, yes, no, fr, exp .mp3
 set -euo pipefail
 
-src="${1:?Pass the folder that holds n.mp3 ns.mp3 yn.mp3 fr.mp3 exp.mp3}"
-names=(n ns yn fr exp)
+src="${1:?Pass the folder that holds n.mp3 ns.mp3 yes.mp3 no.mp3 fr.mp3 exp.mp3}"
+names=(n ns yes no fr exp)
 
 for name in "${names[@]}"; do
   [[ -f "$src/$name.mp3" ]] || { echo "Missing $src/$name.mp3" >&2; exit 1; }
 done
 
-# In-app playback (all five).
+# In-app playback (all six).
 for name in "${names[@]}"; do
   cp "$src/$name.mp3" "assets/sounds/$name.mp3"
 done

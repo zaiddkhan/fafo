@@ -9,6 +9,7 @@ import 'package:fafu/src/core/theme/app_colors.dart';
 import 'package:fafu/src/core/theme/app_typography.dart';
 import 'package:fafu/src/core/utils/server_clock.dart';
 import 'package:fafu/src/features/friends/domain/friend.dart';
+import 'package:fafu/src/features/notifications/data/live_timers.dart';
 import 'package:fafu/src/features/notifications/data/push_service.dart';
 import 'package:fafu/src/features/nudges/data/nudges_repository.dart';
 import 'package:fafu/src/features/nudges/domain/nudge.dart';
@@ -194,7 +195,7 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
 
   Future<void> _answer(NudgeResponse nudge, NudgeVote vote) async {
     if (_answering.contains(nudge.id)) return;
-    AppSounds.play(FafoSound.answer);
+    AppSounds.play(vote == NudgeVote.yes ? FafoSound.answerYes : FafoSound.answerNo);
     setState(() => _answering.add(nudge.id));
     try {
       final updated = await ref.read(nudgesRepositoryProvider).respond(nudge.id, vote);
@@ -265,6 +266,9 @@ class _RightNowPageState extends ConsumerState<RightNowPage>
               NudgeView(n, myUid: myUid),
           ]..sort((a, b) => b.nudge.createdAt.compareTo(a.nudge.createdAt));
           _playTimerSounds(views, now);
+          // Only once the list has loaded: an empty first frame would end
+          // every running Live Activity.
+          if (nudges.hasValue) LiveTimers.sync(views, now);
           final live = views.where((v) => v.isInLiveArea(now)).toList()
             // Something waiting on my answer goes first.
             ..sort((a, b) {

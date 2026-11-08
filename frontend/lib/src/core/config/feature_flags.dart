@@ -32,10 +32,20 @@ class FeatureFlags {
   /// The prototype's flows have none.
   static const bool exitSurveys = false;
 
-  /// The five V3 sounds (brief 7.4). Off until the audio files are installed
-  /// (assets/sounds/README.md): pushes use the system sound and in-app sounds
-  /// stay silent. Flipping this also moves Android to the custom-sound channels.
+  /// In-app V3 sounds (brief 7.4): nudge sent, Yes / No tap and "I'm free".
+  /// The files are in assets/sounds/.
+  static const bool inAppSounds = true;
+
+  /// Custom push sounds (brief 7.4): notification (N) and timer (EXP). Off
+  /// until those two files are delivered and installed
+  /// (assets/sounds/README.md); pushes use the system sound meanwhile.
+  /// Flipping this also moves Android to the custom-sound channels.
   static const bool customSounds = false;
+
+  /// iOS Live Activities for running nudge / side-quest timers: Lock Screen
+  /// and Dynamic Island (lib/src/features/notifications/data/live_timers.dart).
+  /// Needs the FafoTimer widget extension in the iOS build; iOS 16.2+.
+  static const bool liveActivities = true;
 
   /// "Preview both sides" (brief 3.9): a demo-only two-phone sheet from the
   /// prototype. Not part of the real app; kept for client demos.
@@ -48,6 +58,12 @@ class FeatureFlags {
   /// Group mute (8 hours, 1 week, always). Needs a backend endpoint; until
   /// then the Mute button stays hidden.
   static const bool groupMute = false;
+
+  /// Settings rows the 1 Nov HTML doesn't have (SB-136): Default countdown,
+  /// Side quest invites, and the per-phone "Plans on this phone" switch in the
+  /// Notifications sheet. Profiles keep their saved values (10 min, invites on
+  /// by default); flip this to bring the controls back.
+  static const bool extraSettings = false;
 
   /// In-app System / Light / Dark choice in Settings. Light is the default
   /// (product call; brief 2.4 had System).

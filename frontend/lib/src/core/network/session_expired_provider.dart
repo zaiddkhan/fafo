@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fafu/src/core/network/auth_token_provider.dart';
+import 'package:fafu/src/features/notifications/data/live_timers.dart';
 
 /// Tracks whether the current session is no longer valid — i.e. the backend
 /// rejected our credentials with a 401 and the Firebase ID token could not be
@@ -29,6 +30,7 @@ class SessionExpiredNotifier extends Notifier<bool> {
     // the redirect; the cleanup just settles state.
     FirebaseAuth.instance.signOut().catchError((_) {});
     ref.read(authTokenProvider.notifier).clearToken();
+    LiveTimers.endAll();
   }
 
   /// Called after a successful re-authentication so the router stops forcing

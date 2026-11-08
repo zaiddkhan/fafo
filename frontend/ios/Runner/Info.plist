@@ -55,6 +55,8 @@
 	<string>FaFo uses your location to show events near you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>FaFo needs photo library access so you can choose profile and event images.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

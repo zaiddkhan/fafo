@@ -1,0 +1,4 @@
+// FafoTimer widget extension. Only Generated.xcconfig (not the Pods config the
+// Runner uses): it supplies FLUTTER_BUILD_NAME / FLUTTER_BUILD_NUMBER so the
+// extension's version always matches the app's, which App Store requires.
+#include "../Flutter/Generated.xcconfig"

@@ -12,5 +12,9 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    // Nudge / side-quest timers on the Lock Screen and Dynamic Island.
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "FafoLiveActivityPlugin") {
+      FafoLiveActivityPlugin.register(with: registrar)
+    }
   }
 }
