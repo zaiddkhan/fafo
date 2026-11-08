@@ -10,6 +10,7 @@ import 'package:fafu/src/core/router/app_router.dart';
 import 'package:fafu/src/core/services/logger_provider.dart';
 import 'package:fafu/src/features/notifications/data/live_nudge_notifications.dart';
 import 'package:fafu/src/features/notifications/data/notification_navigation.dart';
+import 'package:fafu/src/features/notifications/data/nudge_notification_actions.dart';
 import 'package:fafu/src/features/right_now/data/home_focus.dart';
 import 'package:fafu/src/features/notifications/data/push_repository.dart';
 import 'package:fafu/src/features/notifications/data/notification_nag.dart';
@@ -38,8 +39,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   final plugin = FlutterLocalNotificationsPlugin();
   await plugin.initialize(
     const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('ic_stat_fafo'),
     ),
+    // "I'm in" / "Can't" on the notification while the app is closed.
+    onDidReceiveBackgroundNotificationResponse: onNudgeNotificationActionBackground,
   );
   final android = plugin
       .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -124,7 +127,7 @@ class PushService {
   Future<void> _initLocalNotifications() async {
     await _local.initialize(
       const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: AndroidInitializationSettings('ic_stat_fafo'),
         // FCM already requested iOS permissions; don't ask twice here.
         iOS: DarwinInitializationSettings(
           requestAlertPermission: false,
@@ -132,7 +135,14 @@ class PushService {
           requestSoundPermission: false,
         ),
       ),
+      onDidReceiveBackgroundNotificationResponse: onNudgeNotificationActionBackground,
       onDidReceiveNotificationResponse: (response) {
+        // "I'm in" / "Can't" pressed while the app is open: answer, then let
+        // Home catch up. A plain tap falls through to routing.
+        if (response.actionId == nudgeYesAction || response.actionId == nudgeNoAction) {
+          handleNudgeNotificationAction(response, plugin: _local).then((_) => HomeFocus.ping());
+          return;
+        }
         final payload = response.payload;
         if (payload == null || payload.isEmpty) return;
         try {

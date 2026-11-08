@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Keep the notification sounds through resource shrinking (V3 brief 7.4). -->
+<!-- Notification art referenced by name from Dart (flutter_local_notifications)
+     and the manifest; keep it through release resource shrinking. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@raw/n,@raw/exp" />
+    tools:keep="@drawable/ic_stat_fafo,@drawable/fafo_notification_tile" />

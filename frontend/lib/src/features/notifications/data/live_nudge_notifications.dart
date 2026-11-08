@@ -41,9 +41,20 @@ List<AndroidNotificationChannel> get nudgeChannels => FeatureFlags.customSounds
     ? const [nudgeAndroidChannel, nudgeSoundChannel, timerSoundChannel]
     : const [nudgeAndroidChannel];
 
-/// Renders V3 nudge pushes as live notifications on Android:
-/// - arrives: red bar filling over the 10-minute answer window
-/// - after yes: green bar over the sender's 5, 10 or 15 minutes
+/// Action ids for the answer buttons on an incoming nudge.
+const nudgeYesAction = 'nudge_yes';
+const nudgeNoAction = 'nudge_no';
+
+/// Small (status bar) icon: the white mascot silhouette. Large icon: the blue
+/// mascot tile (Notification_Progress.html).
+const _smallIcon = 'ic_stat_fafo';
+const _tile = DrawableResourceAndroidBitmap('fafo_notification_tile');
+
+/// Renders V3 nudge pushes as live notifications on Android
+/// (Notification_Progress.html):
+/// - waiting: blue bar until there's an answer, "FaFo · 9:42 to answer", and
+///   "I'm in" / "Can't" for the receiver
+/// - after yes: red bar toward go time, "FaFo · 14:42 to get there"
 /// - expired / go time: the same notification turns static and stays
 ///
 /// Android runs the countdown natively (chronometer + timeout), so nothing has
@@ -89,27 +100,33 @@ class LiveNudgeNotifications {
     AndroidNotificationDetails details;
     switch (template) {
       case 'nudge.received' || 'nudge.group_received' when answerBy != null:
+        // The sender's own bar is drawn locally and marked silent (NS already
+        // played in the app); only the receiver gets the answer buttons.
+        final senderCopy = data['silent'] == '1';
         details = _bar(
           channel: channel,
-          // The sender's own bar: NS already played in the app.
-          silent: data['silent'] == '1',
+          silent: senderCopy,
           start: answerBy.subtract(const Duration(minutes: 10)),
           end: answerBy,
           now: now,
-          color: AppColors.signalRed,
+          color: AppColors.accentPrimary,
+          label: 'to answer',
+          answerable: !senderCopy,
         );
-      case 'nudge.said_yes' || 'nudge.group_first_yes' when goAt != null:
+      case 'nudge.said_yes' || 'nudge.group_first_yes' || 'nudge.you_said_yes' when goAt != null:
         details = _bar(
           channel: channel,
+          silent: template == 'nudge.you_said_yes',
           start: goAt.subtract(Duration(minutes: countdown)),
           end: goAt,
           now: now,
-          color: AppColors.stateGreen,
+          color: AppColors.signalRed,
+          label: 'to get there',
         );
       case 'nudge.expired':
-        details = _done(channel: channel, color: AppColors.signalRed);
+        details = _done(channel: channel, color: AppColors.accentPrimary);
       case 'nudge.go_time':
-        details = _done(channel: channel, color: AppColors.stateGreen);
+        details = _done(channel: channel, color: AppColors.signalRed);
       case 'nudge.cancelled':
         details = _plain(channel);
       default:
@@ -150,7 +167,24 @@ class LiveNudgeNotifications {
     });
   }
 
-  /// The user answered in the app: the red bar is no longer needed.
+  /// The receiver said yes from the notification: swap the blue answer bar
+  /// for the red "to get there" countdown, in place.
+  Future<void> showYouSaidYes(NudgeResponse nudge) {
+    final who = nudge.senderName ?? 'They';
+    return show({
+      'template_id': 'nudge.you_said_yes',
+      'nudge_id': nudge.id,
+      'feed_type': nudge.isGroup ? 'group' : 'friend',
+      'target_id': nudge.isGroup ? (nudge.targetId ?? '') : nudge.senderUid,
+      'title': nudge.title,
+      'go_at': nudge.goTime.toUtc().toIso8601String(),
+      'countdown_minutes': '${nudge.countdownMinutes}',
+      'n_title': 'You’re in: ${nudge.title}',
+      'n_body': 'Head out. $who’s on the way.',
+    });
+  }
+
+  /// The user answered in the app: the answer bar is no longer needed.
   Future<void> cancel(String nudgeId) => _plugin.cancel(idFor(nudgeId));
 
   AndroidNotificationDetails _bar({
@@ -160,6 +194,8 @@ class LiveNudgeNotifications {
     required DateTime end,
     required DateTime now,
     required Color color,
+    required String label,
+    bool answerable = false,
   }) {
     final total = end.difference(start).inSeconds.clamp(1, 1 << 30);
     final elapsed = now.difference(start).inSeconds.clamp(0, total);
@@ -170,8 +206,11 @@ class LiveNudgeNotifications {
       channelDescription: channel.description,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: _smallIcon,
+      largeIcon: _tile,
       color: color,
+      // Header reads "FaFo · 9:42 to answer": the chronometer plus this label.
+      subText: label,
       category: AndroidNotificationCategory.progress,
       silent: silent,
       ongoing: true,
@@ -187,6 +226,13 @@ class LiveNudgeNotifications {
       when: end.millisecondsSinceEpoch,
       // Clears at zero; the server's expiry / go-time push takes over.
       timeoutAfter: left.isNegative ? 1 : left.inMilliseconds,
+      // Answer without opening the app; handled in nudge_notification_actions.
+      actions: answerable
+          ? const [
+              AndroidNotificationAction(nudgeYesAction, 'I’m in', showsUserInterface: false, cancelNotification: false),
+              AndroidNotificationAction(nudgeNoAction, 'Can’t', showsUserInterface: false, cancelNotification: true),
+            ]
+          : null,
     );
   }
 
@@ -200,7 +246,8 @@ class LiveNudgeNotifications {
       channelDescription: channel.description,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: _smallIcon,
+      largeIcon: _tile,
       color: color,
       showProgress: true,
       maxProgress: 1,
@@ -215,7 +262,9 @@ class LiveNudgeNotifications {
       channelDescription: channel.description,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: _smallIcon,
+      largeIcon: _tile,
+      color: AppColors.accentPrimary,
     );
   }
 }
