@@ -32,6 +32,7 @@ import 'package:fafu/src/features/friends/presentation/invite_landing_page.dart'
 import 'package:fafu/src/features/onboarding/presentation/profile_setup_page.dart';
 import 'package:fafu/src/features/profile/presentation/edit_profile_page.dart';
 import 'package:fafu/src/features/settings/presentation/settings_page.dart';
+import 'package:fafu/src/features/splash/presentation/brand_splash_page.dart';
 import 'package:fafu/src/features/splash/presentation/splash_page.dart';
 import 'package:fafu/src/features/friends/data/friends_providers.dart';
 import 'package:fafu/src/features/friends/data/friends_repository.dart';
@@ -335,6 +336,7 @@ Future<void> _shoot(
   double width = 390,
   double height = 1500,
   Duration settle = Duration.zero,
+  bool decodeImages = false,
 }) async {
   AppColors.setBrightness(brightness);
   // Toasts are app-wide state; don't let one test's toast leak into the next.
@@ -360,6 +362,15 @@ Future<void> _shoot(
   if (settle > Duration.zero) {
     await tester.pump(settle);
     await tester.pump(settle);
+  }
+  if (decodeImages) {
+    // Asset images decode outside the test's fake clock.
+    await tester.runAsync(() async {
+      for (final e in find.byType(Image).evaluate()) {
+        await precacheImage((e.widget as Image).image, e);
+      }
+    });
+    await tester.pump();
   }
   await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/$name.png'));
   // Unmount so tickers' periodic timers are cancelled before the test ends.
@@ -505,6 +516,23 @@ void main() {
     testWidgets(entry.key, (tester) async {
       final s = entry.value;
       await _shoot(tester, entry.key, s.screen, overrides: s.overrides, height: s.height);
+    });
+  }
+
+  // Launch splash: white dino over the wordmark, normal and small phone.
+  for (final width in [390.0, 320.0]) {
+    final name = width == 390 ? '43_brand_splash' : 'small_43_brand_splash';
+    testWidgets(name, (tester) async {
+      await _shoot(
+        tester,
+        name,
+        const BrandSplashPage(),
+        overrides: _overrides(),
+        width: width,
+        height: 844,
+        settle: const Duration(milliseconds: 300),
+        decodeImages: true,
+      );
     });
   }
 

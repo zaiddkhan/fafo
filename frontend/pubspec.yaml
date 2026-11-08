@@ -84,14 +84,16 @@ flutter_launcher_icons:
   ios: true
   remove_alpha_ios: true
   image_path: "assets/icon/app_icon.png"
-  # Android 8+ adaptive icon: brand-blue field + the FAFO mark in the safe zone
-  adaptive_icon_background: "#1A87DA"
+  # Android 8+ adaptive icon: brand-blue field + the white mascot in the safe zone
+  adaptive_icon_background: "#1A6FD0"
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  # Android 13+ themed icons tint this silhouette
+  adaptive_icon_monochrome: "assets/icon/app_icon_foreground.png"
   web:
     generate: true
     image_path: "assets/icon/app_icon.png"
-    background_color: "#1A87DA"
-    theme_color: "#1A87DA"
+    background_color: "#1A6FD0"
+    theme_color: "#1A6FD0"
 
 dependency_overrides:
   maplibre_ios:
@@ -112,6 +114,8 @@ flutter:
     - assets/gifs/Confetti.lottie
     # V3 sounds (brief 7.4); see assets/sounds/README.md.
     - assets/sounds/
+    # White dino for the launch splash (rendered from assets/brand/mascot.svg).
+    - assets/brand/mascot_white.png
     # Font licences (OFL), registered with LicenseRegistry at startup.
     - assets/fonts/Anton-OFL.txt
     - assets/fonts/Archivo-OFL.txt

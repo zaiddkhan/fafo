@@ -12,7 +12,7 @@ import 'package:fafu/src/shared/widgets/fafo_wordmark.dart';
 import 'package:fafu/src/features/home/presentation/main_shell.dart';
 import 'package:fafu/src/features/splash/presentation/splash_page.dart';
 
-/// Branded launch splash: full-bleed blue, the "FAFO" wordmark and tagline.
+/// Branded launch splash: full-bleed blue, the white dino over the "FAFO" wordmark.
 /// Shown for a brief beat on cold start (covering the native launch window and
 /// session restore) then routes to the app shell (onboarded) or the welcome
 /// screen (new user). Kept visually continuous with the native launch screen,
@@ -92,6 +92,13 @@ class _BrandSplashPageState extends ConsumerState<BrandSplashPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // The mascot (white dino) sits above the wordmark.
+              Image.asset(
+                'assets/brand/mascot_white.png',
+                width: 220,
+                filterQuality: FilterQuality.medium,
+              ),
+              const SizedBox(height: 40),
               // Wordmark in the Display face (Anton) with a hard ink offset,
               // per the V3 design system. No soft shadows.
               FafoWordmark(
@@ -108,17 +115,6 @@ class _BrandSplashPageState extends ConsumerState<BrandSplashPage>
                       blurRadius: 0,
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'F*ck Around & Find Out',
-                style: const TextStyle(
-                  fontFamily: 'IBMPlexMono',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  letterSpacing: 1.6,
                 ),
               ),
             ],
